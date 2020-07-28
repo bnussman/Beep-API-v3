@@ -4,6 +4,12 @@ import { Application, Request, Response } from 'express';
 import express = require('express');
 import * as r from 'rethinkdb';
 
+interface TokenData {
+    userid: string,
+    token: string,
+    tokenid: string
+}
+
 var app: Application = express();
 
 const port = 3001;
@@ -49,7 +55,7 @@ app.post('/account/password', changePassword);
 /**
  * API function to handle a login
  */
-function login (req: Request, res: Response) {
+function login (req: Request, res: Response): void {
     //RethinkDB Query to see if there is a user with POSTed username
     r.table("users").filter({ "username": req.body.username }).run(conn, function (err, cursor) {
         //Handle RethinkDB error
@@ -109,7 +115,7 @@ function login (req: Request, res: Response) {
  * API function to handle a sign up
  * TODO: ensure username is not taken before signup
  */
-function signup (req: Request, res: Response) {
+function signup (req: Request, res: Response): void {
     //This is the row that will be inserted into our users RethinkDB table
     const document = {
         'first': req.body.first,
@@ -172,7 +178,7 @@ function signup (req: Request, res: Response) {
     });
 }
 
-async function editAccount (req: Request, res: Response) {
+async function editAccount (req: Request, res: Response): Promise<void> {
     //check if auth token is valid before processing the request to update push token
     let id = await isTokenValid(req.body.token);
 
@@ -190,7 +196,7 @@ async function editAccount (req: Request, res: Response) {
     });
 }
 
-async function changePassword (req: Request, res: Response) {
+async function changePassword (req: Request, res: Response): Promise<void> {
     //check if auth token is valid before processing the request to update push token
     let id = await isTokenValid(req.body.token);
 
@@ -213,7 +219,7 @@ async function changePassword (req: Request, res: Response) {
 /**
  * API function to handle a logout
  */
-async function logout (req: Request, res: Response) {
+async function logout (req: Request, res: Response): Promise<void> {
     //check if auth token is valid before processing the request to update push token
     let id = await isTokenValid(req.body.token);
 
@@ -232,6 +238,7 @@ async function logout (req: Request, res: Response) {
         //if RethinkDB tells us something was deleted, logout was successful
         if (result.deleted == 1) {
             //unset the user's push token
+            //@ts-ignore We can safely ignore beacause earlier in this function, we terminate if id is null
             setPushToken(id, null);
             //return success message
             res.send(makeJSONSuccess("Token was revoked."));
@@ -247,7 +254,7 @@ async function logout (req: Request, res: Response) {
  * API function that handles revoking an auth token given a tokenid (an offline logout)
  * TODO: rather than having this function, just use logout and post data accordingly
  */
-function removeToken (req: Request, res: Response) {
+function removeToken (req: Request, res: Response): void {
     //RethinkDB query to delete entry in tokens table.
     r.table("tokens").filter({'tokenid': req.body.tokenid}).delete().run(conn, function (error, result) {
         //handle a RethinkDB error
@@ -271,7 +278,7 @@ function removeToken (req: Request, res: Response) {
  * @param token takes a user's auth token as input
  * @return userid if token is valid, null otherwise
  */
-async function isTokenValid(token: string) {
+async function isTokenValid(token: string): Promise<string | null> {
     //get (only) user's id from tokens db where the token is the token passed to this function
     //NOTE: filter must be used over get here because token is not a primary (or secondary) key
     let id = await r.table("tokens").filter({token: token}).pluck('userid').run(conn);
@@ -292,11 +299,43 @@ async function isTokenValid(token: string) {
 }
 
 /**
+ * function to tell if user has a specific user level
+ * @param userid is the user's id
+ * @prarm level is the desired user level
+ * @returns a promice that is a boolean. True if user has level, false otherwise
+ */
+async function hasUserLevel(userid: string, level: number): Promise<boolean> {
+    //@ts-ignore
+    const userLevel = await r.table("users").get(userid).pluck('userLevel').run(conn);
+    
+    //return a boolean, true if user has desired level, false otherwise
+    return level == userLevel;
+}
+
+/**
+ * works exactly like isTokenValid, but only returns a userid if user has userLevel == 1 (meaning they are an admin)
+ * @param token a user's auth token
+ * @returns promice that resolves to null or a user's id
+ */
+async function isAdmin(token: string): Promise<string | null> {
+    const id = await isTokenValid(token);
+
+    if (id) {
+        const hasCorrectLevel = await hasUserLevel(id, 1);
+        
+        if(hasCorrectLevel) {
+            return id;
+        }
+    }
+    return null;
+}
+
+/**
  * Updates a user's pushToken in the database
  * @param id a user's id in which we want to update their push tokens
  * @param token the expo push token for the user
  */
-async function setPushToken(id: string, token: string | null) {
+async function setPushToken(id: string, token: string | null): Promise<void> {
     //run query to get user and update their pushToken
     await r.table("users").get(id).update({pushToken: token}).run(conn);
 }
@@ -308,7 +347,7 @@ async function setPushToken(id: string, token: string | null) {
  * @param userid a user's ID which is used to associate a token with a userid in our tokens table
  * @return user's id, auth token, and auth token's token to be used by login and sign up
  */
-function getToken(userid: string) {
+function getToken(userid: string): TokenData {
     //this information will be inserted into the tokens table and returned by this function
     const document = {
         'userid': userid,
@@ -336,7 +375,7 @@ function getToken(userid: string) {
 /**
  * API function that returns a beeper's isBeeing status
  */
-function getBeeperStatus (req: Request, res: Response) {
+function getBeeperStatus (req: Request, res: Response): void {
     //get isBeeping from user with id GET param in users db
     //@ts-ignore
     r.table("users").get(req.params.id).pluck('isBeeping').run(conn, function (error, result) {
@@ -357,7 +396,7 @@ function getBeeperStatus (req: Request, res: Response) {
 /**
  * API function that allows beeper to update isBeeping
  */
-async function setBeeperStatus (req: Request, res: Response) {
+async function setBeeperStatus (req: Request, res: Response): Promise<void> {
     //get user's id
     let id = await isTokenValid(req.body.token);
 
@@ -391,7 +430,7 @@ async function setBeeperStatus (req: Request, res: Response) {
     });
 }
 
-async function chooseBeep (req: Request, res: Response) {
+async function chooseBeep (req: Request, res: Response): Promise<void> {
     //get user's id
     let id = await isTokenValid(req.body.token);
 
@@ -486,7 +525,7 @@ async function chooseBeep (req: Request, res: Response) {
 /**
  * API function that allows user to find a ride with a beeper
  */
-async function findBeep (req: Request, res: Response) {
+async function findBeep (req: Request, res: Response): Promise<void> {
     //get user's id
     let id = await isTokenValid(req.body.token);
 
@@ -542,7 +581,7 @@ async function findBeep (req: Request, res: Response) {
 /**
  * API function that gets a beeper's queue as an array
  */
-async function getBeeperQueue (req: Request, res: Response) {
+async function getBeeperQueue (req: Request, res: Response): Promise<void> {
     //get user's id
     let id = await isTokenValid(req.body.token);
 
@@ -581,7 +620,7 @@ async function getBeeperQueue (req: Request, res: Response) {
  * @param userid
  * @return json-like object (or array?) thing with personal info
  */
-async function getPersonalInfo (userid: string) {
+async function getPersonalInfo (userid: string): Promise<object> {
     //RethinkDB query gets data from users db at userid
     //@ts-ignore
     let result = await r.table('users').get(userid).pluck('first', 'last', 'phone', 'venmo').run(conn);
@@ -593,7 +632,7 @@ async function getPersonalInfo (userid: string) {
     });
 }
 
-async function getRiderStatus (req: Request, res: Response) {
+async function getRiderStatus (req: Request, res: Response): Promise<void> {
     //get user's id
     let id = await isTokenValid(req.body.token);
 
@@ -676,7 +715,7 @@ async function getRiderStatus (req: Request, res: Response) {
 /**
  * API function that is invoked when a rider wants to leave the queue they are in
  */
-async function riderLeaveQueue (req: Request, res: Response) {
+async function riderLeaveQueue (req: Request, res: Response): Promise<void> {
     //get user's id
     let id = await isTokenValid(req.body.token);
 
@@ -738,7 +777,7 @@ async function riderLeaveQueue (req: Request, res: Response) {
 /**
  * API function that allows beeper to modify the status of a rider in their queue
  */
-async function setBeeperQueue (req: Request, res: Response) {
+async function setBeeperQueue (req: Request, res: Response): Promise<void> {
     //get user's id
     let id = await isTokenValid(req.body.token);
 
@@ -893,7 +932,7 @@ async function setBeeperQueue (req: Request, res: Response) {
 /**
  * API endpoint to return a JSON responce with a status and list of all users beeping
  */
-function getBeeperList (req: Request, res: Response) {
+function getBeeperList (req: Request, res: Response): void {
     r.table("users").filter({isBeeping: true}).pluck('first', 'last', 'queueSize', 'id', 'singlesRate', 'groupRate', 'capacity').run(conn, async function (error, result) {
         if (error) {
             console.log(error);
@@ -915,7 +954,7 @@ function getBeeperList (req: Request, res: Response) {
  * @param token takes a user's auth token as input
  * @return userid if token is valid, null otherwise
  */
-async function getQueueSize(userid: string) {
+async function getQueueSize(userid: string): Promise<number> {
     //@ts-ignore
     let size = await r.table("users").get(userid).pluck('queueSize').run(conn);
     return size.queueSize;
@@ -925,7 +964,7 @@ async function getQueueSize(userid: string) {
  * @param message the error message you wish to include in the API's responce
  * @return JSON error message
  */
-function makeJSONError(message: string) {
+function makeJSONError(message: string): object {
     return ({ status: "error", message: message });
 }
 
@@ -933,7 +972,7 @@ function makeJSONError(message: string) {
  * @param message the success message you wish to include in the API's responce
  * @return JSON success message
  */
-function makeJSONSuccess(message: string) {
+function makeJSONSuccess(message: string): object {
     return ({ status: "success", message: message });
 }
 
@@ -943,7 +982,7 @@ function makeJSONSuccess(message: string) {
  * @param title for the notification
  * @param message is the body of the push notification
  */
-async function sendNotification(userid: string, title: string, message: string) {
+async function sendNotification(userid: string, title: string, message: string): Promise<void> {
     let pushToken = await getPushToken(userid);
 
     fetch("https://exp.host/--/api/v2/push/send", {
@@ -964,7 +1003,7 @@ async function sendNotification(userid: string, title: string, message: string) 
  * @param userid a user's id
  * @return string of users Expo push token
  */
-async function getPushToken(userid: string) {
+async function getPushToken(userid: string): Promise<string> {
     //@ts-ignore
     const output = await r.table("users").get(userid).pluck('pushToken').run(conn);
     return output.pushToken;
