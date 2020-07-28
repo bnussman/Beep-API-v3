@@ -46,7 +46,6 @@ app.get('/rider/list', getBeeperList);
 app.post('/account/edit', editAccount);
 app.post('/account/password', changePassword);
 
-
 /**
  * API function to handle a login
  */
@@ -85,7 +84,8 @@ function login (req: Request, res: Response) {
                     'singlesRate': result.singlesRate,
                     'groupRate': result.groupRate,
                     'capacity': result.capacity,
-                    'isBeeping': result.isBeeping
+                    'isBeeping': result.isBeeping,
+                    'userLevel': result.userLevel
                 });
 
                 setPushToken(result.id, req.body.expoPushToken);
@@ -125,7 +125,8 @@ function signup (req: Request, res: Response) {
         'pushToken': req.body.expoPushToken,
         'singlesRate': '3.00',
         'groupRate': '2.00',
-        'capacity': 4
+        'capacity': 4,
+        'userLevel': 0
     };
 
     //insert a new user into our users table
@@ -160,7 +161,8 @@ function signup (req: Request, res: Response) {
                 'singlesRate': '3.00',
                 'groupRate': '2.00',
                 'capacity': 4,
-                'isBeeping': false
+                'isBeeping': false,
+                'userLevel': 0
             });
         }
         else {
