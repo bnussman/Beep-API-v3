@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Application, Request, Response } from 'express';
 import express = require('express');
 import * as r from 'rethinkdb';
+import { conn, connQueues } from './database/db';
 
 interface TokenData {
     userid: string,
@@ -10,28 +11,13 @@ interface TokenData {
     tokenid: string
 }
 
-var app: Application = express();
+const app: Application = express();
 
 const port = 3001;
-
+/*
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
-
-//------------------------------
-//  Establish RethinkDB
-//------------------------------
-let conn: r.Connection;
-let connQueues: r.Connection;
-
-r.connect({host: '192.168.1.132', port: 28015, db: 'beep'})
-    .then(connection => {
-    conn = connection;
-});
-
-r.connect({host: '192.168.1.132', port: 28015, db: 'beepQueues'})
-    .then(connection => {
-    connQueues = connection;
-});
+*/
 
 //------------------------------
 //  API Endpoints
@@ -337,7 +323,9 @@ async function isAdmin(token: string): Promise<string | null> {
  */
 async function setPushToken(id: string, token: string | null): Promise<void> {
     //run query to get user and update their pushToken
-    await r.table("users").get(id).update({pushToken: token}).run(conn);
+    if (token !== null && id !== null) {
+        await r.table("users").get(id).update({pushToken: token}).run(conn);
+    }
 }
 
 /**
@@ -984,7 +972,8 @@ function makeJSONSuccess(message: string): object {
  */
 async function sendNotification(userid: string, title: string, message: string): Promise<void> {
     let pushToken = await getPushToken(userid);
-
+    
+    /*
     fetch("https://exp.host/--/api/v2/push/send", {
         method: "POST",
         headers: {
@@ -995,7 +984,8 @@ async function sendNotification(userid: string, title: string, message: string):
             "title": title,
             "body": message
         })
-    });    
+    });
+    */
 }
 
 /**
