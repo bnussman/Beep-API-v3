@@ -78,8 +78,10 @@ function login (req: Request, res: Response): void {
                     'isBeeping': result.isBeeping,
                     'userLevel': result.userLevel
                 });
-
-                setPushToken(result.id, req.body.expoPushToken);
+                
+                if (req.body.expoPushToken) {
+                    setPushToken(result.id, req.body.expoPushToken);
+                }
 
                 //close the RethinkDB cursor to prevent leak
                 cursor.close();
@@ -322,9 +324,7 @@ async function isAdmin(token: string): Promise<string | null> {
  */
 async function setPushToken(id: string, token: string | null): Promise<void> {
     //run query to get user and update their pushToken
-    if (token !== null && id !== null) {
-        await r.table("users").get(id).update({pushToken: token}).run(conn);
-    }
+    await r.table("users").get(id).update({pushToken: token}).run(conn);
 }
 
 /**
