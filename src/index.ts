@@ -3,12 +3,11 @@ import { v4 as uuidv4 } from 'uuid';
 import { Application, Request, Response } from 'express';
 import express = require('express');
 import * as r from 'rethinkdb';
-import { CursorError, ReqlError, Cursor } from 'rethinkdb';
+import { CursorError, ReqlError, Cursor, WriteResult } from 'rethinkdb';
 import { conn, connQueues } from './database/db';
-import { Beep } from './types/index.d';
+import { TokenData, User } from './types/index.d';
 
 const app: Application = express();
-
 const port = 3001;
 
 app.use(express.json())
@@ -44,10 +43,10 @@ function login (req: Request, res: Response): void {
             throw error;
         }
         //Iterate through user's with that given username
-        cursor.next(function(error: CursorError, result: Beep.User) {
-            console.log(result);
+        cursor.next(async function(error: CursorError, result: User) {
             //Handle RethinkDB cursour error
             if (error) {
+                //TODO: re-add error.msg check
                 res.send(makeJSONError("User not found."));
                 //close the RethinkDB cursor to prevent leak
                 cursor.close();
@@ -56,7 +55,7 @@ function login (req: Request, res: Response): void {
             //hash the input, and compare it to user's encrypted password
             if (result.password == sha256(req.body.password)) {
                 //if authenticated, get new auth tokens
-                const tokenData = getToken(result.id);
+                const tokenData = await getToken(result.id);
                 //send out data to REST API
                 res.send({
                     'status': "success",
@@ -113,24 +112,24 @@ function signup (req: Request, res: Response): void {
         'queueSize': 0,
         'inQueueOfUserID': null,
         'pushToken': req.body.expoPushToken,
-        'singlesRate': '3.00',
-        'groupRate': '2.00',
+        'singlesRate': 3.00,
+        'groupRate': 2.00,
         'capacity': 4,
         'userLevel': 0
     };
 
     //insert a new user into our users table
-    r.table("users").insert(document).run(conn, function (err, result) {
+    r.table("users").insert(document).run(conn, async function (error: Error, result: WriteResult) {
         //handle a RethinkDB error
-        if (err) {
-            throw err;
+        if (error) {
+            throw error;
         }
         //if we successfully inserted our new user...
         if (result.inserted == 1) {
             //line below uses the RethinkDB result to get us the user's id the rethinkdb generated for us
             const userid = result.generated_keys[0];
             //user our getToken function to get an auth token on signup
-            const tokenData = getToken(userid);
+            const tokenData = await getToken(userid);
 
             //because signup was successful we must make their queue table
             r.db("beepQueues").tableCreate(userid).run(connQueues);
@@ -147,8 +146,8 @@ function signup (req: Request, res: Response): void {
                 'venmo': req.body.venmo,
                 'token': tokenData.token,
                 'tokenid': tokenData.tokenid,
-                'singlesRate': '3.00',
-                'groupRate': '2.00',
+                'singlesRate': 3.00,
+                'groupRate': 2.00,
                 'capacity': 4,
                 'isBeeping': false,
                 'userLevel': 0
@@ -163,7 +162,7 @@ function signup (req: Request, res: Response): void {
 
 async function editAccount (req: Request, res: Response): Promise<void> {
     //check if auth token is valid before processing the request to update push token
-    let id = await isTokenValid(req.body.token);
+    const id = await isTokenValid(req.body.token);
 
     if (!id) {
         //if there is no id returned, the token is not valid.
@@ -171,7 +170,7 @@ async function editAccount (req: Request, res: Response): Promise<void> {
         return;
     }
 
-    r.table("users").get(id).update({first: req.body.first, last: req.body.last, email: req.body.email, phone: req.body.phone, venmo: req.body.venmo}).run(conn, function (error) {
+    r.table("users").get(id).update({first: req.body.first, last: req.body.last, email: req.body.email, phone: req.body.phone, venmo: req.body.venmo}).run(conn, function (error: Error) {
         if (error) {
             throw error;
         }
@@ -181,7 +180,7 @@ async function editAccount (req: Request, res: Response): Promise<void> {
 
 async function changePassword (req: Request, res: Response): Promise<void> {
     //check if auth token is valid before processing the request to update push token
-    let id = await isTokenValid(req.body.token);
+    const id = await isTokenValid(req.body.token);
 
     if (!id) {
         //if there is no id returned, the token is not valid.
@@ -191,7 +190,7 @@ async function changePassword (req: Request, res: Response): Promise<void> {
 
     const encryptedPassword = sha256(req.body.password);
 
-    r.table("users").get(id).update({password: encryptedPassword}).run(conn, function (error) {
+    r.table("users").get(id).update({password: encryptedPassword}).run(conn, function (error: Error) {
         if (error) {
             throw error;
         }
@@ -204,7 +203,7 @@ async function changePassword (req: Request, res: Response): Promise<void> {
  */
 async function logout (req: Request, res: Response): Promise<void> {
     //check if auth token is valid before processing the request to update push token
-    let id = await isTokenValid(req.body.token);
+    const id = await isTokenValid(req.body.token);
 
     if (!id) {
         //if there is no id returned, the token is not valid.
@@ -213,7 +212,7 @@ async function logout (req: Request, res: Response): Promise<void> {
     }
 
     //RethinkDB query to delete entry in tokens table.
-    r.table("tokens").filter({token: req.body.token}).delete().run(conn, function (error, result) {
+    r.table("tokens").get(req.body.token).delete().run(conn, function (error: Error, result: WriteResult) {
         //handle a RethinkDB error
         if (error) {
             throw error;
@@ -238,7 +237,7 @@ async function logout (req: Request, res: Response): Promise<void> {
  */
 function removeToken (req: Request, res: Response): void {
     //RethinkDB query to delete entry in tokens table.
-    r.table("tokens").filter({'tokenid': req.body.tokenid}).delete().run(conn, function (error, result) {
+    r.table("tokens").filter({'tokenid': req.body.tokenid}).delete().run(conn, function (error: Error, result: WriteResult) {
         //handle a RethinkDB error
         if (error) {
             throw error;
@@ -263,16 +262,10 @@ function removeToken (req: Request, res: Response): void {
 async function isTokenValid(token: string): Promise<string | null> {
     //get (only) user's id from tokens db where the token is the token passed to this function
     //NOTE: filter must be used over get here because token is not a primary (or secondary) key
-    let id = await r.table("tokens").filter({token: token}).pluck('userid').run(conn);
-    //resolve the promice to get data
-    let data = await id.toArray();
+    const result: any = await r.table("tokens").get(token).run(conn);
 
-    if (data.length > 0) {
-        //if we found a row in the token db, the token is valid.
-        //no clue what is going on this next line, but we need to to get the userid
-        let userid = data.find(a => { return a.userid; }).userid;
-        //return the user's id we found from the input token
-        return userid;
+    if (result) {
+        return result.userid;
     }
 
     //we did not find this token in the tokens table, so it is not valid,
@@ -287,7 +280,7 @@ async function isTokenValid(token: string): Promise<string | null> {
  * @returns a promice that is a boolean. True if user has level, false otherwise
  */
 async function hasUserLevel(userid: string, level: number): Promise<boolean> {
-    const userLevel = await r.table("users").get(userid).pluck('userLevel').run(conn);
+    const userLevel: number = await r.table("users").get(userid).pluck('userLevel').run(conn);
     //return a boolean, true if user has desired level, false otherwise
     return level == userLevel;
 }
@@ -328,29 +321,29 @@ async function setPushToken(id: string | null, token: string | null): Promise<vo
  * @param userid a user's ID which is used to associate a token with a userid in our tokens table
  * @return user's id, auth token, and auth token's token to be used by login and sign up
  */
-function getToken(userid: string): Beep.TokenData {
+async function getToken(userid: string): Promise<TokenData> {
     //this information will be inserted into the tokens table and returned by this function
     const document = {
         'userid': userid,
-        'token': uuidv4(),
         'tokenid': uuidv4()
     };
 
     //insert our new auth token into our tokens table
-    r.table("tokens").insert(document).run(conn, function (error, result) {
-        //Handle any RethinkDB error
-        if (error) {
-            console.log(error);
-            return;
-        }
-        //if nothing was inserted into the tokens table, we know something is wrong
-        if (result.inserted == 0) {
-            throw "Unable to insert new token into db.";
-        }
-    });
+    const result: WriteResult = await r.table("tokens").insert(document).run(conn);
+
+    //if nothing was inserted into the tokens table, we know something is wrong
+    if (result.inserted == 0) {
+        throw "Unable to insert new token into db.";
+    }
+
+    const token: string = result.generated_keys[0];
 
     //return the data we generated
-    return document;
+    return ({
+        'userid': document.userid,
+        'tokenid': document.tokenid,
+        'token': token
+    });
 }
 
 /**
@@ -398,7 +391,7 @@ async function setBeeperStatus (req: Request, res: Response): Promise<void> {
     }
 
     //query updates beepers isBeeping, singlesRate, and groupRate values
-    r.table('users').get(id).update({isBeeping: req.body.isBeeping, singlesRate: req.body.singlesRate, groupRate: req.body.groupRate, capacity: req.body.capacity}).run(conn, function(error) {
+    r.table('users').get(id).update({isBeeping: req.body.isBeeping, singlesRate: req.body.singlesRate, groupRate: req.body.groupRate, capacity: req.body.capacity}).run(conn, function(error: Error) {
         //handle any RethinkDB error
         if (error) {
             res.send(makeJSONError("Unable to update beeping status."));
@@ -906,7 +899,7 @@ async function setBeeperQueue (req: Request, res: Response): Promise<void> {
  * API endpoint to return a JSON responce with a status and list of all users beeping
  */
 function getBeeperList (req: Request, res: Response): void {
-    r.table("users").filter({isBeeping: true}).pluck('first', 'last', 'queueSize', 'id', 'singlesRate', 'groupRate', 'capacity').run(conn, async function (error, result) {
+    r.table("users").filter({isBeeping: true}).pluck('first', 'last', 'queueSize', 'id', 'singlesRate', 'groupRate', 'capacity').run(conn, async function (error: Error, result) {
         if (error) {
             console.log(error);
             return;
@@ -928,7 +921,7 @@ function getBeeperList (req: Request, res: Response): void {
  * @return userid if token is valid, null otherwise
  */
 async function getQueueSize(userid: string): Promise<number> {
-    let size = await r.table("users").get(userid).pluck('queueSize').run(conn);
+    const size = await r.table("users").get(userid).pluck('queueSize').run(conn);
     return size.queueSize;
 }
 
