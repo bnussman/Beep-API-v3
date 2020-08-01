@@ -3,13 +3,9 @@ import { v4 as uuidv4 } from 'uuid';
 import { Application, Request, Response } from 'express';
 import express = require('express');
 import * as r from 'rethinkdb';
+import { CursorError, ReqlError, Cursor } from 'rethinkdb';
 import { conn, connQueues } from './database/db';
-
-interface TokenData {
-    userid: string,
-    token: string,
-    tokenid: string
-}
+import { Beep } from './types/index.d';
 
 const app: Application = express();
 
@@ -42,15 +38,16 @@ app.post('/account/password', changePassword);
  */
 function login (req: Request, res: Response): void {
     //RethinkDB Query to see if there is a user with POSTed username
-    r.table("users").filter({ "username": req.body.username }).run(conn, function (err, cursor) {
+    r.table("users").filter({ "username": req.body.username }).run(conn, function (error: Error, cursor: Cursor) {
         //Handle RethinkDB error
-        if (err) {
-            throw err;
+        if (error) {
+            throw error;
         }
         //Iterate through user's with that given username
-        cursor.next(function(err, result) {
+        cursor.next(function(error: CursorError, result: Beep.User) {
+            console.log(result);
             //Handle RethinkDB cursour error
-            if (err) {
+            if (error) {
                 res.send(makeJSONError("User not found."));
                 //close the RethinkDB cursor to prevent leak
                 cursor.close();
@@ -136,8 +133,7 @@ function signup (req: Request, res: Response): void {
             const tokenData = getToken(userid);
 
             //because signup was successful we must make their queue table
-            //@ts-ignore
-            r.tableCreate(userid).run(connQueues);
+            r.db("beepQueues").tableCreate(userid).run(connQueues);
 
             //produce our REST API output
             res.send({
@@ -225,7 +221,6 @@ async function logout (req: Request, res: Response): Promise<void> {
         //if RethinkDB tells us something was deleted, logout was successful
         if (result.deleted == 1) {
             //unset the user's push token
-            //@ts-ignore We can safely ignore beacause earlier in this function, we terminate if id is null
             setPushToken(id, null);
             //return success message
             res.send(makeJSONSuccess("Token was revoked."));
@@ -292,9 +287,7 @@ async function isTokenValid(token: string): Promise<string | null> {
  * @returns a promice that is a boolean. True if user has level, false otherwise
  */
 async function hasUserLevel(userid: string, level: number): Promise<boolean> {
-    //@ts-ignore
     const userLevel = await r.table("users").get(userid).pluck('userLevel').run(conn);
-    
     //return a boolean, true if user has desired level, false otherwise
     return level == userLevel;
 }
@@ -322,7 +315,8 @@ async function isAdmin(token: string): Promise<string | null> {
  * @param id a user's id in which we want to update their push tokens
  * @param token the expo push token for the user
  */
-async function setPushToken(id: string, token: string | null): Promise<void> {
+async function setPushToken(id: string | null, token: string | null): Promise<void> {
+    if (!id) return;
     //run query to get user and update their pushToken
     await r.table("users").get(id).update({pushToken: token}).run(conn);
 }
@@ -334,7 +328,7 @@ async function setPushToken(id: string, token: string | null): Promise<void> {
  * @param userid a user's ID which is used to associate a token with a userid in our tokens table
  * @return user's id, auth token, and auth token's token to be used by login and sign up
  */
-function getToken(userid: string): TokenData {
+function getToken(userid: string): Beep.TokenData {
     //this information will be inserted into the tokens table and returned by this function
     const document = {
         'userid': userid,
@@ -364,8 +358,7 @@ function getToken(userid: string): TokenData {
  */
 function getBeeperStatus (req: Request, res: Response): void {
     //get isBeeping from user with id GET param in users db
-    //@ts-ignore
-    r.table("users").get(req.params.id).pluck('isBeeping').run(conn, function (error, result) {
+    r.table("users").get(req.params.id).pluck('isBeeping').run(conn, function (error: ReqlError, result: any) {
         //if there was an error, notify user with REST API.
         if (error) {
             res.send(makeJSONError("Unable to get beeping status."));
@@ -427,7 +420,6 @@ async function chooseBeep (req: Request, res: Response): Promise<void> {
         return;
     }
 
-    //@ts-ignore
     const result = await r.table('users').get(req.body.beepersID).pluck('first', 'last', 'queueSize', 'singlesRate', 'groupRate', 'isBeeping').run(conn);
 
     if (!result.isBeeping) {
@@ -533,12 +525,11 @@ async function findBeep (req: Request, res: Response): Promise<void> {
         }
 
         //this paticular RethinkDB query will return an iterable object, so use next to get the beeper
-        cursor.next(function(err, result) {
+        cursor.next(function(error: CursorError, result: any) {
             //Handle RethinkDB cursour error
-            if (err) {
+            if (error) {
                 //If rethinkdb says there are not more rows, no one is beeping!
-                //@ts-ignore
-                if (err.msg == "No more rows in the cursor.") {
+                if (error.msg == "No more rows in the cursor.") {
                     //Return error to REST API
                     res.send(makeJSONError("Nobody is beeping at the moment! Try to find a ride later."));
                     //close the RethinkDB cursor to prevent leak
@@ -579,7 +570,7 @@ async function getBeeperQueue (req: Request, res: Response): Promise<void> {
     }
 
     //get beeper's queue ordered by the time each rider entered the queue so the order makes sence for the beeper
-    r.table(id).orderBy('timeEnteredQueue').run(connQueues, async function (error, result) {
+    r.table(id).orderBy('timeEnteredQueue').run(connQueues, async function (error: any, result: any) {
         //Handle any RethinkDB error
         if (error) {
             res.send(makeJSONError("Unable to get beeper's queue due to a server error."));
@@ -588,7 +579,6 @@ async function getBeeperQueue (req: Request, res: Response): Promise<void> {
         }
 
         //for every entry in a beeper's queue, add personal info
-        //@ts-ignore
         for (let doc of result) {
             //for every queue entry, add personal info of the rider
             doc['personalInfo'] = await getPersonalInfo(doc.riderid);
@@ -609,7 +599,6 @@ async function getBeeperQueue (req: Request, res: Response): Promise<void> {
  */
 async function getPersonalInfo (userid: string): Promise<object> {
     //RethinkDB query gets data from users db at userid
-    //@ts-ignore
     let result = await r.table('users').get(userid).pluck('first', 'last', 'phone', 'venmo').run(conn);
     return ({
         'first': result.first,
@@ -630,7 +619,6 @@ async function getRiderStatus (req: Request, res: Response): Promise<void> {
     }
 
     //get rider's entry in our user's db
-    //@ts-ignore
     let result = await r.table('users').get(id).pluck('inQueueOfUserID').run(conn);
 
     //we will be using the rider's beeper's id a lot, so make it a const
@@ -649,7 +637,6 @@ async function getRiderStatus (req: Request, res: Response): Promise<void> {
         let ridersQueuePosition = await r.table(beepersID).filter(r.row('timeEnteredQueue').lt(queueEntry.timeEnteredQueue).and(r.row('isAccepted').eq(true))).count().run(connQueues);
 
         //get beeper's information
-        //@ts-ignore
         let beepersInfo = await r.table('users').get(beepersID).pluck('first', 'last', 'phone', 'venmo', 'singlesRate', 'groupRate', 'queueSize').run(conn);
 
         let output;
@@ -894,7 +881,6 @@ async function setBeeperQueue (req: Request, res: Response): Promise<void> {
                 return;
             }
            
-            //@ts-ignore
             let newState = result.changes[0].new_val.state;
 
             switch(newState) {
@@ -942,7 +928,6 @@ function getBeeperList (req: Request, res: Response): void {
  * @return userid if token is valid, null otherwise
  */
 async function getQueueSize(userid: string): Promise<number> {
-    //@ts-ignore
     let size = await r.table("users").get(userid).pluck('queueSize').run(conn);
     return size.queueSize;
 }
@@ -993,7 +978,6 @@ async function sendNotification(userid: string, title: string, message: string):
  * @return string of users Expo push token
  */
 async function getPushToken(userid: string): Promise<string> {
-    //@ts-ignore
     const output = await r.table("users").get(userid).pluck('pushToken').run(conn);
     return output.pushToken;
 }
