@@ -9,7 +9,7 @@ import { conn } from "../utils/db";
  * @param message is the body of the push notification
  */
 export async function sendNotification(userid: string, title: string, message: string): Promise<void> {
-    let pushToken = await getPushToken(userid);
+    const pushToken = await getPushToken(userid);
 
     const req = request({
         host: "exp.host",

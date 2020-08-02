@@ -17,7 +17,7 @@ router.get('/list', getBeeperList);
 
 async function chooseBeep (req: Request, res: Response): Promise<void> {
     //get user's id
-    let id = await isTokenValid(req.body.token);
+    const id = await isTokenValid(req.body.token);
 
     //if id is null, user's token is not valid
     if (!id) {
@@ -111,7 +111,7 @@ async function chooseBeep (req: Request, res: Response): Promise<void> {
  */
 async function findBeep (req: Request, res: Response): Promise<void> {
     //get user's id
-    let id = await isTokenValid(req.body.token);
+    const id = await isTokenValid(req.body.token);
 
     //if id is null, user's token is not valid
     if (!id) {
@@ -163,7 +163,7 @@ async function findBeep (req: Request, res: Response): Promise<void> {
 
 async function getRiderStatus (req: Request, res: Response): Promise<void> {
     //get user's id
-    let id = await isTokenValid(req.body.token);
+    const id = await isTokenValid(req.body.token);
 
     //if id is null, user's token is not valid
     if (!id) {
@@ -244,7 +244,7 @@ async function getRiderStatus (req: Request, res: Response): Promise<void> {
  */
 async function riderLeaveQueue (req: Request, res: Response): Promise<void> {
     //get user's id
-    let id = await isTokenValid(req.body.token);
+    const id = await isTokenValid(req.body.token);
 
     //if id is null, user's token is not valid
     if (!id) {

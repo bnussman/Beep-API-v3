@@ -78,7 +78,7 @@ async function setBeeperStatus (req: Request, res: Response): Promise<void> {
  */
 async function getBeeperQueue (req: Request, res: Response): Promise<void> {
     //get user's id
-    let id = await isTokenValid(req.body.token);
+    const id = await isTokenValid(req.body.token);
 
     //if id is null, user's token is not valid
     if (!id) {
@@ -131,7 +131,7 @@ async function getPersonalInfo (userid: string): Promise<object> {
  */
 async function setBeeperQueue (req: Request, res: Response): Promise<void> {
     //get user's id
-    let id = await isTokenValid(req.body.token);
+    const id = await isTokenValid(req.body.token);
 
     //if id is null, user's token is not valid
     if (!id) {
