@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import * as r from 'rethinkdb';
 import { WriteResult } from 'rethinkdb';
-import { TokenData } from '../types/index.d';
+import { TokenData } from '../types/beep';
 import { conn } from '../utils/db';
 
 /**

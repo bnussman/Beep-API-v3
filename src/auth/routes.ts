@@ -3,7 +3,7 @@ import { Router, Request, Response } from 'express';
 import * as r from 'rethinkdb';
 import { Cursor, CursorError, WriteResult } from 'rethinkdb';
 import { conn, connQueues } from '../utils/db';
-import { User } from '../types/index.d';
+import { User } from '../types/beep';
 import { makeJSONSuccess, makeJSONError } from '../utils/json';
 import { sha256 } from 'js-sha256';
 import { getToken, setPushToken, isTokenValid } from './helpers';
