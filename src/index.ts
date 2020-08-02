@@ -6,6 +6,7 @@ import * as r from 'rethinkdb';
 import { CursorError, ReqlError, Cursor, WriteResult } from 'rethinkdb';
 import { conn, connQueues } from './database/db';
 import { TokenData, User } from './types/index.d';
+import { request } from "https";
 
 const app: Application = express();
 const port = 3001;
@@ -949,20 +950,23 @@ function makeJSONSuccess(message: string): object {
  */
 async function sendNotification(userid: string, title: string, message: string): Promise<void> {
     let pushToken = await getPushToken(userid);
-    
-    /*
-    fetch("https://exp.host/--/api/v2/push/send", {
+
+    const req = request({
+        host: "exp.host",
+        path: "/--/api/v2/push/send",
         method: "POST",
         headers: {
             'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            "to": pushToken,
-            "title": title,
-            "body": message
-        })
+        }
     });
-    */
+
+    req.write(JSON.stringify({
+        "to": pushToken,
+        "title": title,
+        "body": message 
+    }));
+
+    req.end();
 }
 
 /**
