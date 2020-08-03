@@ -1,6 +1,6 @@
 # Beep-API-v3
 
-##Installation and Run
+Installation and Run
 
 1. Clone this repository.
 ```git clone https://github.com/bnussman/Beep-API-v3.git```
