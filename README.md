@@ -6,7 +6,7 @@ Installation and Run
 ```git clone https://github.com/bnussman/Beep-API-v3.git```
 
 2. Go into the new directory
-```cd Beep-API-v3.git```
+```cd Beep-API-v3```
 
 3. Compile the Typescript. (A tsconfig.json is included)
 ```tsc```
