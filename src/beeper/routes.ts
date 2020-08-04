@@ -246,11 +246,10 @@ async function setBeeperQueue (req: Request, res: Response): Promise<void> {
                 case 2:
                     sendNotification(req.body.riderID, "Your beeper is here!", "Your beepr is here to pick you up.");
                     break;
-                /*
                 case 3:
-                    sendNotification(req.body.riderID, "Your beeper is on their way!", "Your beepr is on their way to pick you up.");
                     break;
-                */
+               default: 
+                   throw new Error("this should never happen");
             }
             
             res.send(makeJSONSuccess("Successfully changed ride state."));
