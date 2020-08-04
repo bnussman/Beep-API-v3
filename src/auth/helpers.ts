@@ -85,7 +85,7 @@ export async function hasUserLevel(userid: string, level: number): Promise<boole
  * @returns promice that resolves to null or a user's id
  */
 export async function isAdmin(token: string): Promise<string | null> {
-    const id = await isTokenValid(token);
+    const id: string | null = await isTokenValid(token);
 
     if (id) {
         const hasCorrectLevel = await hasUserLevel(id, 1);

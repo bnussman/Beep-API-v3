@@ -6,7 +6,8 @@ import { makeJSONSuccess, makeJSONError } from '../utils/json';
 import { isTokenValid } from "../auth/helpers";
 import { conn, connQueues } from '../utils/db';
 import { sendNotification } from '../utils/notifications';
-import { getQueueSize } from './helpers';
+import { getQueueSize, getPersonalInfo } from './helpers';
+import { UserPluckResult } from "../types/beep";
 
 const router: Router = express.Router();
 
@@ -20,12 +21,10 @@ router.post('/queue/status', setBeeperQueue);
  */
 function getBeeperStatus (req: Request, res: Response): void {
     //get isBeeping from user with id GET param in users db
-    r.table("users").get(req.params.id).pluck('isBeeping').run(conn, function (error: ReqlError, result: any) {
+    r.table("users").get(req.params.id).pluck('isBeeping').run(conn, function (error: ReqlError, result: UserPluckResult) {
         //if there was an error, notify user with REST API.
         if (error) {
-            res.send(makeJSONError("Unable to get beeping status."));
-            console.log(error);
-            return;
+            throw error;
         }
         //We have no error, send the resulting data from query.
         res.send({
@@ -87,12 +86,10 @@ async function getBeeperQueue (req: Request, res: Response): Promise<void> {
     }
 
     //get beeper's queue ordered by the time each rider entered the queue so the order makes sence for the beeper
-    r.table(id).orderBy('timeEnteredQueue').run(connQueues, async function (error: any, result: any) {
+    r.table(id).orderBy('timeEnteredQueue').run(connQueues, async function (error: Error, result: any) {
         //Handle any RethinkDB error
         if (error) {
-            res.send(makeJSONError("Unable to get beeper's queue due to a server error."));
-            console.log(error);
-            return;
+            throw error;
         }
 
         //for every entry in a beeper's queue, add personal info
@@ -108,23 +105,6 @@ async function getBeeperQueue (req: Request, res: Response): Promise<void> {
         });
     });
 }
-
-/**
- * Helper function that, given a user's id, will return that user's personal info
- * @param userid
- * @return json-like object (or array?) thing with personal info
- */
-async function getPersonalInfo (userid: string): Promise<object> {
-    //RethinkDB query gets data from users db at userid
-    let result = await r.table('users').get(userid).pluck('first', 'last', 'phone', 'venmo').run(conn);
-    return ({
-        'first': result.first,
-        'last': result.last,
-        'phone': result.phone,
-        'venmo': result.venmo
-    });
-}
-
 
 /**
  * API function that allows beeper to modify the status of a rider in their queue
@@ -180,12 +160,10 @@ async function setBeeperQueue (req: Request, res: Response): Promise<void> {
 
     if (req.body.value == 'accept') {
         //RethinkDB query that modifies record in beeper's queue, setting isAccepted to true for specific rider
-        r.table(id).get(req.body.queueID).update({'isAccepted': true}).run(connQueues, function (error) {
+        r.table(id).get(req.body.queueID).update({'isAccepted': true}).run(connQueues, function (error: Error) {
             //handle RethinkDB errors
             if (error) {
-                res.send(makeJSONError("Unable to accept rider due to a server error."));
-                console.log(error);
-                return;
+                throw error;
             }
 
             //if we made it here, accept occoured successfully

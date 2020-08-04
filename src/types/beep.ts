@@ -22,3 +22,22 @@ export interface User {
     queueSize: number;
     userLevel: number;
 }
+
+export interface UserPluckResult {
+    id?: string;
+    first?: string;
+    last?: string;
+    email?: string;
+    phone?: string;
+    venmo?: string;
+    username?: string;
+    password?: string;
+    capacity?: number;
+    singlesRate?: number;
+    groupRate?: number;
+    pushToken?: string | null;
+    inQueueOfUserID?: string | null;
+    isBeeping?: boolean;
+    queueSize?: number;
+    userLevel?: number;
+}
