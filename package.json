@@ -9,8 +9,8 @@
         "start": "node build/index.js"
     },
     "repository": {
-      "type": "git",
-      "url": "https://github.com/bnussman/Beep-API-v3.git"
+        "type": "git",
+        "url": "https://github.com/bnussman/Beep-API-v3.git"
     },
     "author": "Banks Nussman",
     "license": "ISC",

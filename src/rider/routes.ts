@@ -1,7 +1,7 @@
 import express = require('express');
 import { Router, Request, Response } from 'express';
 import * as r from 'rethinkdb';
-import { CursorError } from 'rethinkdb';
+import { CursorError, WriteResult, Cursor } from 'rethinkdb';
 import { makeJSONSuccess, makeJSONError } from '../utils/json';
 import { isTokenValid } from "../auth/helpers";
 import { conn, connQueues } from '../utils/db';
@@ -24,7 +24,7 @@ async function chooseBeep (req: Request, res: Response): Promise<void> {
         res.send(makeJSONError("Your token is not valid."));
         return;
     }
-
+    
     const result = await r.table('users').get(req.body.beepersID).pluck('first', 'last', 'queueSize', 'singlesRate', 'groupRate', 'isBeeping').run(conn);
 
     if (!result.isBeeping) {
@@ -43,50 +43,29 @@ async function chooseBeep (req: Request, res: Response): Promise<void> {
         'state': 0
     };
 
-    //insert newEntry into beeper's queue table
-    r.table(req.body.beepersID).insert(newEntry).run(connQueues, function (error, result) {
-        //handle any RethinkDB error
-        if (error) {
-            res.send(makeJSONError("Server error while creating new entry in beeper's queue table."));
-            console.log(error);
-            return;
-        }
-        //ensure we actually inserted something
-        if (result.inserted != 1) {
-            res.send(makeJSONError("Nothing was inserted into beeper's queue table. This should not have happended..."));
-            return;
-        }
-    });
+    try {
+        //insert newEntry into beeper's queue table
+        r.table(req.body.beepersID).insert(newEntry).run(connQueues);
+    }
+    catch (error) {
+        throw new error;
+    }
 
-    //update beeper's queue size in the users table
-    r.table('users').get(req.body.beepersID).update({'queueSize': r.row('queueSize').add(1)}).run(conn, function (error, result) {
-        //handle any RethinkDB error
-        if (error) {
-            res.send(makeJSONError("Server error while incrementing beeper's queue size"));
-            console.log(error);
-            return;
-        }
-        //ensure we actually updated something
-        if (result.replaced != 1) {
-            res.send(makeJSONError("Nothing was changed in beeper's queue table. This should not have happended..."));
-            return;
-        }
-    });
+    try {
+        //update beeper's queue size in the users table
+        r.table('users').get(req.body.beepersID).update({'queueSize': r.row('queueSize').add(1)}).run(conn);
+    }
+    catch (error) {
+        throw new error;
+    }
 
-    //update rider's inQueueOfUserID
-    r.table('users').get(id).update({'inQueueOfUserID': req.body.beepersID}).run(conn, function (error, result) {
-        //handle any RethinkDB error
-        if (error) {
-            res.send(makeJSONError("Server error while updating 'inQueueOfUserID' for rider"));
-            console.log(error);
-            return;
-        }
-        //ensure we actually updated something
-        if (result.replaced != 1) {
-            res.send(makeJSONError("Nothing was changed in beeper's queue table. This should not have happended..."));
-            return;
-        }
-    });
+    try {
+        //update rider's inQueueOfUserID
+        r.table('users').get(id).update({'inQueueOfUserID': req.body.beepersID}).run(conn);
+    }
+    catch (error) {
+        throw new error;
+    }
 
     //Tell Beeper someone entered their queue
     sendNotification(req.body.beepersID, "A rider has entered your queue", "Please open your app to accept or deny them.");
@@ -121,12 +100,10 @@ async function findBeep (req: Request, res: Response): Promise<void> {
 
     //rethinkdb query to search users table (in acending order by queueSize) for users where isBeeping is true
     //and id is not equal to requester's, and limit by 1 to decide a riders beeper
-    r.table('users').orderBy({'index': 'queueSize'}).filter(r.row('isBeeping').eq(true).and(r.row('id').ne(id))).limit(1).run(conn, function (error, cursor) {
+    r.table('users').orderBy({'index': 'queueSize'}).filter(r.row('isBeeping').eq(true).and(r.row('id').ne(id))).limit(1).run(conn, function (error: Error, cursor: Cursor) {
         //Handle any RethinkDB error
         if (error) {
-            res.send(makeJSONError("Unable to find a beep due to a backend error."));
-            console.log(error);
-            return;
+            throw error;
         }
 
         //this paticular RethinkDB query will return an iterable object, so use next to get the beeper
@@ -251,51 +228,27 @@ async function riderLeaveQueue (req: Request, res: Response): Promise<void> {
         res.send(makeJSONError("Your token is not valid."));
         return;
     }
+    
+    try {
+        //delete entry in beeper's queue table
+        r.table(req.body.beepersID).filter({'riderid': id}).delete().run(connQueues);
+    } catch (error) {
+        throw new error;
+    }
+    
+    try {
+        //decreace beeper's queue size
+        r.table('users').get(req.body.beepersID).update({'queueSize': r.row('queueSize').sub(1)}).run(conn);
+    } catch (error) {
+        throw new error;
+    }
 
-    //delete entry in beeper's queue table
-    r.table(req.body.beepersID).filter({'riderid': id}).delete().run(connQueues, function (error, result) {
-        //handle any RethinkDB error
-        if (error) {
-            res.send(makeJSONError("Server error while deleting queue entry in beeper's queue table"));
-            console.log(error);
-            return;
-        }
-        //ensure we actually deleted something
-        if (result.deleted != 1) {
-            res.send(makeJSONError("Nothing was deleted into beeper's queue table. This should not have happended..."));
-            return;
-        }
-    });
-
-    //decreace beeper's queue size
-    r.table('users').get(req.body.beepersID).update({'queueSize': r.row('queueSize').sub(1)}).run(conn, function (error, result) {
-        //handle any RethinkDB error
-        if (error) {
-            res.send(makeJSONError("Server error while decrementing beeper's queue size"));
-            console.log(error);
-            return;
-        }
-        //ensure we actually updated something
-        if (result.replaced != 1) {
-            res.send(makeJSONError("Nothing was changed in beeper's queue table. This should not have happended..."));
-            return;
-        }
-    });
-
-    //set rider's inQueueOfUserID value to null because they are no longer in a queue
-    r.table('users').get(id).update({'inQueueOfUserID': null}).run(conn, function (error, result) {
-        //handle any RethinkDB error
-        if (error) {
-            res.send(makeJSONError("Server error while updating 'inQueueOfUserID' for rider"));
-            console.log(error);
-            return;
-        }
-        //ensure we actually updated something
-        if (result.replaced != 1) {
-            res.send(makeJSONError("Nothing was changed in beeper's queue table. This should not have happended..."));
-            return;
-        }
-    });
+    try {
+        //set rider's inQueueOfUserID value to null because they are no longer in a queue
+        r.table('users').get(id).update({'inQueueOfUserID': null}).run(conn);
+    } catch (error) {
+        throw new error;
+    }
 
     //if we made it to this point, we successfully removed a user from the queue.
     res.send(makeJSONSuccess("Successfully removed user from queue."));
@@ -307,8 +260,7 @@ async function riderLeaveQueue (req: Request, res: Response): Promise<void> {
 function getBeeperList (req: Request, res: Response): void {
     r.table("users").filter({isBeeping: true}).pluck('first', 'last', 'queueSize', 'id', 'singlesRate', 'groupRate', 'capacity').run(conn, async function (error: Error, result) {
         if (error) {
-            console.log(error);
-            return;
+            throw error;
         }
 
         const list = await result.toArray();
