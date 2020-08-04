@@ -14,6 +14,7 @@ router.post('/login', login);
 router.post('/signup', signup);
 router.post('/logout', logout);
 router.post('/token', removeToken);
+router.post('/password/forgot', forgotPassword);
 
 /**
  * API function to handle a login
@@ -196,6 +197,9 @@ function removeToken (req: Request, res: Response): void {
             res.send(makeJSONError("Token was not deleted in our database."));
         }
     });
+}
+
+function forgotPassword (req: Request, res: Response) {
 }
 
 export = router;
