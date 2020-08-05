@@ -1,5 +1,10 @@
 # Beep-API-v3
 
+Prerequesists
+1. npm
+2. tsc 
+3. Envrionment Varibles: ```MAIL_PASSWORD=<password>```
+
 Installation and Run
 
 1. Clone this repository.
@@ -8,8 +13,11 @@ Installation and Run
 2. Go into the new directory
 ```cd Beep-API-v3```
 
-3. Compile the Typescript. (A tsconfig.json is included)
+3. Install dependencies
+```npm install```
+
+4. Compile the Typescript. (A tsconfig.json is included)
 ```tsc```
 
-4. Run with Node.js
+5. Run with Node.js
 ```node build/index.js```
