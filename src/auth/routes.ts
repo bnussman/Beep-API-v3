@@ -6,7 +6,8 @@ import { conn, connQueues } from '../utils/db';
 import { User } from '../types/beep';
 import { makeJSONSuccess, makeJSONError } from '../utils/json';
 import { sha256 } from 'js-sha256';
-import { getToken, setPushToken, isTokenValid } from './helpers';
+import { getToken, setPushToken, isTokenValid, getUser, sendResetEmail } from './helpers';
+import { UserPluckResult } from "../types/beep";
 
 const router: Router = express.Router();
 
@@ -199,7 +200,27 @@ function removeToken (req: Request, res: Response): void {
     });
 }
 
-function forgotPassword (req: Request, res: Response) {
+async function forgotPassword (req: Request, res: Response) {
+    const user: UserPluckResult | null = await getUser(req.body.email, "id", "first");
+
+    if (user) {
+        const doccument = {
+            "userid": user.id,
+            "time": Date.now()
+        }; 
+
+        const result: WriteResult = await r.table("passwordReset").insert(doccument).run(conn);
+
+        const id: string = result.generated_keys[0];
+
+        //now send an email with some link inside like https://ridebeep.app/password/reset/ba386adf-743a-434e-acfe-98bdce47d484	
+        sendResetEmail(req.body.email, id, user.first);
+
+        res.send(makeJSONSuccess("Successfully sent email."));
+    }
+    else {
+        res.send(makeJSONError("User not found."));
+    }
 }
 
 export = router;

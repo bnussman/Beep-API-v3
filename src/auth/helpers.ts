@@ -1,8 +1,9 @@
 import { v4 as uuidv4 } from 'uuid';
 import * as r from 'rethinkdb';
-import { WriteResult } from 'rethinkdb';
-import { TokenData } from '../types/beep';
+import { WriteResult, Cursor } from 'rethinkdb';
+import { TokenData, UserPluckResult } from '../types/beep';
 import { conn } from '../utils/db';
+import * as nodemailer from "nodemailer";
 
 /**
  * Generates an authentication token and a token for that token (for offline logouts), stores
@@ -95,4 +96,58 @@ export async function isAdmin(token: string): Promise<string | null> {
         }
     }
     return null;
+}
+
+export async function getUser(email: string, ...pluckItems: string[]): Promise<UserPluckResult | null> {
+    try {
+        let cursor: Cursor;
+        //if no pluck items were passed in, don't pluck anything
+        if (pluckItems.length == 0) {
+            cursor = await r.table("users").filter({ 'email': email }).limit(1).run(conn);
+        }
+        else {
+            cursor = await r.table("users").filter({ 'email': email }).pluck(...pluckItems).limit(1).run(conn);
+        }
+        
+        try {
+            const result: UserPluckResult = await cursor.next();
+            return result;
+        } catch (error) {
+            //error is telling us there is no row result from the db, not really an errro
+            return null;
+        }
+
+    } catch (error) {
+        throw new error;
+    }
+}
+
+export function sendResetEmail(email: string, id: string, first: string | undefined): void {
+    const transporter = nodemailer.createTransport({
+        host: "smtp.gmail.com",
+        port: 465,
+        secure: true,
+        auth: {
+            user: "banks@nussman.us",
+            pass: process.env.MAIL_PASSWORD
+        }
+    }); 
+ 
+    const mailOptions: nodemailer.SendMailOptions = { 
+        from : 'banks@nussman.us', 
+        to : email, 
+        subject : 'Change your Beep App password', 
+        html: `Hey ${first}, <br><br>
+            Head to https://ridebeep.app/password/reset/${id} to reset your password. <br><br>
+            Roll Neers, <br>
+            -Banks Nussman
+        ` 
+    }; 
+
+    transporter.sendMail(mailOptions, (error: Error | null, info: nodemailer.SentMessageInfo) => { 
+        if (error) { 
+            throw error;
+        } 
+        console.log("Successfully sent email: ", info); 
+    });     
 }
