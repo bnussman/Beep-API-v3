@@ -134,14 +134,13 @@ export function sendResetEmail(email: string, id: string, first: string | undefi
     }); 
 
     const url: string = process.env.NODE_ENV === "development" ? "https://dev.ridebeep.app" : "https://ridebeep.app";
-    console.log(process.env.NODE_ENV);
  
     const mailOptions: nodemailer.SendMailOptions = { 
         from : 'banks@nussman.us', 
         to : email, 
         subject : 'Change your Beep App password', 
         html: `Hey ${first}, <br><br>
-            Head to ${url}/password/reset/${id} to reset your password. <br><br>
+            Head to ${url}/password/reset/${id} to reset your password. This link will expire in an hour. <br><br>
             Roll Neers, <br>
             -Banks Nussman
         ` 
@@ -161,6 +160,16 @@ export function deactivateTokens(userid: string) {
     try {
         r.table("tokens").filter({ userid: userid }).delete().run(conn);
     }
+    catch (error) {
+        throw error;
+    }
+}
+
+export async function cleanPasswordResetTable() {
+    try { 
+        //delete any password reset requests that were requested over an hour ago
+        await r.table("passwordReset").filter((r.row("time").add(3600 * 1000)).lt(Date.now())).delete().run(conn);
+    } 
     catch (error) {
         throw error;
     }

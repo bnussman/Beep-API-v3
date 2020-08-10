@@ -6,7 +6,7 @@ import { conn, connQueues } from '../utils/db';
 import { User } from '../types/beep';
 import { makeJSONSuccess, makeJSONError } from '../utils/json';
 import { sha256 } from 'js-sha256';
-import { getToken, setPushToken, isTokenValid, getUser, sendResetEmail, deactivateTokens } from './helpers';
+import { getToken, setPushToken, isTokenValid, getUser, sendResetEmail, deactivateTokens, cleanPasswordResetTable } from './helpers';
 import { UserPluckResult } from "../types/beep";
 
 const router: Router = express.Router();
@@ -202,24 +202,45 @@ function removeToken (req: Request, res: Response): void {
 }
 
 async function forgotPassword (req: Request, res: Response) {
-    //TODO make sure the user has not already put in a request to reset their password
-
     const user: UserPluckResult | null = await getUser(req.body.email, "id", "first");
 
     if (user) {
+        try {
+            const result = await r.table("passwordReset").filter({ userid: user.id }).run(conn);
+            try { 
+                const entry = await result.next();
+
+                if (entry) {
+                    sendResetEmail(req.body.email, entry.id, user.first);
+                    res.send(makeJSONError("You have already requested to reset your password. We have re-sent your email. Check your email and follow the instructions."));
+                    return;
+                }
+            }
+            catch (error) {
+                console.log("There are no exisiting requests for changing password, proceed with forgot password.");
+            }
+        }
+        catch (error) {
+            throw error;
+        }
+
         const doccument = {
             "userid": user.id,
             "time": Date.now()
         }; 
+        try {
+            const result: WriteResult = await r.table("passwordReset").insert(doccument).run(conn);
 
-        const result: WriteResult = await r.table("passwordReset").insert(doccument).run(conn);
+            const id: string = result.generated_keys[0];
 
-        const id: string = result.generated_keys[0];
+            //now send an email with some link inside like https://ridebeep.app/password/reset/ba386adf-743a-434e-acfe-98bdce47d484	
+            sendResetEmail(req.body.email, id, user.first);
 
-        //now send an email with some link inside like https://ridebeep.app/password/reset/ba386adf-743a-434e-acfe-98bdce47d484	
-        sendResetEmail(req.body.email, id, user.first);
-
-        res.send(makeJSONSuccess("Successfully sent email."));
+            res.send(makeJSONSuccess("Successfully sent email."));
+        }
+        catch (error) {
+            throw error;
+        }
     }
     else {
         res.send(makeJSONError("User not found."));
@@ -227,6 +248,8 @@ async function forgotPassword (req: Request, res: Response) {
 }
 
 async function resetPassword (req: Request, res: Response) {
+    await cleanPasswordResetTable();
+
     try {
         const user: WriteResult = await r.table("passwordReset").get(req.body.id).delete({returnChanges: true}).run(conn);
         const userid = user.changes[0].old_val.userid;
@@ -234,8 +257,6 @@ async function resetPassword (req: Request, res: Response) {
         try {
             await r.table("users").get(userid).update({ password: sha256(req.body.password) }).run(conn);
             res.send(makeJSONSuccess("Successfully reset your password!"));
-
-            //TODO: would it be smart to de-activate any tokens the user has active?
             deactivateTokens(userid);
         }
         catch (error) {
@@ -243,7 +264,7 @@ async function resetPassword (req: Request, res: Response) {
         }
     }
     catch (error) {
-        res.send(makeJSONError("Invalid password reset request."));
+        res.send(makeJSONError("Invalid password reset request. Your time may have expired."));
     }
 }
 
