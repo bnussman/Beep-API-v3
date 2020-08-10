@@ -3,7 +3,7 @@
 Prerequesists
 1. npm
 2. tsc 
-3. Envrionment Varibles: ```MAIL_PASSWORD=<password>```
+3. Envrionment Varibles: ```MAIL_PASSWORD=<password>```, ```NODE_ENV=<development | production>```
 
 Installation and Run
 
