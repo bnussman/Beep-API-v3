@@ -6,7 +6,7 @@ import { conn, connQueues } from '../utils/db';
 import { User } from '../types/beep';
 import { makeJSONSuccess, makeJSONError } from '../utils/json';
 import { sha256 } from 'js-sha256';
-import { getToken, setPushToken, isTokenValid, getUser, sendResetEmail } from './helpers';
+import { getToken, setPushToken, isTokenValid, getUser, sendResetEmail, deactivateTokens } from './helpers';
 import { UserPluckResult } from "../types/beep";
 
 const router: Router = express.Router();
@@ -228,16 +228,15 @@ async function forgotPassword (req: Request, res: Response) {
 
 async function resetPassword (req: Request, res: Response) {
     try {
-        const user = await r.table("passwordReset").get(req.body.id).pluck("userid").run(conn);
+        const user: WriteResult = await r.table("passwordReset").get(req.body.id).delete({returnChanges: true}).run(conn);
+        const userid = user.changes[0].old_val.userid;
 
         try {
-            await r.table("users").get(user.userid).update({ password: sha256(req.body.password) }).run(conn);
+            await r.table("users").get(userid).update({ password: sha256(req.body.password) }).run(conn);
             res.send(makeJSONSuccess("Successfully reset your password!"));
 
-            //TODO: this can be consolidated into one query with the first query
-            r.table("passwordReset").get(req.body.id).delete().run(conn);
-
             //TODO: would it be smart to de-activate any tokens the user has active?
+            deactivateTokens(userid);
         }
         catch (error) {
             throw error;

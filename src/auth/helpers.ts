@@ -156,3 +156,12 @@ export function sendResetEmail(email: string, id: string, first: string | undefi
         console.log("Successfully sent email: ", info); 
     });     
 }
+
+export function deactivateTokens(userid: string) {
+    try {
+        r.table("tokens").filter({ userid: userid }).delete().run(conn);
+    }
+    catch (error) {
+        throw error;
+    }
+}
