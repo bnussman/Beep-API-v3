@@ -132,13 +132,16 @@ export function sendResetEmail(email: string, id: string, first: string | undefi
             pass: process.env.MAIL_PASSWORD
         }
     }); 
+
+    const url: string = process.env.NODE_ENV === "development" ? "https://dev.ridebeep.app" : "https://ridebeep.app";
+    console.log(process.env.NODE_ENV);
  
     const mailOptions: nodemailer.SendMailOptions = { 
         from : 'banks@nussman.us', 
         to : email, 
         subject : 'Change your Beep App password', 
         html: `Hey ${first}, <br><br>
-            Head to https://ridebeep.app/password/reset/${id} to reset your password. <br><br>
+            Head to ${url}/password/reset/${id} to reset your password. <br><br>
             Roll Neers, <br>
             -Banks Nussman
         ` 
@@ -147,7 +150,9 @@ export function sendResetEmail(email: string, id: string, first: string | undefi
     transporter.sendMail(mailOptions, (error: Error | null, info: nodemailer.SentMessageInfo) => { 
         if (error) { 
             throw error;
+            //TODO return false if error in prod
         } 
+        //retun true 
         console.log("Successfully sent email: ", info); 
     });     
 }
