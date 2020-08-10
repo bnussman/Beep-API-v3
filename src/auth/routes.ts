@@ -16,6 +16,7 @@ router.post('/signup', signup);
 router.post('/logout', logout);
 router.post('/token', removeToken);
 router.post('/password/forgot', forgotPassword);
+router.post('/password/reset', resetPassword);
 
 /**
  * API function to handle a login
@@ -201,6 +202,8 @@ function removeToken (req: Request, res: Response): void {
 }
 
 async function forgotPassword (req: Request, res: Response) {
+    //TODO make sure the user has not already put in a request to reset their password
+
     const user: UserPluckResult | null = await getUser(req.body.email, "id", "first");
 
     if (user) {
@@ -220,6 +223,28 @@ async function forgotPassword (req: Request, res: Response) {
     }
     else {
         res.send(makeJSONError("User not found."));
+    }
+}
+
+async function resetPassword (req: Request, res: Response) {
+    try {
+        const user = await r.table("passwordReset").get(req.body.id).pluck("userid").run(conn);
+
+        try {
+            await r.table("users").get(user.userid).update({ password: sha256(req.body.password) }).run(conn);
+            res.send(makeJSONSuccess("Successfully reset your password!"));
+
+            //TODO: this can be consolidated into one query with the first query
+            r.table("passwordReset").get(req.body.id).delete().run(conn);
+
+            //TODO: would it be smart to de-activate any tokens the user has active?
+        }
+        catch (error) {
+            throw error;
+        }
+    }
+    catch (error) {
+        res.send(makeJSONError("Invalid password reset request."));
     }
 }
 
