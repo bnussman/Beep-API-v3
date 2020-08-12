@@ -1,8 +1,9 @@
 import express = require('express');
 import { Router, Request, Response } from 'express';
+import { WriteResult } from "rethinkdb";
 import * as r from 'rethinkdb';
 import { sha256 } from 'js-sha256';
-import { makeJSONSuccess, makeJSONError } from '../utils/json';
+import { makeJSONSuccess, makeJSONError, makeJSONWarning } from '../utils/json';
 import { isTokenValid } from "../auth/helpers";
 import { conn } from '../utils/db';
 
@@ -21,9 +22,13 @@ async function editAccount (req: Request, res: Response): Promise<void> {
         return;
     }
 
-    r.table("users").get(id).update({first: req.body.first, last: req.body.last, email: req.body.email, phone: req.body.phone, venmo: req.body.venmo}).run(conn, function (error: Error) {
+    r.table("users").get(id).update({first: req.body.first, last: req.body.last, email: req.body.email, phone: req.body.phone, venmo: req.body.venmo}).run(conn, function (error: Error, result: WriteResult) {
         if (error) {
             throw error;
+        }
+        if (result.unchanged > 0) {
+            res.send(makeJSONWarning("Nothing was changed about your profile."));
+            return;
         }
         res.send(makeJSONSuccess("Successfully edited profile."));
     });

@@ -98,7 +98,13 @@ export async function isAdmin(token: string): Promise<string | null> {
     return null;
 }
 
-export async function getUser(email: string, ...pluckItems: string[]): Promise<UserPluckResult | null> {
+/**
+ * get user data given an email
+ * @param email string of user's email
+ * @param pluckItems are items we want to pluck in the db query 
+ * @returns Promise<UserPluckResult>
+ */
+export async function getUserFromEmail(email: string, ...pluckItems: string[]): Promise<UserPluckResult | null> {
     try {
         let cursor: Cursor;
         //if no pluck items were passed in, don't pluck anything
@@ -122,6 +128,12 @@ export async function getUser(email: string, ...pluckItems: string[]): Promise<U
     }
 }
 
+/**
+ * Helper function to send password reset email to user
+ * @param email who to send the email to
+ * @param id is the passowrdReset entry (NOT the user's id)
+ * @param first is the first name of the recipiant so email is more personal
+ */
 export function sendResetEmail(email: string, id: string, first: string | undefined): void {
     const transporter = nodemailer.createTransport({
         host: "smtp.gmail.com",
@@ -156,7 +168,11 @@ export function sendResetEmail(email: string, id: string, first: string | undefi
     });     
 }
 
-export function deactivateTokens(userid: string) {
+/**
+ * Helper function that deactives all auth tokens for user by their userid
+ * @param userid string of their user id
+ */
+export function deactivateTokens(userid: string): void {
     try {
         r.table("tokens").filter({ userid: userid }).delete().run(conn);
     }
@@ -164,8 +180,11 @@ export function deactivateTokens(userid: string) {
         throw error;
     }
 }
-
-export async function cleanPasswordResetTable() {
+/**
+ * Helper function that will run a db query on passwordReset table to delete entries
+ * where the time is less than an hour ago, meaning it expired.
+ */
+export async function cleanPasswordResetTable(): Promise<void> {
     try { 
         //delete any password reset requests that were requested over an hour ago
         await r.table("passwordReset").filter((r.row("time").add(3600 * 1000)).lt(Date.now())).delete().run(conn);

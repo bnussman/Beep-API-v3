@@ -6,7 +6,7 @@ import { conn, connQueues } from '../utils/db';
 import { User } from '../types/beep';
 import { makeJSONSuccess, makeJSONError } from '../utils/json';
 import { sha256 } from 'js-sha256';
-import { getToken, setPushToken, isTokenValid, getUser, sendResetEmail, deactivateTokens, cleanPasswordResetTable } from './helpers';
+import { getToken, setPushToken, isTokenValid, getUserFromEmail, sendResetEmail, deactivateTokens, cleanPasswordResetTable } from './helpers';
 import { UserPluckResult } from "../types/beep";
 
 const router: Router = express.Router();
@@ -182,6 +182,8 @@ async function logout (req: Request, res: Response): Promise<void> {
 /**
  * API function that handles revoking an auth token given a tokenid (an offline logout)
  * TODO: rather than having this function, just use logout and post data accordingly
+ * @param req
+ * @param res
  */
 function removeToken (req: Request, res: Response): void {
     //RethinkDB query to delete entry in tokens table.
@@ -201,8 +203,13 @@ function removeToken (req: Request, res: Response): void {
     });
 }
 
-async function forgotPassword (req: Request, res: Response) {
-    const user: UserPluckResult | null = await getUser(req.body.email, "id", "first");
+/**
+ * API function to handle user forgetting a password
+ * @param req
+ * @param res
+ */
+async function forgotPassword (req: Request, res: Response): Promise<void> {
+    const user: UserPluckResult | null = await getUserFromEmail(req.body.email, "id", "first");
 
     if (user) {
         try {
@@ -247,6 +254,11 @@ async function forgotPassword (req: Request, res: Response) {
     }
 }
 
+/**
+ * API function to handle user resetting their password after getting reset email
+ * @param req
+ * @param res
+ */
 async function resetPassword (req: Request, res: Response) {
     await cleanPasswordResetTable();
 
