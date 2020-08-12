@@ -11,6 +11,7 @@ const router: Router = express.Router();
 
 router.post('/edit', editAccount);
 router.post('/password', changePassword);
+router.post('/pushtoken', updatePushToken);
 
 async function editAccount (req: Request, res: Response): Promise<void> {
     //check if auth token is valid before processing the request to update push token
@@ -51,6 +52,24 @@ async function changePassword (req: Request, res: Response): Promise<void> {
             throw error;
         }
         res.send(makeJSONSuccess("Successfully changed password."));
+    });
+}
+
+async function updatePushToken (req: Request, res: Response): Promise<void> {
+    //check if auth token is valid before processing the request to update push token
+    const id = await isTokenValid(req.body.token);
+
+    if (!id) {
+        //if there is no id returned, the token is not valid.
+        res.send(makeJSONError("Your auth token is not valid."));
+        return;
+    }
+
+    r.table("users").get(id).update({pushToken: req.body.expoPushToken}).run(conn, function (error: Error) {
+        if (error) {
+            throw error;
+        }
+        res.send(makeJSONSuccess("Successfully updated push token."));
     });
 }
 
