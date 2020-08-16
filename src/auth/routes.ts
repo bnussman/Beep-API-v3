@@ -209,7 +209,13 @@ function removeToken (req: Request, res: Response): void {
  * @param res
  */
 async function forgotPassword (req: Request, res: Response): Promise<void> {
-    const user: UserPluckResult | null = await getUserFromEmail(req.body.email, "id", "first");
+    let user: UserPluckResult | null;
+    try {
+        user = await getUserFromEmail(req.body.email, "id", "first");
+    }
+    catch(error) {
+        throw error;
+    }
 
     if (user) {
         try {

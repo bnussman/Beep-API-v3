@@ -17,11 +17,13 @@ let conn: Connection;
 let connQueues: Connection;
 
 r.connect(connOptions).then((connection: Connection) => {
+    console.log("connected to beep db");
     conn = connection;
-});
+}).catch((error) => {console.log(error)});
 
 r.connect(connQueuesOptions).then((connection: Connection) => {
+    console.log("connected to queue db");
     connQueues = connection;
-});
+}).catch((error) => {console.log(error)});
 
 export { conn, connQueues };
