@@ -258,7 +258,7 @@ async function riderLeaveQueue (req: Request, res: Response): Promise<void> {
  * API endpoint to return a JSON responce with a status and list of all users beeping
  */
 function getBeeperList (req: Request, res: Response): void {
-    r.table("users").filter({isBeeping: true}).pluck('first', 'last', 'queueSize', 'id', 'singlesRate', 'groupRate', 'capacity').run(conn, async function (error: Error, result) {
+    r.table("users").filter({isBeeping: true}).pluck('first', 'last', 'queueSize', 'id', 'singlesRate', 'groupRate', 'capacity', 'userLevel', 'isStudent').run(conn, async function (error: Error, result) {
         if (error) {
             throw error;
         }
