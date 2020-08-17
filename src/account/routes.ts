@@ -93,10 +93,16 @@ async function updatePushToken (req: Request, res: Response): Promise<void> {
 async function verifyAccount (req: Request, res: Response): Promise<void> {
     try {
         const result: WriteResult = await r.table("verifyEmail").get(req.body.id).delete({returnChanges: true}).run(conn);
+
         const userid = result.changes[0].old_val.userid;
         const email = result.changes[0].old_val.email;
+        const time = result.changes[0].old_val.time;
 
-        //TODO make sure email is the same email that is in their user's document
+        if ((time * (3600 * 1000)) < Date.now()) {
+            res.send(makeJSONError("Your verification token has expired."));
+            return;
+        }
+
         const usersEmail: string | undefined = await getEmail(userid);
 
         if(!usersEmail) {
@@ -127,7 +133,7 @@ async function verifyAccount (req: Request, res: Response): Promise<void> {
         }
     }
     catch (error) {
-        res.send(makeJSONError("Invalid verify email request. Your token may have expired."));
+        res.send(makeJSONError("Invalid verify email token"));
     }
 }
 

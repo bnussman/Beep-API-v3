@@ -180,19 +180,6 @@ export function deactivateTokens(userid: string): void {
         throw error;
     }
 }
-/**
- * Helper function that will run a db query on passwordReset table to delete entries
- * where the time is less than an hour ago, meaning it expired.
- */
-export async function cleanPasswordResetTable(): Promise<void> {
-    try { 
-        //delete any password reset requests that were requested over an hour ago
-        await r.table("passwordReset").filter((r.row("time").add(3600 * 1000)).lt(Date.now())).delete().run(conn);
-    } 
-    catch (error) {
-        throw error;
-    }
-}
 
 export function sendVerifyEmailEmail(email: string, id: string, first: string | undefined): void {
     const transporter = nodemailer.createTransport({

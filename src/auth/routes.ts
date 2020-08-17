@@ -274,11 +274,16 @@ async function forgotPassword (req: Request, res: Response): Promise<void> {
  * @param res
  */
 async function resetPassword (req: Request, res: Response) {
-    await cleanPasswordResetTable();
-
     try {
         const user: WriteResult = await r.table("passwordReset").get(req.body.id).delete({returnChanges: true}).run(conn);
+
         const userid = user.changes[0].old_val.userid;
+        const time: number = user.changes[0].old_val.time;
+
+        if ((time * (3600 * 1000)) < Date.now()) {
+            res.send(makeJSONError("Your verification token has expired"));
+            return;
+        }
 
         try {
             await r.table("users").get(userid).update({ password: sha256(req.body.password) }).run(conn);
@@ -290,7 +295,7 @@ async function resetPassword (req: Request, res: Response) {
         }
     }
     catch (error) {
-        res.send(makeJSONError("Invalid password reset request. Your token may have expired."));
+        res.send(makeJSONError("Invalid password reset token"));
     }
 }
 
