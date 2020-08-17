@@ -193,3 +193,55 @@ export async function cleanPasswordResetTable(): Promise<void> {
         throw error;
     }
 }
+
+export function sendVerifyEmailEmail(email: string, id: string, first: string | undefined): void {
+    const transporter = nodemailer.createTransport({
+        host: "smtp.gmail.com",
+        port: 465,
+        secure: true,
+        auth: {
+            user: "banks@nussman.us",
+            pass: process.env.MAIL_PASSWORD
+        }
+    }); 
+
+    const url: string = process.env.NODE_ENV === "development" ? "https://dev.ridebeep.app" : "https://ridebeep.app";
+ 
+    const mailOptions: nodemailer.SendMailOptions = { 
+        from : 'banks@nussman.us', 
+        to : email, 
+        subject : 'Verify your Beep App Email!', 
+        html: `Hey ${first}, <br><br>
+            Head to ${url}/account/verify/${id} to verify your email. This link will expire in an hour. <br><br>
+            Roll Neers, <br>
+            -Banks Nussman
+        ` 
+    }; 
+
+    transporter.sendMail(mailOptions, (error: Error | null, info: nodemailer.SentMessageInfo) => { 
+        if (error) { 
+            throw error;
+            //TODO return false if error in prod
+        } 
+        //retun true 
+        console.log("Successfully sent email: ", info); 
+    });     
+}
+
+export async function createVerifyEmailEntry(id: string, email: string, first: string): Promise<void> {
+    const document = {
+        "time": Date.now(),
+        "userid": id,
+        "email": email
+    };
+
+    try {
+        const result: WriteResult = await r.table("verifyEmail").insert(document).run(conn);
+        const verifyId: string = result.generated_keys[0];
+
+        sendVerifyEmailEmail(email, verifyId, first);
+    }
+    catch (error) {
+        throw error;
+    }
+}

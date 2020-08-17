@@ -21,6 +21,8 @@ export interface User {
     isBeeping: boolean;
     queueSize: number;
     userLevel: number;
+    isEmailVerified: boolean;
+    isStudent: boolean;
 }
 
 export interface UserPluckResult {
@@ -40,4 +42,6 @@ export interface UserPluckResult {
     isBeeping?: boolean;
     queueSize?: number;
     userLevel?: number;
+    isEmailVerified?: boolean;
+    isStudent?: boolean;
 }

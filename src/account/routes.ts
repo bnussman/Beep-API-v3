@@ -4,14 +4,16 @@ import { WriteResult } from "rethinkdb";
 import * as r from 'rethinkdb';
 import { sha256 } from 'js-sha256';
 import { makeJSONSuccess, makeJSONError, makeJSONWarning } from '../utils/json';
-import { isTokenValid } from "../auth/helpers";
+import { isTokenValid, createVerifyEmailEntry } from "../auth/helpers";
 import { conn } from '../utils/db';
+import {isEduEmail, getEmail} from './helpers';
 
 const router: Router = express.Router();
 
 router.post('/edit', editAccount);
 router.post('/password', changePassword);
 router.post('/pushtoken', updatePushToken);
+router.post('/verify', verifyAccount);
 
 async function editAccount (req: Request, res: Response): Promise<void> {
     //check if auth token is valid before processing the request to update push token
@@ -23,7 +25,7 @@ async function editAccount (req: Request, res: Response): Promise<void> {
         return;
     }
 
-    r.table("users").get(id).update({first: req.body.first, last: req.body.last, email: req.body.email, phone: req.body.phone, venmo: req.body.venmo}).run(conn, function (error: Error, result: WriteResult) {
+    r.table("users").get(id).update({first: req.body.first, last: req.body.last, email: req.body.email, phone: req.body.phone, venmo: req.body.venmo}, {returnChanges: true}).run(conn, function (error: Error, result: WriteResult) {
         if (error) {
             throw error;
         }
@@ -31,6 +33,21 @@ async function editAccount (req: Request, res: Response): Promise<void> {
             res.send(makeJSONWarning("Nothing was changed about your profile."));
             return;
         }
+        
+        if (result.changes[0].old_val.email !== result.changes[0].new_val.email) {
+            //user changed their email, make email not valid
+            try {
+                r.table("users").get(id).update({isEmailVerified: false, isStudent: false}).run(conn);
+            }
+            catch (error) {
+                throw error;
+            }
+
+            createVerifyEmailEntry(id, req.body.email, req.body.first);
+        }
+        //TODO we need to pass returnChanges param to the update function and check if email was changed
+        //if email was changed, set isEmailVarified to false
+
         res.send(makeJSONSuccess("Successfully edited profile."));
     });
 }
@@ -71,6 +88,47 @@ async function updatePushToken (req: Request, res: Response): Promise<void> {
         }
         res.send(makeJSONSuccess("Successfully updated push token."));
     });
+}
+
+async function verifyAccount (req: Request, res: Response): Promise<void> {
+    try {
+        const result: WriteResult = await r.table("verifyEmail").get(req.body.id).delete({returnChanges: true}).run(conn);
+        const userid = result.changes[0].old_val.userid;
+        const email = result.changes[0].old_val.email;
+
+        //TODO make sure email is the same email that is in their user's document
+        const usersEmail: string | undefined = await getEmail(userid);
+
+        if(!usersEmail) {
+            res.send(makeJSONError("Please ensure you have a valid email set in your profile."));
+            return;
+        }
+
+        if (email !== usersEmail) {
+            res.send(makeJSONError("You tried to verify an email address that is not the same as your current email."));
+            return;
+        }
+
+        let update: Object;
+
+        if (isEduEmail(email)) {
+            update = {isEmailVerified: true, isStudent: true};
+        }
+        else {
+            update = {isEmailVerified: true};
+        }
+
+        try {
+            await r.table("users").get(userid).update(update).run(conn);
+            res.send(makeJSONSuccess("Successfully verified email"));
+        }
+        catch(error) {
+            throw error;
+        }
+    }
+    catch (error) {
+        res.send(makeJSONError("Invalid verify email request. Your token may have expired."));
+    }
 }
 
 export = router;

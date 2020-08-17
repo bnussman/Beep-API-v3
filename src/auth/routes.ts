@@ -6,7 +6,7 @@ import { conn, connQueues } from '../utils/db';
 import { User } from '../types/beep';
 import { makeJSONSuccess, makeJSONError } from '../utils/json';
 import { sha256 } from 'js-sha256';
-import { getToken, setPushToken, isTokenValid, getUserFromEmail, sendResetEmail, deactivateTokens, cleanPasswordResetTable } from './helpers';
+import { getToken, setPushToken, isTokenValid, getUserFromEmail, sendResetEmail, deactivateTokens, cleanPasswordResetTable, createVerifyEmailEntry } from './helpers';
 import { UserPluckResult } from "../types/beep";
 
 const router: Router = express.Router();
@@ -58,7 +58,9 @@ function login (req: Request, res: Response): void {
                     'groupRate': result.groupRate,
                     'capacity': result.capacity,
                     'isBeeping': result.isBeeping,
-                    'userLevel': result.userLevel
+                    'userLevel': result.userLevel,
+                    'isEmailVerified': result.isEmailVerified,
+                    'isStudent': result.isStudent
                 });
                 
                 if (req.body.expoPushToken) {
@@ -101,7 +103,9 @@ function signup (req: Request, res: Response): void {
         'singlesRate': 3.00,
         'groupRate': 2.00,
         'capacity': 4,
-        'userLevel': 0
+        'userLevel': 0,
+        'isEmailVerified': false,
+        'isStudent': false
     };
 
     //insert a new user into our users table
@@ -120,6 +124,8 @@ function signup (req: Request, res: Response): void {
             //because signup was successful we must make their queue table
             r.db("beepQueues").tableCreate(userid).run(connQueues);
 
+            createVerifyEmailEntry(userid, req.body.email, req.body.first);
+
             //produce our REST API output
             res.send({
                 'status': "success",
@@ -136,7 +142,9 @@ function signup (req: Request, res: Response): void {
                 'groupRate': 2.00,
                 'capacity': 4,
                 'isBeeping': false,
-                'userLevel': 0
+                'userLevel': 0,
+                'isEmailVerified': false,
+                'isStudent': false
             });
         }
         else {
@@ -282,7 +290,7 @@ async function resetPassword (req: Request, res: Response) {
         }
     }
     catch (error) {
-        res.send(makeJSONError("Invalid password reset request. Your time may have expired."));
+        res.send(makeJSONError("Invalid password reset request. Your token may have expired."));
     }
 }
 
