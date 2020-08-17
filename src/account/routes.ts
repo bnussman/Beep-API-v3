@@ -106,7 +106,7 @@ async function verifyAccount (req: Request, res: Response): Promise<void> {
         const usersEmail: string | undefined = await getEmail(userid);
 
         if(!usersEmail) {
-            res.send(makeJSONError("Please ensure you have a valid email set in your profile."));
+            res.send(makeJSONError("Please ensure you have a valid email set in your profile. Visit your app or our website to re-send a varification email."));
             return;
         }
 

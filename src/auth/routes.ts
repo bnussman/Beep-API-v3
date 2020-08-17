@@ -6,7 +6,7 @@ import { conn, connQueues } from '../utils/db';
 import { User } from '../types/beep';
 import { makeJSONSuccess, makeJSONError } from '../utils/json';
 import { sha256 } from 'js-sha256';
-import { getToken, setPushToken, isTokenValid, getUserFromEmail, sendResetEmail, deactivateTokens, cleanPasswordResetTable, createVerifyEmailEntry } from './helpers';
+import { getToken, setPushToken, isTokenValid, getUserFromEmail, sendResetEmail, deactivateTokens, createVerifyEmailEntry } from './helpers';
 import { UserPluckResult } from "../types/beep";
 
 const router: Router = express.Router();
