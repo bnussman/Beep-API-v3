@@ -25,7 +25,7 @@ async function chooseBeep (req: Request, res: Response): Promise<void> {
         return;
     }
     
-    const result = await r.table('users').get(req.body.beepersID).pluck('first', 'last', 'queueSize', 'singlesRate', 'groupRate', 'isBeeping').run(conn);
+    const result = await r.table('users').get(req.body.beepersID).pluck('first', 'last', 'queueSize', 'singlesRate', 'groupRate', 'isBeeping', 'capacity', 'isStudent', 'userLevel').run(conn);
 
     if (!result.isBeeping) {
         res.send(makeJSONError("The user you have chosen is no longer beeping at this time."));
@@ -80,7 +80,10 @@ async function chooseBeep (req: Request, res: Response): Promise<void> {
             'last': result.last,
             'queueSize': result.queueSize + 1,
             'singlesRate': result.singlesRate,
-            'groupRate': result.groupRate
+            'groupRate': result.groupRate,
+            'userLevel': result.userLevel,
+            'isStudent': result.isStudent,
+            'capacity': result.capacity
         }
     });
 }
@@ -131,7 +134,9 @@ async function findBeep (req: Request, res: Response): Promise<void> {
                     'queueSize': result.queueSize,
                     'singlesRate': result.singlesRate,
                     'groupRate': result.groupRate,
-                    'capacity': result.capacity
+                    'capacity': result.capacity,
+                    'userLevel': result.userLevel,
+                    'isStudent': result.isStudent
                 }
             });
         });
@@ -148,8 +153,16 @@ async function getRiderStatus (req: Request, res: Response): Promise<void> {
         return;
     }
 
+    let result;
     //get rider's entry in our user's db
-    let result = await r.table('users').get(id).pluck('inQueueOfUserID').run(conn);
+    try {
+        result = await r.table('users').get(id).pluck('inQueueOfUserID').run(conn);
+    } 
+    catch (error) {
+        //TODO: user's account was deleted, we need to somehow get the client to logout
+        //keep in mind that getRiderStatus returns with error status code just because
+        //rider is not in a queue
+    }
 
     //we will be using the rider's beeper's id a lot, so make it a const
     const beepersID = result.inQueueOfUserID;
@@ -167,7 +180,7 @@ async function getRiderStatus (req: Request, res: Response): Promise<void> {
         let ridersQueuePosition = await r.table(beepersID).filter(r.row('timeEnteredQueue').lt(queueEntry.timeEnteredQueue).and(r.row('isAccepted').eq(true))).count().run(connQueues);
 
         //get beeper's information
-        let beepersInfo = await r.table('users').get(beepersID).pluck('first', 'last', 'phone', 'venmo', 'singlesRate', 'groupRate', 'queueSize').run(conn);
+        let beepersInfo = await r.table('users').get(beepersID).pluck('first', 'last', 'phone', 'venmo', 'singlesRate', 'groupRate', 'queueSize', 'userLevel', 'isStudent', 'capacity').run(conn);
 
         let output;
 
@@ -187,7 +200,10 @@ async function getRiderStatus (req: Request, res: Response): Promise<void> {
                     "venmo": beepersInfo.venmo,
                     "queueSize": beepersInfo.queueSize,
                     "singlesRate": beepersInfo.singlesRate,
-                    "groupRate": beepersInfo.groupRate
+                    "groupRate": beepersInfo.groupRate,
+                    'capacity': beepersInfo.capacity,
+                    'userLevel': beepersInfo.userLevel,
+                    'isStudent': beepersInfo.isStudent
                 }
             };
         }
@@ -203,7 +219,10 @@ async function getRiderStatus (req: Request, res: Response): Promise<void> {
                     "last": beepersInfo.last,
                     "queueSize": beepersInfo.queueSize,
                     "singlesRate": beepersInfo.singlesRate,
-                    "groupRate": beepersInfo.groupRate
+                    "groupRate": beepersInfo.groupRate,
+                    'capacity': beepersInfo.capacity,
+                    'userLevel': beepersInfo.userLevel,
+                    'isStudent': beepersInfo.isStudent
                 }
             };
         }
