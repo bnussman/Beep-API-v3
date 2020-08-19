@@ -135,6 +135,10 @@ export async function getUserFromEmail(email: string, ...pluckItems: string[]): 
  * @param first is the first name of the recipiant so email is more personal
  */
 export function sendResetEmail(email: string, id: string, first: string | undefined): void {
+    if (email.length < 3) {
+        return;
+    }
+
     const transporter = nodemailer.createTransport({
         host: "smtp.gmail.com",
         port: 465,
@@ -182,6 +186,10 @@ export function deactivateTokens(userid: string): void {
 }
 
 export function sendVerifyEmailEmail(email: string, id: string, first: string | undefined): void {
+    if (email.length < 3) {
+        return;
+    }
+
     const transporter = nodemailer.createTransport({
         host: "smtp.gmail.com",
         port: 465,
