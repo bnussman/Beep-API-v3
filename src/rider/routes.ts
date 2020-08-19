@@ -170,7 +170,7 @@ async function getRiderStatus (req: Request, res: Response): Promise<void> {
     //if user is in a queue...
     if (beepersID) {
         //since we are in a queue, we need to find the db entry where the rider has you id
-        let result = await r.table(beepersID).filter({riderid: id}).run(connQueues);
+        const result = await r.table(beepersID).filter({riderid: id}).run(connQueues);
 
         //resolve the next element so we have a const of the db entry
         const queueEntry = await result.next();

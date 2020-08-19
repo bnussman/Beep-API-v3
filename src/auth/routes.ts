@@ -22,6 +22,7 @@ router.post('/password/reset', resetPassword);
  * API function to handle a login
  */
 function login (req: Request, res: Response): void {
+    console.log("someone is logging in");
     //RethinkDB Query to see if there is a user with POSTed username
     r.table("users").filter({ "username": req.body.username }).run(conn, function (error: Error, cursor: Cursor) {
         //Handle RethinkDB error
