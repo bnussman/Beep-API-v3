@@ -128,7 +128,7 @@ async function signup (req: Request, res: Response): Promise<void> {
         'isBeeping': false,
         'queueSize': 0,
         'inQueueOfUserID': null,
-        'pushToken': req.body.expoPushToken,
+        'pushToken': req.body.expoPushToken || null,
         'singlesRate': 3.00,
         'groupRate': 2.00,
         'capacity': 4,

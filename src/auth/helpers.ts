@@ -43,7 +43,7 @@ export async function getToken(userid: string): Promise<TokenData> {
  * @param token the expo push token for the user
  */
 export async function setPushToken(id: string | null, token: string | null): Promise<void> {
-    if (!id) return;
+    if (!id || !token) return;
     //run query to get user and update their pushToken
     await r.table("users").get(id).update({pushToken: token}).run(conn);
 }
