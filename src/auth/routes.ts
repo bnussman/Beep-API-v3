@@ -19,17 +19,6 @@ router.post('/token', removeToken);
 router.post('/password/forgot', forgotPassword);
 router.post('/password/reset', resetPassword);
 
-/*
-function parseError(validatorError: any): string {
-    let output: string = "";
-
-    Object.keys(validatorError).forEach(function (item) {
-        output += "\n" + validatorError[item].message;
-    });
-    return output.substr(1, output.length);
-}
-*/
-
 /**
  * API function to handle a login
  */
