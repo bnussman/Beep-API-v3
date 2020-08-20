@@ -8,6 +8,7 @@ import { conn, connQueues } from '../utils/db';
 import { sendNotification } from '../utils/notifications';
 import { getQueueSize, getPersonalInfo } from './helpers';
 import { UserPluckResult } from "../types/beep";
+import {Validator} from 'node-input-validator';
 
 const router: Router = express.Router();
 
@@ -47,6 +48,20 @@ async function setBeeperStatus (req: Request, res: Response): Promise<void> {
         return;
     }
 
+    const v = new Validator(req.body, {
+        singlesRate: "required|numeric",
+        groupRate: "required|numeric",
+        capacity: "required|numeric",
+        isBeeping: "boolean"
+    });
+
+    const matched = await v.check();
+
+    if (!matched) {
+        res.send(makeJSONError(v.errors));
+        return;
+    }
+
     //if beeper is setting isBeeping to false
     if (req.body.isBeeping == false) {
         //get beepers queue size
@@ -58,7 +73,7 @@ async function setBeeperStatus (req: Request, res: Response): Promise<void> {
         }
     }
 
-    //query updates beepers isBeeping, singlesRate, and groupRate values
+    //query updates beepers isBeeping, singlesRate, and groupRate values, and capacity
     r.table('users').get(id).update({isBeeping: req.body.isBeeping, singlesRate: req.body.singlesRate, groupRate: req.body.groupRate, capacity: req.body.capacity}).run(conn, function(error: Error) {
         //handle any RethinkDB error
         if (error) {

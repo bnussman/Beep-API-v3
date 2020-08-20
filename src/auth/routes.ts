@@ -8,6 +8,7 @@ import { makeJSONSuccess, makeJSONError } from '../utils/json';
 import { sha256 } from 'js-sha256';
 import { getToken, setPushToken, isTokenValid, getUserFromEmail, sendResetEmail, deactivateTokens, createVerifyEmailEntry } from './helpers';
 import { UserPluckResult } from "../types/beep";
+import { Validator } from "node-input-validator";
 
 const router: Router = express.Router();
 
@@ -18,11 +19,33 @@ router.post('/token', removeToken);
 router.post('/password/forgot', forgotPassword);
 router.post('/password/reset', resetPassword);
 
+/*
+function parseError(validatorError: any): string {
+    let output: string = "";
+
+    Object.keys(validatorError).forEach(function (item) {
+        output += "\n" + validatorError[item].message;
+    });
+    return output.substr(1, output.length);
+}
+*/
+
 /**
  * API function to handle a login
  */
-function login (req: Request, res: Response): void {
-    console.log("someone is logging in");
+async function login (req: Request, res: Response): Promise<void> {
+    const v = new Validator(req.body, {
+        username: "required",
+        password: "required"
+    });
+
+    const matched = await v.check();
+
+    if (!matched) {
+        res.send(makeJSONError(v.errors));
+        return;
+    }
+
     //RethinkDB Query to see if there is a user with POSTed username
     r.table("users").filter({ "username": req.body.username }).run(conn, function (error: Error, cursor: Cursor) {
         //Handle RethinkDB error
@@ -82,12 +105,28 @@ function login (req: Request, res: Response): void {
     });
 }
 
-
 /**
  * API function to handle a sign up
  * TODO: ensure username is not taken before signup
  */
-function signup (req: Request, res: Response): void {
+async function signup (req: Request, res: Response): Promise<void> {
+
+    const v = new Validator(req.body, {
+        first: "required|alpha",
+        last: "required|alpha",
+        email: "required|email",
+        phone: "required|phoneNumber",
+        venmo: "required",
+        username: "required|alphaNumeric",
+        password: "required",
+    });
+
+    const matched = await v.check();
+
+    if (!matched) {
+        res.send(makeJSONError(v.errors));
+        return;
+    }
     //This is the row that will be inserted into our users RethinkDB table
     const document = {
         'first': req.body.first,
@@ -218,7 +257,19 @@ function removeToken (req: Request, res: Response): void {
  * @param res
  */
 async function forgotPassword (req: Request, res: Response): Promise<void> {
+    const v = new Validator(req.body, {
+        email: "required|email",
+    });
+
+    const matched = await v.check();
+
+    if (!matched) {
+        res.send(makeJSONError(v.errors));
+        return;
+    }
+
     let user: UserPluckResult | null;
+
     try {
         user = await getUserFromEmail(req.body.email, "id", "first");
     }
@@ -275,6 +326,17 @@ async function forgotPassword (req: Request, res: Response): Promise<void> {
  * @param res
  */
 async function resetPassword (req: Request, res: Response) {
+    const v = new Validator(req.body, {
+        password: "required",
+    });
+
+    const matched = await v.check();
+
+    if (!matched) {
+        res.send(makeJSONError(v.errors));
+        return;
+    }
+
     try {
         const user: WriteResult = await r.table("passwordReset").get(req.body.id).delete({returnChanges: true}).run(conn);
 

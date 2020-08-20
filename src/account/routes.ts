@@ -7,6 +7,7 @@ import { makeJSONSuccess, makeJSONError, makeJSONWarning } from '../utils/json';
 import { isTokenValid, createVerifyEmailEntry } from "../auth/helpers";
 import { conn } from '../utils/db';
 import {isEduEmail, getEmail} from './helpers';
+import { Validator } from "node-input-validator";
 
 const router: Router = express.Router();
 
@@ -22,6 +23,21 @@ async function editAccount (req: Request, res: Response): Promise<void> {
     if (!id) {
         //if there is no id returned, the token is not valid.
         res.send(makeJSONError("Your auth token is not valid."));
+        return;
+    }
+
+    const v = new Validator(req.body, {
+        first: "required|alpha",
+        last: "required|alpha",
+        email: "required|email",
+        phone: "required|phoneNumber",
+        venmo: "required",
+    });
+
+    const matched = await v.check();
+
+    if (!matched) {
+        res.send(makeJSONError(v.errors));
         return;
     }
 
@@ -59,6 +75,17 @@ async function changePassword (req: Request, res: Response): Promise<void> {
     if (!id) {
         //if there is no id returned, the token is not valid.
         res.send(makeJSONError("Your auth token is not valid."));
+        return;
+    }
+
+    const v = new Validator(req.body, {
+        password: "required",
+    });
+
+    const matched = await v.check();
+
+    if (!matched) {
+        res.send(makeJSONError(v.errors));
         return;
     }
 

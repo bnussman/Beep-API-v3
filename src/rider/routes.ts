@@ -1,11 +1,12 @@
 import express = require('express');
 import { Router, Request, Response } from 'express';
 import * as r from 'rethinkdb';
-import { CursorError, WriteResult, Cursor } from 'rethinkdb';
+import { CursorError, Cursor } from 'rethinkdb';
 import { makeJSONSuccess, makeJSONError } from '../utils/json';
 import { isTokenValid } from "../auth/helpers";
 import { conn, connQueues } from '../utils/db';
 import { sendNotification } from '../utils/notifications';
+import { Validator } from "node-input-validator";
 
 const router: Router = express.Router();
 
@@ -22,6 +23,19 @@ async function chooseBeep (req: Request, res: Response): Promise<void> {
     //if id is null, user's token is not valid
     if (!id) {
         res.send(makeJSONError("Your token is not valid."));
+        return;
+    }
+
+    const v = new Validator(req.body, {
+        groupSize: "required|numeric",
+        origin: "required",
+        destination: "required",
+    });
+
+    const matched = await v.check();
+
+    if (!matched) {
+        res.send(makeJSONError(v.errors));
         return;
     }
     
