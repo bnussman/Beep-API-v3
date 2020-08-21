@@ -8,6 +8,7 @@ import { isTokenValid, createVerifyEmailEntry } from "../auth/helpers";
 import { conn } from '../utils/db';
 import {isEduEmail, getEmail} from './helpers';
 import { Validator } from "node-input-validator";
+import {UserPluckResult} from '../types/beep';
 
 const router: Router = express.Router();
 
@@ -15,6 +16,7 @@ router.post('/edit', editAccount);
 router.post('/password', changePassword);
 router.post('/pushtoken', updatePushToken);
 router.post('/verify', verifyAccount);
+router.post('/status', getAccountStatus);
 
 async function editAccount (req: Request, res: Response): Promise<void> {
     //check if auth token is valid before processing the request to update push token
@@ -162,6 +164,24 @@ async function verifyAccount (req: Request, res: Response): Promise<void> {
     catch (error) {
         res.send(makeJSONError("Invalid verify email token"));
     }
+}
+
+async function getAccountStatus(req: Request, res: Response) {
+    //check if auth token is valid before processing the request to update push token
+    const id = await isTokenValid(req.body.token);
+
+    if (!id) {
+        //if there is no id returned, the token is not valid.
+        res.send(makeJSONError("Your auth token is not valid."));
+        return;
+    }
+
+    r.table("users").get(id).pluck("isEmailVerified", "isStudent").run(conn, function(error: Error, result: UserPluckResult) {
+        if (error) {
+            throw error;
+        }
+        res.send(makeJSONSuccess(result));
+    });
 }
 
 export = router;

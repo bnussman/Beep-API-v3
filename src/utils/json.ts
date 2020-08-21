@@ -10,7 +10,7 @@ export function makeJSONError(message: string): object {
  * @param message the success message you wish to include in the API's responce
  * @return JSON success message
  */
-export function makeJSONSuccess(message: string): object {
+export function makeJSONSuccess(message: string | any): object {
     return ({ status: "success", message: message });
 }
 
