@@ -43,7 +43,7 @@ export async function getToken(userid: string): Promise<TokenData> {
  * @param token the expo push token for the user
  */
 export async function setPushToken(id: string | null, token: string | null): Promise<void> {
-    if (!id || !token) return;
+    if (!id) return;
     //run query to get user and update their pushToken
     await r.table("users").get(id).update({pushToken: token}).run(conn);
 }
@@ -75,9 +75,17 @@ export async function isTokenValid(token: string): Promise<string | null> {
  * @returns a promice that is a boolean. True if user has level, false otherwise
  */
 export async function hasUserLevel(userid: string, level: number): Promise<boolean> {
-    const userLevel: number = await r.table("users").get(userid).pluck('userLevel').run(conn);
-    //return a boolean, true if user has desired level, false otherwise
-    return level == userLevel;
+    try {
+        const userLevel: number = await r.table("users").get(userid).pluck('userLevel').run(conn);
+
+        //return a boolean, true if user has desired level, false otherwise
+        return level == userLevel;
+    }
+    catch (error) {
+        //in prod, log error with our logger i guess
+        console.error(error);
+    }
+    return false;
 }
 
 /**
@@ -107,6 +115,7 @@ export async function isAdmin(token: string): Promise<string | null> {
 export async function getUserFromEmail(email: string, ...pluckItems: string[]): Promise<UserPluckResult | null> {
     try {
         let cursor: Cursor;
+
         //if no pluck items were passed in, don't pluck anything
         if (pluckItems.length == 0) {
             cursor = await r.table("users").filter({ 'email': email }).limit(1).run(conn);
@@ -119,12 +128,12 @@ export async function getUserFromEmail(email: string, ...pluckItems: string[]): 
             const result: UserPluckResult = await cursor.next();
             return result;
         } catch (error) {
-            //error is telling us there is no row result from the db, not really an errro
+            //error is telling us there is no row result from the db, not really an error
             return null;
         }
-
-    } catch (error) {
-        throw new error;
+    }
+    catch (error) {
+        throw error;
     }
 }
 
@@ -135,10 +144,6 @@ export async function getUserFromEmail(email: string, ...pluckItems: string[]): 
  * @param first is the first name of the recipiant so email is more personal
  */
 export function sendResetEmail(email: string, id: string, first: string | undefined): void {
-    if (email.length < 3) {
-        return;
-    }
-
     const transporter = nodemailer.createTransport({
         host: "smtp.gmail.com",
         port: 465,
@@ -152,7 +157,7 @@ export function sendResetEmail(email: string, id: string, first: string | undefi
     const url: string = process.env.NODE_ENV === "development" ? "https://dev.ridebeep.app" : "https://ridebeep.app";
  
     const mailOptions: nodemailer.SendMailOptions = { 
-        from : 'banks@nussman.us', 
+        from : 'banks@ridebeep.app', 
         to : email, 
         subject : 'Change your Beep App password', 
         html: `Hey ${first}, <br><br>
@@ -165,9 +170,8 @@ export function sendResetEmail(email: string, id: string, first: string | undefi
     transporter.sendMail(mailOptions, (error: Error | null, info: nodemailer.SentMessageInfo) => { 
         if (error) { 
             throw error;
-            //TODO return false if error in prod
         } 
-        //retun true 
+        //TODO use logger to log email events
         console.log("Successfully sent email: ", info); 
     });     
 }
@@ -186,10 +190,6 @@ export function deactivateTokens(userid: string): void {
 }
 
 export function sendVerifyEmailEmail(email: string, id: string, first: string | undefined): void {
-    if (email.length < 3) {
-        return;
-    }
-
     const transporter = nodemailer.createTransport({
         host: "smtp.gmail.com",
         port: 465,
@@ -216,9 +216,8 @@ export function sendVerifyEmailEmail(email: string, id: string, first: string | 
     transporter.sendMail(mailOptions, (error: Error | null, info: nodemailer.SentMessageInfo) => { 
         if (error) { 
             throw error;
-            //TODO return false if error in prod
         } 
-        //retun true 
+        //TODO use logger to log email events
         console.log("Successfully sent email: ", info); 
     });     
 }
@@ -232,6 +231,7 @@ export async function createVerifyEmailEntry(id: string, email: string, first: s
 
     try {
         const result: WriteResult = await r.table("verifyEmail").insert(document).run(conn);
+
         const verifyId: string = result.generated_keys[0];
 
         sendVerifyEmailEmail(email, verifyId, first);

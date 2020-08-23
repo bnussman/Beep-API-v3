@@ -6,9 +6,9 @@ import { sha256 } from 'js-sha256';
 import { makeJSONSuccess, makeJSONError, makeJSONWarning } from '../utils/json';
 import { isTokenValid, createVerifyEmailEntry } from "../auth/helpers";
 import { conn } from '../utils/db';
-import {isEduEmail, getEmail} from './helpers';
+import { isEduEmail, getEmail } from './helpers';
 import { Validator } from "node-input-validator";
-import {UserPluckResult} from '../types/beep';
+import { UserPluckResult } from '../types/beep';
 
 const router: Router = express.Router();
 
@@ -20,7 +20,7 @@ router.post('/status', getAccountStatus);
 
 async function editAccount (req: Request, res: Response): Promise<void> {
     //check if auth token is valid before processing the request to update push token
-    const id = await isTokenValid(req.body.token);
+    const id: string | null = await isTokenValid(req.body.token);
 
     if (!id) {
         //if there is no id returned, the token is not valid.

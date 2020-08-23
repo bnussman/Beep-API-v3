@@ -45,7 +45,6 @@ async function login (req: Request, res: Response): Promise<void> {
         cursor.next(async function(error: CursorError, result: User) {
             //Handle RethinkDB cursour error
             if (error) {
-                //TODO: re-add error.msg check
                 res.send(makeJSONError("User not found."));
                 //close the RethinkDB cursor to prevent leak
                 cursor.close();

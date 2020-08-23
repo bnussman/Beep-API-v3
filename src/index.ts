@@ -10,6 +10,7 @@ const port = 3001;
 
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
+app.disable('x-powered-by');
 
 //------------------------------
 //  API Endpoints
