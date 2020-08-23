@@ -123,30 +123,28 @@ async function verifyAccount (req: Request, res: Response): Promise<void> {
     try {
         const result: WriteResult = await r.table("verifyEmail").get(req.body.id).delete({returnChanges: true}).run(conn);
 
-        const userid = result.changes[0].old_val.userid;
-        const email = result.changes[0].old_val.email;
-        const time = result.changes[0].old_val.time;
+        const entry = result.changes[0].old_val;
 
-        if ((time * (3600 * 1000)) < Date.now()) {
+        if ((entry.time + (3600 * 1000)) < Date.now()) {
             res.send(makeJSONError("Your verification token has expired."));
             return;
         }
 
-        const usersEmail: string | undefined = await getEmail(userid);
+        const usersEmail: string | undefined = await getEmail(entry.userid);
 
         if(!usersEmail) {
             res.send(makeJSONError("Please ensure you have a valid email set in your profile. Visit your app or our website to re-send a varification email."));
             return;
         }
 
-        if (email !== usersEmail) {
+        if (entry.email !== usersEmail) {
             res.send(makeJSONError("You tried to verify an email address that is not the same as your current email."));
             return;
         }
 
         let update: Object;
 
-        if (isEduEmail(email)) {
+        if (isEduEmail(entry.email)) {
             update = {isEmailVerified: true, isStudent: true};
         }
         else {
@@ -154,7 +152,7 @@ async function verifyAccount (req: Request, res: Response): Promise<void> {
         }
 
         try {
-            await r.table("users").get(userid).update(update).run(conn);
+            await r.table("users").get(entry.userid).update(update).run(conn);
             res.send(makeJSONSuccess("Successfully verified email"));
         }
         catch(error) {

@@ -203,7 +203,7 @@ export function sendVerifyEmailEmail(email: string, id: string, first: string | 
     const url: string = process.env.NODE_ENV === "development" ? "https://dev.ridebeep.app" : "https://ridebeep.app";
  
     const mailOptions: nodemailer.SendMailOptions = { 
-        from : 'banks@nussman.us', 
+        from : 'banks@ridebeep.app', 
         to : email, 
         subject : 'Verify your Beep App Email!', 
         html: `Hey ${first}, <br><br>

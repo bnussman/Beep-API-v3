@@ -326,12 +326,12 @@ async function resetPassword (req: Request, res: Response) {
     }
 
     try {
-        const user: WriteResult = await r.table("passwordReset").get(req.body.id).delete({returnChanges: true}).run(conn);
+        const result: WriteResult = await r.table("passwordReset").get(req.body.id).delete({returnChanges: true}).run(conn);
 
-        const userid = user.changes[0].old_val.userid;
-        const time: number = user.changes[0].old_val.time;
+        const userid = result.changes[0].old_val.userid;
+        const time: number = result.changes[0].old_val.time;
 
-        if ((time * (3600 * 1000)) < Date.now()) {
+        if ((time + (3600 * 1000)) < Date.now()) {
             res.send(makeJSONError("Your verification token has expired"));
             return;
         }
