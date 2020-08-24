@@ -4,7 +4,7 @@ import { WriteResult } from "rethinkdb";
 import * as r from 'rethinkdb';
 import { sha256 } from 'js-sha256';
 import { makeJSONSuccess, makeJSONError, makeJSONWarning } from '../utils/json';
-import { isTokenValid, createVerifyEmailEntry } from "../auth/helpers";
+import { isTokenValid, createVerifyEmailEntryAndSendEmail } from "../auth/helpers";
 import { conn } from '../utils/db';
 import { isEduEmail, getEmail } from './helpers';
 import { Validator } from "node-input-validator";
@@ -67,7 +67,7 @@ async function editAccount (req: Request, res: Response): Promise<void> {
             }
             
             //calles helper function that will create a db entry for email varification and also send the email
-            createVerifyEmailEntry(id, req.body.email, req.body.first);
+            createVerifyEmailEntryAndSendEmail(id, req.body.email, req.body.first);
         }
 
         res.send(makeJSONSuccess("Successfully edited profile."));
