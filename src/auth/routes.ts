@@ -6,7 +6,7 @@ import { conn, connQueues } from '../utils/db';
 import { User } from '../types/beep';
 import { makeJSONSuccess, makeJSONError } from '../utils/json';
 import { sha256 } from 'js-sha256';
-import { getToken, setPushToken, isTokenValid, getUserFromEmail, sendResetEmail, deactivateTokens, createVerifyEmailEntry } from './helpers';
+import { getToken, setPushToken, isTokenValid, getUserFromEmail, sendResetEmail, deactivateTokens, createVerifyEmailEntryAndSendEmail } from './helpers';
 import { UserPluckResult } from "../types/beep";
 import { Validator } from "node-input-validator";
 
@@ -23,6 +23,7 @@ router.post('/password/reset', resetPassword);
  * API function to handle a login
  */
 async function login (req: Request, res: Response): Promise<void> {
+    //make a validator to check login inputs
     const v = new Validator(req.body, {
         username: "required",
         password: "required"
@@ -31,6 +32,7 @@ async function login (req: Request, res: Response): Promise<void> {
     const matched = await v.check();
 
     if (!matched) {
+        //users input did not match our criteria, send the validator's error
         res.send(makeJSONError(v.errors));
         return;
     }
@@ -98,7 +100,7 @@ async function login (req: Request, res: Response): Promise<void> {
  * TODO: ensure username is not taken before signup
  */
 async function signup (req: Request, res: Response): Promise<void> {
-
+    //validator to check if all signup feilds are valid
     const v = new Validator(req.body, {
         first: "required|alpha",
         last: "required|alpha",
@@ -112,6 +114,7 @@ async function signup (req: Request, res: Response): Promise<void> {
     const matched = await v.check();
 
     if (!matched) {
+        //users input did not match our criteria, send the validator's error
         res.send(makeJSONError(v.errors));
         return;
     }
@@ -152,7 +155,8 @@ async function signup (req: Request, res: Response): Promise<void> {
             //because signup was successful we must make their queue table
             r.db("beepQueues").tableCreate(userid).run(connQueues);
 
-            createVerifyEmailEntry(userid, req.body.email, req.body.first);
+            //because user signed up, create a verify email entry in the db, this function will send the email
+            createVerifyEmailEntryAndSendEmail(userid, req.body.email, req.body.first);
 
             //produce our REST API output
             res.send({
@@ -245,6 +249,7 @@ function removeToken (req: Request, res: Response): void {
  * @param res
  */
 async function forgotPassword (req: Request, res: Response): Promise<void> {
+    //validate the email that user inputs
     const v = new Validator(req.body, {
         email: "required|email",
     });
@@ -252,13 +257,16 @@ async function forgotPassword (req: Request, res: Response): Promise<void> {
     const matched = await v.check();
 
     if (!matched) {
+        //if input did not match criteria, give user error
         res.send(makeJSONError(v.errors));
         return;
     }
 
+    //we want to try to get a user's doc, if null, there is no user
     let user: UserPluckResult | null;
 
     try {
+        //call our helper function. getUserFromEmail takes an email and will pluck evey other param from their user table
         user = await getUserFromEmail(req.body.email, "id", "first");
     }
     catch(error) {
@@ -266,11 +274,18 @@ async function forgotPassword (req: Request, res: Response): Promise<void> {
     }
 
     if (user) {
+        //we were able to find a user and get their details
+        //everything in this try-catch is to handle if a request has already been made for forgot password
         try {
-            const result = await r.table("passwordReset").filter({ userid: user.id }).run(conn);
-            try { 
-                const entry = await result.next();
+            //query the db for any password reset entries with the same userid
+            const cursor: Cursor = await r.table("passwordReset").filter({ userid: user.id }).run(conn);
 
+            try { 
+                //we try to take the cursor and get the next item
+                const entry = await cursor.next();
+
+                //there is a entry where userid is the same as the incoming request, this means the user already has an active db entry,
+                //so we will just resend an email with the same db id
                 if (entry) {
                     sendResetEmail(req.body.email, entry.id, user.first);
                     res.send(makeJSONError("You have already requested to reset your password. We have re-sent your email. Check your email and follow the instructions."));
@@ -278,20 +293,26 @@ async function forgotPassword (req: Request, res: Response): Promise<void> {
                 }
             }
             catch (error) {
-                console.log("There are no exisiting requests for changing password, proceed with forgot password.");
+                //the next function is throwing an error, it is basiclly saying there is no next, so we can say 
+                //there is no entry for the user currenly in the table
             }
         }
         catch (error) {
+            //there was an error establishing the cursor used for looking in passwordReset
             throw error;
         }
 
+        //this is what will be inserted when making a new forgot password entry
         const doccument = {
             "userid": user.id,
             "time": Date.now()
         }; 
+
         try {
+            //insert the new entry
             const result: WriteResult = await r.table("passwordReset").insert(doccument).run(conn);
 
+            //use the RethinkDB write result as the forgot password token
             const id: string = result.generated_keys[0];
 
             //now send an email with some link inside like https://ridebeep.app/password/reset/ba386adf-743a-434e-acfe-98bdce47d484	
@@ -300,6 +321,7 @@ async function forgotPassword (req: Request, res: Response): Promise<void> {
             res.send(makeJSONSuccess("Successfully sent email."));
         }
         catch (error) {
+            //There was an error inserting a forgot password entry
             throw error;
         }
     }
@@ -314,6 +336,7 @@ async function forgotPassword (req: Request, res: Response): Promise<void> {
  * @param res
  */
 async function resetPassword (req: Request, res: Response) {
+    //validate the user's new password
     const v = new Validator(req.body, {
         password: "required",
     });
@@ -321,31 +344,39 @@ async function resetPassword (req: Request, res: Response) {
     const matched = await v.check();
 
     if (!matched) {
+        //user did not match the password criteria, send them the validation errors
         res.send(makeJSONError(v.errors));
         return;
     }
 
     try {
+        //this seems odd, but we delete the forgot password entry but use RethinkDB returnChanges to invalidate the entry and complete this 
+        //new password request
         const result: WriteResult = await r.table("passwordReset").get(req.body.id).delete({returnChanges: true}).run(conn);
 
-        const userid = result.changes[0].old_val.userid;
-        const time: number = result.changes[0].old_val.time;
+        //get the db entry from the RethinkDB changes
+        const entry = result.changes[0].old_val;
 
-        if ((time + (3600 * 1000)) < Date.now()) {
+        //check if request time was made over an hour ago
+        if ((entry.time + (3600 * 1000)) < Date.now()) {
             res.send(makeJSONError("Your verification token has expired"));
             return;
         }
 
         try {
-            await r.table("users").get(userid).update({ password: sha256(req.body.password) }).run(conn);
+            //update user's password in their db entry
+            await r.table("users").get(entry.userid).update({ password: sha256(req.body.password) }).run(conn);
             res.send(makeJSONSuccess("Successfully reset your password!"));
-            deactivateTokens(userid);
+            //incase user's password was in the hands of bad person, invalidate user's tokens after they successfully reset their password
+            deactivateTokens(entry.userid);
         }
         catch (error) {
+            //RethinkDB unable to update user's password
             throw error;
         }
     }
     catch (error) {
+        //the entry with the user's specifed token does not exists in the passwordReset table
         res.send(makeJSONError("Invalid password reset token"));
     }
 }

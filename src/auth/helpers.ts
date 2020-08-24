@@ -121,18 +121,23 @@ export async function getUserFromEmail(email: string, ...pluckItems: string[]): 
             cursor = await r.table("users").filter({ 'email': email }).limit(1).run(conn);
         }
         else {
+            //expand all the pluck paramaters and rethinkdb query to get them
             cursor = await r.table("users").filter({ 'email': email }).pluck(...pluckItems).limit(1).run(conn);
         }
         
         try {
+            //call the next item in the table
             const result: UserPluckResult = await cursor.next();
+            //return the user's pluck data
             return result;
         } catch (error) {
             //error is telling us there is no row result from the db, not really an error
+            //return null because there is no user.
             return null;
         }
     }
     catch (error) {
+        //error establishing rethinkdb cursor in the user's table when we filtered by email
         throw error;
     }
 }
@@ -171,7 +176,7 @@ export function sendResetEmail(email: string, id: string, first: string | undefi
         if (error) { 
             throw error;
         } 
-        //TODO use logger to log email events
+        //Successfully sent email. TODO log the event
         console.log("Successfully sent email: ", info); 
     });     
 }
@@ -182,9 +187,11 @@ export function sendResetEmail(email: string, id: string, first: string | undefi
  */
 export function deactivateTokens(userid: string): void {
     try {
+        //delete all entries in the tokens db where userid matches
         r.table("tokens").filter({ userid: userid }).delete().run(conn);
     }
     catch (error) {
+        //RethinkDB error when deleteing push tokens for userid
         throw error;
     }
 }
@@ -217,12 +224,20 @@ export function sendVerifyEmailEmail(email: string, id: string, first: string | 
         if (error) { 
             throw error;
         } 
-        //TODO use logger to log email events
+        //Successfully sent email TODO use logger to log email events
         console.log("Successfully sent email: ", info); 
     });     
 }
 
-export async function createVerifyEmailEntry(id: string, email: string, first: string): Promise<void> {
+/**
+ * Helper function for email verfication. This function will create and insert a new email verification entry and 
+ * it will call the other helper function to actually send the email.
+ * @param id is the user's is
+ * @param email is the user's email
+ * @param first is the user's first name so we can make the email more personal
+ */
+export async function createVerifyEmailEntryAndSendEmail(id: string, email: string, first: string): Promise<void> {
+    //this is what will be inserted into the verifyEmail table
     const document = {
         "time": Date.now(),
         "userid": id,
@@ -232,11 +247,14 @@ export async function createVerifyEmailEntry(id: string, email: string, first: s
     try {
         const result: WriteResult = await r.table("verifyEmail").insert(document).run(conn);
 
+        //get the generated id from RethinkDB write result because that id is the token the user uses for varification
         const verifyId: string = result.generated_keys[0];
 
+        //send the email
         sendVerifyEmailEmail(email, verifyId, first);
     }
     catch (error) {
+        //RethinkDB unable to insert into verifyEmail table
         throw error;
     }
 }
