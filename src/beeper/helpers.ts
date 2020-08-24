@@ -14,6 +14,7 @@ export async function getQueueSize(userid: string): Promise<number> {
         return result.queueSize;
     }
     catch(error) {
+        //TODO even when i replace the throw with the logger, I should still return something to prevent a promise that never resolves
         throw error;
     }
 }
@@ -21,7 +22,7 @@ export async function getQueueSize(userid: string): Promise<number> {
 /**
  * Helper function that, given a user's id, will return that user's personal info
  * @param userid
- * @return json-like object (or array?) thing with personal info
+ * @return object with personal info
  */
 export async function getPersonalInfo (userid: string): Promise<object> {
     try {
@@ -36,6 +37,7 @@ export async function getPersonalInfo (userid: string): Promise<object> {
         });
     }
     catch (error) {
+        //TODO even when i replace the throw with the logger, I should still return something to prevent a promise that never resolves
         throw error;
     }
 }

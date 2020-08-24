@@ -26,6 +26,7 @@ async function chooseBeep (req: Request, res: Response): Promise<void> {
         return;
     }
 
+    //validate input
     const v = new Validator(req.body, {
         groupSize: "required|numeric",
         origin: "required",
@@ -35,12 +36,15 @@ async function chooseBeep (req: Request, res: Response): Promise<void> {
     const matched = await v.check();
 
     if (!matched) {
+        //input from the client does not match validation criteria
         res.send(makeJSONError(v.errors));
         return;
     }
-    
+   
+    //get beeper's information
     const result = await r.table('users').get(req.body.beepersID).pluck('first', 'last', 'queueSize', 'singlesRate', 'groupRate', 'isBeeping', 'capacity', 'isStudent', 'userLevel').run(conn);
 
+    //make sure beeper is still beeping. This case WILL happen because a beeper may turn off isBeeping and rider's client may have not updated
     if (!result.isBeeping) {
         res.send(makeJSONError("The user you have chosen is no longer beeping at this time."));
         return;
@@ -62,7 +66,9 @@ async function chooseBeep (req: Request, res: Response): Promise<void> {
         r.table(req.body.beepersID).insert(newEntry).run(connQueues);
     }
     catch (error) {
-        throw new error;
+        //RethinkDB error while inserting beep entery into beeper's queue table
+        //TODO because no insert happended we proabably want to return to stop further damage
+        throw error;
     }
 
     try {
@@ -70,7 +76,8 @@ async function chooseBeep (req: Request, res: Response): Promise<void> {
         r.table('users').get(req.body.beepersID).update({'queueSize': r.row('queueSize').add(1)}).run(conn);
     }
     catch (error) {
-        throw new error;
+        //RethinkDB error while trying to increment beeper's queue size in the users table
+        throw error;
     }
 
     try {
@@ -78,14 +85,16 @@ async function chooseBeep (req: Request, res: Response): Promise<void> {
         r.table('users').get(id).update({'inQueueOfUserID': req.body.beepersID}).run(conn);
     }
     catch (error) {
-        throw new error;
+        //unable to set inQueueOfUserID for rider in users table
+        throw error;
     }
 
-    //Tell Beeper someone entered their queue
+    //Tell Beeper someone entered their queue asyncronously
     sendNotification(req.body.beepersID, "A rider has entered your queue", "Please open your app to accept or deny them.");
 
     //if we made it to this point, user has found a beep and it has been
     //registered in our db. Send output with nessesary data to rider.
+    //Notice no need to send beeper's venmo of phone number because rider is not accepted as they just now joined the queue
     res.send({
         'status': 'success',
         'beeper': {
@@ -135,6 +144,10 @@ async function findBeep (req: Request, res: Response): Promise<void> {
                     cursor.close();
                     return;
                 }
+                else {
+                    //the error was proabably serious, log it
+                    throw error;
+                }
             }
 
             //if we made it to this point, user has found a beep and it has been
@@ -168,7 +181,8 @@ async function getRiderStatus (req: Request, res: Response): Promise<void> {
     }
 
     let result;
-    //get rider's entry in our user's db
+
+    //get rider's inQueueOfUserID in our user's db so we know what queue to look into
     try {
         result = await r.table('users').get(id).pluck('inQueueOfUserID').run(conn);
     } 
@@ -176,6 +190,8 @@ async function getRiderStatus (req: Request, res: Response): Promise<void> {
         //TODO: user's account was deleted, we need to somehow get the client to logout
         //keep in mind that getRiderStatus returns with error status code just because
         //rider is not in a queue
+        res.send(makeJSONError("You are trying to get your rider status of an account that no longer exists"));
+        return;
     }
 
     //we will be using the rider's beeper's id a lot, so make it a const
@@ -265,22 +281,25 @@ async function riderLeaveQueue (req: Request, res: Response): Promise<void> {
     try {
         //delete entry in beeper's queue table
         r.table(req.body.beepersID).filter({'riderid': id}).delete().run(connQueues);
-    } catch (error) {
-        throw new error;
+    }
+    catch (error) {
+        throw error;
     }
     
     try {
         //decreace beeper's queue size
         r.table('users').get(req.body.beepersID).update({'queueSize': r.row('queueSize').sub(1)}).run(conn);
-    } catch (error) {
-        throw new error;
+    }
+    catch (error) {
+        throw error;
     }
 
     try {
         //set rider's inQueueOfUserID value to null because they are no longer in a queue
         r.table('users').get(id).update({'inQueueOfUserID': null}).run(conn);
-    } catch (error) {
-        throw new error;
+    }
+    catch (error) {
+        throw error;
     }
 
     //if we made it to this point, we successfully removed a user from the queue.
