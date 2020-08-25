@@ -175,7 +175,11 @@ async function verifyAccount (req: Request, res: Response): Promise<Response | v
             //update the user's tabe with the new values
             await r.table("users").get(entry.userid).update(update).run(conn);
 
-            return res.send(makeJSONSuccess("Successfully verified email"));
+            return res.send({
+                "status": "success",
+                "message": "Successfully verified email",
+                "data": {...update, usersEmail}
+            });
         }
         catch(error) {
             throw error;
