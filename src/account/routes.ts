@@ -178,7 +178,7 @@ async function verifyAccount (req: Request, res: Response): Promise<Response | v
             return res.send({
                 "status": "success",
                 "message": "Successfully verified email",
-                "data": {...update, usersEmail}
+                "data": {...update, "email": usersEmail}
             });
         }
         catch(error) {
