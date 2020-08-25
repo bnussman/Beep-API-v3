@@ -4,6 +4,7 @@ import * as Auth from "./auth/routes";
 import * as Account from "./account/routes";
 import * as Rider from "./rider/routes";
 import * as Beeper from "./beeper/routes";
+import logger from  "./utils/logger";
 
 const app: Application = express();
 const port = 3001;
