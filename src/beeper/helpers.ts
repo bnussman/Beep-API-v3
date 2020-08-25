@@ -24,17 +24,12 @@ export async function getQueueSize(userid: string): Promise<number> {
  * @param userid
  * @return object with personal info
  */
-export async function getPersonalInfo (userid: string): Promise<object> {
+export async function getPersonalInfo (userid: string): Promise<UserPluckResult> {
     try {
         //RethinkDB query gets data from users db at userid
-        const result: UserPluckResult = await r.table('users').get(userid).pluck('first', 'last', 'phone', 'venmo').run(conn);
+        const result: UserPluckResult = await r.table('users').get(userid).pluck('first', 'last', 'phone', 'venmo', 'isStudent').run(conn);
 
-        return ({
-            'first': result.first,
-            'last': result.last,
-            'phone': result.phone,
-            'venmo': result.venmo
-        });
+        return result;
     }
     catch (error) {
         //TODO even when i replace the throw with the logger, I should still return something to prevent a promise that never resolves
