@@ -208,7 +208,11 @@ async function logout (req: Request, res: Response): Promise<Response | void> {
         //if RethinkDB tells us something was deleted, logout was successful
         if (result.deleted == 1) {
             //unset the user's push token
-            setPushToken(id, null);
+            if (req.body.isApp) {
+                //if user signs out in our iOS or Android app, unset their push token.
+                //We must check this beacuse we don't want the website to un-set a push token
+                setPushToken(id, null);
+            }
             //return success message
             return res.send(makeJSONSuccess("Token was revoked."));
         }
