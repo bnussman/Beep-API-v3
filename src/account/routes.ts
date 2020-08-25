@@ -18,14 +18,13 @@ router.post('/pushtoken', updatePushToken);
 router.post('/verify', verifyAccount);
 router.post('/status', getAccountStatus);
 
-async function editAccount (req: Request, res: Response): Promise<void> {
+async function editAccount (req: Request, res: Response): Promise<Response | void> {
     //check if auth token is valid before processing the request to update push token
     const id: string | null = await isTokenValid(req.body.token);
 
     if (!id) {
         //if there is no id returned, the token is not valid.
-        res.send(makeJSONError("Your auth token is not valid."));
-        return;
+        return res.send(makeJSONError("Your auth token is not valid."));
     }
 
     //Create a new validator to ensure user matches
@@ -42,8 +41,7 @@ async function editAccount (req: Request, res: Response): Promise<void> {
 
     if (!matched) {
         //if user did not meet cirteria, send them an error with the validator results
-        res.send(makeJSONError(v.errors));
-        return;
+        return res.send(makeJSONError(v.errors));
     }
 
     r.table("users").get(id).update({first: req.body.first, last: req.body.last, email: req.body.email, phone: req.body.phone, venmo: req.body.venmo}, {returnChanges: true}).run(conn, function (error: Error, result: WriteResult) {
@@ -53,8 +51,7 @@ async function editAccount (req: Request, res: Response): Promise<void> {
 
         if (result.unchanged > 0) {
             //if RethinkDB reports no changes made, send user a warning
-            res.send(makeJSONWarning("Nothing was changed about your profile."));
-            return;
+            return res.send(makeJSONWarning("Nothing was changed about your profile."));
         }
        
         if (result.changes[0].old_val.email !== result.changes[0].new_val.email) {
@@ -74,14 +71,13 @@ async function editAccount (req: Request, res: Response): Promise<void> {
     });
 }
 
-async function changePassword (req: Request, res: Response): Promise<void> {
+async function changePassword (req: Request, res: Response): Promise<Response | void> {
     //check if auth token is valid before processing the request to update push token
     const id = await isTokenValid(req.body.token);
 
     if (!id) {
         //if there is no id returned, the token is not valid.
-        res.send(makeJSONError("Your auth token is not valid."));
-        return;
+        return res.send(makeJSONError("Your auth token is not valid."));
     }
 
     //vaidator that will ensure a new password was entered
@@ -93,8 +89,7 @@ async function changePassword (req: Request, res: Response): Promise<void> {
 
     if (!matched) {
         //user did not meet new password criteria, send them the validation errors
-        res.send(makeJSONError(v.errors));
-        return;
+        return res.send(makeJSONError(v.errors));
     }
 
     //encrypt password
@@ -106,18 +101,17 @@ async function changePassword (req: Request, res: Response): Promise<void> {
             throw error;
         }
 
-        res.send(makeJSONSuccess("Successfully changed password."));
+        return res.send(makeJSONSuccess("Successfully changed password."));
     });
 }
 
-async function updatePushToken (req: Request, res: Response): Promise<void> {
+async function updatePushToken (req: Request, res: Response): Promise<Response | void> {
     //check if auth token is valid before processing the request to update push token
     const id = await isTokenValid(req.body.token);
 
     if (!id) {
         //if there is no id returned, the token is not valid.
-        res.send(makeJSONError("Your auth token is not valid."));
-        return;
+        return res.send(makeJSONError("Your auth token is not valid."));
     }
 
     //update user's push token
@@ -130,7 +124,7 @@ async function updatePushToken (req: Request, res: Response): Promise<void> {
     });
 }
 
-async function verifyAccount (req: Request, res: Response): Promise<void> {
+async function verifyAccount (req: Request, res: Response): Promise<Response | void> {
     try {
         //this seems weird, but verifying the account by deleteing the entry in the db, but tell RethinkDB to retun changes
         const result: WriteResult = await r.table("verifyEmail").get(req.body.id).delete({returnChanges: true}).run(conn);
@@ -141,8 +135,7 @@ async function verifyAccount (req: Request, res: Response): Promise<void> {
         //check to see if 1 hour has passed since the initial request, if so, report an error.
         //3600 seconds in an hour, multiplied by 1000 because javascripts handles Unix time in ms
         if ((entry.time + (3600 * 1000)) < Date.now()) {
-            res.send(makeJSONError("Your verification token has expired."));
-            return;
+            return res.send(makeJSONError("Your verification token has expired."));
         }
 
         //use the helper function getEmail to get user's email address from their id
@@ -150,14 +143,12 @@ async function verifyAccount (req: Request, res: Response): Promise<void> {
 
         //this case should not happen because of validation, but just in case
         if(!usersEmail) {
-            res.send(makeJSONError("Please ensure you have a valid email set in your profile. Visit your app or our website to re-send a varification email."));
-            return;
+            return res.send(makeJSONError("Please ensure you have a valid email set in your profile. Visit your app or our website to re-send a varification email."));
         }
 
         //if the user's current email is not the same as the email they are trying to verify dont prcede with the request
         if (entry.email !== usersEmail) {
-            res.send(makeJSONError("You tried to verify an email address that is not the same as your current email."));
-            return;
+            return res.send(makeJSONError("You tried to verify an email address that is not the same as your current email."));
         }
 
         let update: Object;
@@ -198,8 +189,7 @@ async function getAccountStatus(req: Request, res: Response) {
 
     if (!id) {
         //if there is no id returned, the token is not valid.
-        res.send(makeJSONError("Your auth token is not valid."));
-        return;
+        return res.send(makeJSONError("Your auth token is not valid."));
     }
 
     r.table("users").get(id).pluck("isEmailVerified", "isStudent").run(conn, function(error: Error, result: UserPluckResult) {

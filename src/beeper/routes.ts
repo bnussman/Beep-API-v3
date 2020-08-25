@@ -1,7 +1,7 @@
 import express = require('express');
 import { Router, Request, Response } from 'express';
 import * as r from 'rethinkdb';
-import { ReqlError } from 'rethinkdb';
+import { ReqlError, WriteResult } from 'rethinkdb';
 import { makeJSONSuccess, makeJSONError } from '../utils/json';
 import { isTokenValid } from "../auth/helpers";
 import { conn, connQueues } from '../utils/db';
@@ -20,7 +20,7 @@ router.post('/queue/status', setBeeperQueue);
 /**
  * API function that returns a beeper's isBeeing status
  */
-function getBeeperStatus (req: Request, res: Response): void {
+function getBeeperStatus (req: Request, res: Response): Response | void {
     //get isBeeping from user with id GET param in users db
     r.table("users").get(req.params.id).pluck('isBeeping').run(conn, function (error: ReqlError, result: UserPluckResult) {
         //if there was an error, notify user with REST API.
@@ -28,7 +28,7 @@ function getBeeperStatus (req: Request, res: Response): void {
             throw error;
         }
         //We have no error, send the resulting data from query.
-        res.send({
+        return res.send({
             'status': 'success',
             'isBeeping': result.isBeeping
         });
@@ -38,14 +38,13 @@ function getBeeperStatus (req: Request, res: Response): void {
 /**
  * API function that allows beeper to update isBeeping
  */
-async function setBeeperStatus (req: Request, res: Response): Promise<void> {
+async function setBeeperStatus (req: Request, res: Response): Promise<Response | void> {
     //get user's id
     const id = await isTokenValid(req.body.token);
 
     //if id is null, user's token is not valid
     if (!id) {
-        res.send(makeJSONError("Your token is not valid."));
-        return;
+        return res.send(makeJSONError("Your token is not valid."));
     }
 
     const v = new Validator(req.body, {
@@ -58,8 +57,7 @@ async function setBeeperStatus (req: Request, res: Response): Promise<void> {
     const matched = await v.check();
 
     if (!matched) {
-        res.send(makeJSONError(v.errors));
-        return;
+        return res.send(makeJSONError(v.errors));
     }
 
     //if beeper is setting isBeeping to false
@@ -68,8 +66,7 @@ async function setBeeperStatus (req: Request, res: Response): Promise<void> {
         const queueSize = await getQueueSize(id);
         //we must make sure their queue is empty before they stop beeping
         if (queueSize > 0) {
-            res.send(makeJSONError("You can't stop beeping when you still have beeps to complete or riders in your queue"));
-            return;
+            return res.send(makeJSONError("You can't stop beeping when you still have beeps to complete or riders in your queue"));
         }
     }
 
@@ -77,12 +74,10 @@ async function setBeeperStatus (req: Request, res: Response): Promise<void> {
     r.table('users').get(id).update({isBeeping: req.body.isBeeping, singlesRate: req.body.singlesRate, groupRate: req.body.groupRate, capacity: req.body.capacity}).run(conn, function(error: Error) {
         //handle any RethinkDB error
         if (error) {
-            res.send(makeJSONError("Unable to update beeping status."));
-            console.log(error);
-            return;
+            throw error;
         }
         //If there was no DB error, our update query was successful. return success with REST API
-        res.send(makeJSONSuccess("Successfully updated beeping status."));
+        return res.send(makeJSONSuccess("Successfully updated beeping status."));
     });
 }
 
@@ -90,14 +85,13 @@ async function setBeeperStatus (req: Request, res: Response): Promise<void> {
 /**
  * API function that gets a beeper's queue as an array
  */
-async function getBeeperQueue (req: Request, res: Response): Promise<void> {
+async function getBeeperQueue (req: Request, res: Response): Promise<Response | void> {
     //get user's id
     const id = await isTokenValid(req.body.token);
 
     //if id is null, user's token is not valid
     if (!id) {
-        res.send(makeJSONError("Your token is not valid."));
-        return;
+        return res.send(makeJSONError("Your token is not valid."));
     }
 
     //get beeper's queue ordered by the time each rider entered the queue so the order makes sence for the beeper
@@ -114,7 +108,7 @@ async function getBeeperQueue (req: Request, res: Response): Promise<void> {
         }
 
         //after processing, send data.
-        res.send({
+        return res.send({
             'status': 'success',
             'queue': result
         });
@@ -124,52 +118,59 @@ async function getBeeperQueue (req: Request, res: Response): Promise<void> {
 /**
  * API function that allows beeper to modify the status of a rider in their queue
  */
-async function setBeeperQueue (req: Request, res: Response): Promise<void> {
+async function setBeeperQueue (req: Request, res: Response): Promise<Response | void> {
     //get user's id
     const id = await isTokenValid(req.body.token);
 
     //if id is null, user's token is not valid
     if (!id) {
-        res.send(makeJSONError("Your token is not valid."));
-        return;
+        return res.send(makeJSONError("Your token is not valid."));
     }
 
     //if the beeper is accepting or denying a rider, run this code to ensure that beeper is
     //acceping or denying the rider that was first to request a ride (amung the isAccepted == false) beeps
     if (req.body.value == 'accept' || req.body.value == 'deny') {
-        //in beeper's queue table, get the time the rider entered the queue
-        //we need this to count the number of people before this rider in the queue
-        let result = await r.table(id).filter({'riderid': req.body.riderID}).pluck('timeEnteredQueue').run(connQueues);
+        try {
+            //in beeper's queue table, get the time the rider entered the queue
+            //we need this to count the number of people before this rider in the queue
+            const cursor = await r.table(id).filter({'riderid': req.body.riderID}).pluck('timeEnteredQueue').run(connQueues);
 
-        //resolve the query and get the time this rider entered the queue as a const
-        const timeEnteredQueue = (await result.next()).timeEnteredQueue;
+            //resolve the query and get the time this rider entered the queue as a const
+            const timeEnteredQueue = (await cursor.next()).timeEnteredQueue;
 
-        //query to get rider's actual position in the queue
-        let ridersQueuePosition = await r.table(id).filter(r.row('timeEnteredQueue').lt(timeEnteredQueue).and(r.row('isAccepted').eq(false))).count().run(connQueues);
+            //query to get rider's actual position in the queue
+            const ridersQueuePosition = await r.table(id).filter(r.row('timeEnteredQueue').lt(timeEnteredQueue).and(r.row('isAccepted').eq(false))).count().run(connQueues);
 
-        //if there are riders before this rider that have not been accepted,
-        //tell the beeper they must respond to them first.
-        if (ridersQueuePosition != 0) {
-            res.send(makeJSONError("You must respond to the rider who first joined your queue."));
-            return;
+            //if there are riders before this rider that have not been accepted,
+            //tell the beeper they must respond to them first.
+            if (ridersQueuePosition != 0) {
+                return res.send(makeJSONError("You must respond to the rider who first joined your queue."));
+            }
+        }
+        catch (error) {
+            throw error;
         }
     }
     else {
-        //in beeper's queue table, get the time the rider entered the queue
-        //we need this to count the number of people before this rider in the queue
-        let result = await r.table(id).filter({'riderid': req.body.riderID}).pluck('timeEnteredQueue').run(connQueues);
+        try {
+            //in beeper's queue table, get the time the rider entered the queue
+            //we need this to count the number of people before this rider in the queue
+            const cursor = await r.table(id).filter({'riderid': req.body.riderID}).pluck('timeEnteredQueue').run(connQueues);
 
-        //resolve the query and get the time this rider entered the queue as a const
-        const timeEnteredQueue = (await result.next()).timeEnteredQueue;
+            //resolve the query and get the time this rider entered the queue as a const
+            const timeEnteredQueue = (await cursor.next()).timeEnteredQueue;
 
-        //query to get rider's actual position in the queue
-        let ridersQueuePosition = await r.table(id).filter(r.row('timeEnteredQueue').lt(timeEnteredQueue).and(r.row('isAccepted').eq(true))).count().run(connQueues);
+            //query to get rider's actual position in the queue
+            const ridersQueuePosition = await r.table(id).filter(r.row('timeEnteredQueue').lt(timeEnteredQueue).and(r.row('isAccepted').eq(true))).count().run(connQueues);
 
-        //if there are riders before this rider that have been accepted,
-        //tell the beeper they must respond to them first.
-        if (ridersQueuePosition != 0) {
-            res.send(makeJSONError("You must respond to the rider who first joined your queue."));
-            return;
+            //if there are riders before this rider that have been accepted,
+            //tell the beeper they must respond to them first.
+            if (ridersQueuePosition != 0) {
+                return res.send(makeJSONError("You must respond to the rider who first joined your queue."));
+            }
+        }
+        catch (error) {
+            throw error;
         }
     }
 
@@ -186,51 +187,45 @@ async function setBeeperQueue (req: Request, res: Response): Promise<void> {
         });
 
         //Notify the rider that they were accepted into a queue
-        sendNotification(req.body.riderID, "A beeper has accepted your beep request", "You will recieve another notification when they are on their way to pick you up.");
+        return sendNotification(req.body.riderID, "A beeper has accepted your beep request", "You will recieve another notification when they are on their way to pick you up.");
     }
     else if (req.body.value == 'deny' || req.body.value == 'complete') {
         //delete entry in beeper's queues table
-        r.table(id).get(req.body.queueID).delete().run(connQueues, function (error, result) {
+        r.table(id).get(req.body.queueID).delete().run(connQueues, function (error: Error, result: WriteResult) {
             //handle any RethinkDB error
             if (error) {
-                res.send(makeJSONError("Server error while deleting queue entry in beeper's queue table"));
-                console.log(error);
-                return;
+                throw error;
             }
+
             //ensure we actually deleted something
             if (result.deleted != 1) {
-                res.send(makeJSONError("Nothing was deleted into beeper's queue table. This should not have happended..."));
-                return;
+                return res.send(makeJSONError("Nothing was deleted into beeper's queue table. This should not have happended..."));
             }
         });
 
         //decrease beeper's queue size
-        r.table('users').get(id).update({'queueSize': r.row('queueSize').sub(1)}).run(conn, function (error, result) {
+        r.table('users').get(id).update({'queueSize': r.row('queueSize').sub(1)}).run(conn, function (error: Error, result: WriteResult) {
             //handle any RethinkDB error
             if (error) {
-                res.send(makeJSONError("Server error while decrementing beeper's queue size"));
-                console.log(error);
-                return;
+                throw error;
             }
+
             //ensure we actually updated something
             if (result.replaced != 1) {
-                res.send(makeJSONError("Nothing was changed in beeper's queue table. This should not have happended..."));
-                return;
+                return res.send(makeJSONError("Nothing was changed in beeper's queue table. This should not have happended..."));
             }
         });
 
         //set rider's inQueueOfUserID value to null because they are no longer in a queue
-        r.table('users').get(req.body.riderID).update({'inQueueOfUserID': null}).run(conn, function (error, result) {
+        r.table('users').get(req.body.riderID).update({'inQueueOfUserID': null}).run(conn, function (error: Error, result: WriteResult) {
             //handle any RethinkDB error
             if (error) {
-                res.send(makeJSONError("Server error while updating 'inQueueOfUserID' for rider"));
-                console.log(error);
-                return;
+                throw error;
             }
+
             //ensure we actually updated something
             if (result.replaced != 1) {
-                res.send(makeJSONError("Nothing was changed in beeper's queue table. This should not have happended..."));
-                return;
+                return res.send(makeJSONError("Nothing was changed in beeper's queue table. This should not have happended..."));
             }
         });
 
@@ -240,19 +235,17 @@ async function setBeeperQueue (req: Request, res: Response): Promise<void> {
         }
 
         //if we reached this point, operation was successful
-        res.send(makeJSONSuccess("Successfully removed user from queue."));
+        return res.send(makeJSONSuccess("Successfully removed user from queue."));
     }
     else {
         //we can just increment the state number in the queue doccument
-        r.table(id).get(req.body.queueID).update({'state': r.row('state').add(1)}, {returnChanges: true}).run(connQueues, function (error, result) {
+        r.table(id).get(req.body.queueID).update({'state': r.row('state').add(1)}, {returnChanges: true}).run(connQueues, function (error: Error, result: WriteResult) {
             //handle any RethinkDB error
             if (error) {
-                res.send(makeJSONError("Server error while updating incrementing state in rider's queue doccument"));
-                console.log(error);
-                return;
+                throw error;
             }
            
-            let newState = result.changes[0].new_val.state;
+            const newState = result.changes[0].new_val.state;
 
             switch(newState) {
                 case 1:
@@ -267,7 +260,7 @@ async function setBeeperQueue (req: Request, res: Response): Promise<void> {
                    throw new Error("this should never happen");
             }
             
-            res.send(makeJSONSuccess("Successfully changed ride state."));
+            return res.send(makeJSONSuccess("Successfully changed ride state."));
         });
     }
 }
