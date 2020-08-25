@@ -4,7 +4,7 @@ import { WriteResult } from "rethinkdb";
 import * as r from 'rethinkdb';
 import { sha256 } from 'js-sha256';
 import { makeJSONSuccess, makeJSONError, makeJSONWarning } from '../utils/json';
-import { isTokenValid, createVerifyEmailEntryAndSendEmail } from "../auth/helpers";
+import { isTokenValid, createVerifyEmailEntryAndSendEmail, getUserFromId } from "../auth/helpers";
 import { conn } from '../utils/db';
 import { isEduEmail, getEmail } from './helpers';
 import { Validator } from "node-input-validator";
@@ -16,6 +16,7 @@ router.post('/edit', editAccount);
 router.post('/password', changePassword);
 router.post('/pushtoken', updatePushToken);
 router.post('/verify', verifyAccount);
+router.post('/verify/resend', resendEmailVarification);
 router.post('/status', getAccountStatus);
 
 async function editAccount (req: Request, res: Response): Promise<Response | void> {
@@ -44,7 +45,7 @@ async function editAccount (req: Request, res: Response): Promise<Response | voi
         return res.send(makeJSONError(v.errors));
     }
 
-    r.table("users").get(id).update({first: req.body.first, last: req.body.last, email: req.body.email, phone: req.body.phone, venmo: req.body.venmo}, {returnChanges: true}).run(conn, function (error: Error, result: WriteResult) {
+    r.table("users").get(id).update({first: req.body.first, last: req.body.last, email: req.body.email, phone: req.body.phone, venmo: req.body.venmo}, {returnChanges: true}).run(conn, async function (error: Error, result: WriteResult) {
         if (error) {
             throw error;
         }
@@ -55,6 +56,19 @@ async function editAccount (req: Request, res: Response): Promise<Response | voi
         }
        
         if (result.changes[0].old_val.email !== result.changes[0].new_val.email) {
+            try {
+                //delete user's existing email varification entries
+                const result: WriteResult = await r.table("verifyEmail").filter({ userid: id }).delete().run(conn);
+
+                if (result.deleted == 0) {
+                    //in theory, if they want to resend an email verification email, there should be something in the db...
+                    return res.send(makeJSONError("You don't have any email varification requests associated with your account, we can't resend you anything"));
+                }
+            }
+            catch (error) {
+                throw error;
+            }
+
             //if user made a change to their email, we need set their status to not verified and make them re-verify
             try {
                 r.table("users").get(id).update({isEmailVerified: false, isStudent: false}).run(conn);
@@ -183,7 +197,7 @@ async function verifyAccount (req: Request, res: Response): Promise<Response | v
  * @param req
  * @param res
  */
-async function getAccountStatus(req: Request, res: Response) {
+async function getAccountStatus(req: Request, res: Response): Promise<Response | void> {
     //check if auth token is valid before processing the request to update push token
     const id = await isTokenValid(req.body.token);
 
@@ -192,13 +206,43 @@ async function getAccountStatus(req: Request, res: Response) {
         return res.send(makeJSONError("Your auth token is not valid."));
     }
 
-    r.table("users").get(id).pluck("isEmailVerified", "isStudent").run(conn, function(error: Error, result: UserPluckResult) {
+    r.table("users").get(id).pluck("isEmailVerified", "isStudent", "email").run(conn, function(error: Error, result: UserPluckResult) {
         if (error) {
             throw error;
         }
 
         return res.send(makeJSONSuccess(result));
     });
+}
+
+async function resendEmailVarification(req: Request, res: Response) {
+    //check if auth token is valid before processing the request to update push token
+    const id = await isTokenValid(req.body.token);
+
+    if (!id) {
+        //if there is no id returned, the token is not valid.
+        return res.send(makeJSONError("Your auth token is not valid."));
+    }
+
+    try {
+        //delete user's existing email varification entries
+        await r.table("verifyEmail").filter({ userid: id }).delete().run(conn);
+    }
+    catch (error) {
+        throw error;
+    }
+
+    //get user's current email and first name
+    const user = await getUserFromId(id, "first", "email");
+
+    if (!user) {
+        return res.send(makeJSONError("You don't exist as a user"));
+    }
+
+    //create a new entry with their current email address and send in email
+    await createVerifyEmailEntryAndSendEmail(id, user.email, user.first);
+
+    return res.send(makeJSONSuccess("Successfully re-sent varification email to " + user.email));
 }
 
 export = router;

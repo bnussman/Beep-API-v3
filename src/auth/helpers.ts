@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import * as r from 'rethinkdb';
 import { WriteResult, Cursor } from 'rethinkdb';
-import { TokenData, UserPluckResult } from '../types/beep';
+import { TokenData, UserPluckResult, User } from '../types/beep';
 import { conn } from '../utils/db';
 import * as nodemailer from "nodemailer";
 
@@ -139,6 +139,33 @@ export async function getUserFromEmail(email: string, ...pluckItems: string[]): 
     catch (error) {
         //error establishing rethinkdb cursor in the user's table when we filtered by email
         throw error;
+    }
+}
+
+/**
+ * get user data given an email
+ * @param email string of user's email
+ * @param pluckItems are items we want to pluck in the db query 
+ * @returns Promise<UserPluckResult>
+ */
+export async function getUserFromId(id: string, ...pluckItems: string[]): Promise<any | null> {
+    try {
+        let result;
+
+        //if no pluck items were passed in, don't pluck anything
+        if (pluckItems.length == 0) {
+            result = await r.table("users").get(id).run(conn);
+        }
+        else {
+            //expand all the pluck paramaters and rethinkdb query to get them
+            result = await r.table("users").get(id).pluck(...pluckItems).run(conn);
+        }
+        
+        return result;
+    }
+    catch (error) {
+        //there was nothing to 'get'
+        return null;
     }
 }
 
