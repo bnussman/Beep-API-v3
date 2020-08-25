@@ -287,8 +287,7 @@ async function forgotPassword (req: Request, res: Response): Promise<Response | 
             }
             catch (error) {
                 //the next function is throwing an error, it is basiclly saying there is no next, so we can say 
-                //there is no entry for the user currenly in the table
-                return res.send(makeJSONError("There were no password reset request requested for this user"));
+                //there is no entry for the user currenly in the table, which means we can procede to give them a forgot password token
             }
         }
         catch (error) {
@@ -345,14 +344,14 @@ async function resetPassword (req: Request, res: Response): Promise<Response | v
     try {
         //this seems odd, but we delete the forgot password entry but use RethinkDB returnChanges to invalidate the entry and complete this 
         //new password request
-        const result: WriteResult = await r.table("passwordReset").get(req.body.id).delete({returnChanges: true}).run(conn);
+        const result: WriteResult = await r.table("passwordReset").get(req.body.id).delete({ returnChanges: true }).run(conn);
 
         //get the db entry from the RethinkDB changes
         const entry = result.changes[0].old_val;
 
         //check if request time was made over an hour ago
         if ((entry.time + (3600 * 1000)) < Date.now()) {
-            return res.send(makeJSONError("Your verification token has expired"));
+            return res.send(makeJSONError("Your verification token has expired. You must re-request to reset your password."));
         }
 
         try {
