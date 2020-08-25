@@ -58,12 +58,7 @@ async function editAccount (req: Request, res: Response): Promise<Response | voi
         if (result.changes[0].old_val.email !== result.changes[0].new_val.email) {
             try {
                 //delete user's existing email varification entries
-                const result: WriteResult = await r.table("verifyEmail").filter({ userid: id }).delete().run(conn);
-
-                if (result.deleted == 0) {
-                    //in theory, if they want to resend an email verification email, there should be something in the db...
-                    return res.send(makeJSONError("You don't have any email varification requests associated with your account, we can't resend you anything"));
-                }
+                await r.table("verifyEmail").filter({ userid: id }).delete().run(conn);
             }
             catch (error) {
                 throw error;
