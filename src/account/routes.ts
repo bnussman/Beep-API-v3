@@ -166,14 +166,14 @@ async function verifyAccount (req: Request, res: Response): Promise<Response | v
             //update the user's tabe with the new values
             await r.table("users").get(entry.userid).update(update).run(conn);
 
-            res.send(makeJSONSuccess("Successfully verified email"));
+            return res.send(makeJSONSuccess("Successfully verified email"));
         }
         catch(error) {
             throw error;
         }
     }
     catch (error) {
-        res.send(makeJSONError("Invalid verify email token"));
+        return res.send(makeJSONError("Invalid verify email token"));
     }
 }
 
@@ -197,7 +197,7 @@ async function getAccountStatus(req: Request, res: Response) {
             throw error;
         }
 
-        res.send(makeJSONSuccess(result));
+        return res.send(makeJSONSuccess(result));
     });
 }
 

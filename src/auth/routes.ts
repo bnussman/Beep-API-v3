@@ -159,7 +159,7 @@ async function signup (req: Request, res: Response): Promise<Response | void> {
             createVerifyEmailEntryAndSendEmail(userid, req.body.email, req.body.first);
 
             //produce our REST API output
-            res.send({
+            return res.send({
                 'status': "success",
                 'id': userid,
                 'username': req.body.username,
@@ -181,7 +181,7 @@ async function signup (req: Request, res: Response): Promise<Response | void> {
         }
         else {
             //RethinkDB says that a new entry was NOT inserted, something went wrong...
-            res.send(makeJSONError("New user was not inserted into the database."));
+            return res.send(makeJSONError("New user was not inserted into the database."));
         }
     });
 }
@@ -204,16 +204,17 @@ async function logout (req: Request, res: Response): Promise<Response | void> {
         if (error) {
             throw error;
         }
+
         //if RethinkDB tells us something was deleted, logout was successful
         if (result.deleted == 1) {
             //unset the user's push token
             setPushToken(id, null);
             //return success message
-            res.send(makeJSONSuccess("Token was revoked."));
+            return res.send(makeJSONSuccess("Token was revoked."));
         }
         else {
             //Nothing was deleted in the db, so there was some kind of error
-            res.send(makeJSONError("Token was not deleted in our database."));
+            return res.send(makeJSONError("Token was not deleted in our database."));
         }
     });
 }
@@ -231,13 +232,14 @@ function removeToken (req: Request, res: Response): void {
         if (error) {
             throw error;
         }
+
         //if RethinkDB tells us something was deleted, logout was successful
         if (result.deleted == 1) {
-            res.send(makeJSONSuccess("Token was revoked."));
+            return res.send(makeJSONSuccess("Token was revoked."));
         }
         else {
             //Nothing was deleted in the db, so there was some kind of error
-            res.send(makeJSONError("Token was not deleted in our database."));
+            return res.send(makeJSONError("Token was not deleted in our database."));
         }
     });
 }
@@ -261,15 +263,8 @@ async function forgotPassword (req: Request, res: Response): Promise<Response | 
     }
 
     //we want to try to get a user's doc, if null, there is no user
-    let user: UserPluckResult | null;
-
-    try {
-        //call our helper function. getUserFromEmail takes an email and will pluck evey other param from their user table
-        user = await getUserFromEmail(req.body.email, "id", "first");
-    }
-    catch(error) {
-        throw error;
-    }
+    //call our helper function. getUserFromEmail takes an email and will pluck evey other param from their user table
+    let user: UserPluckResult | null = await getUserFromEmail(req.body.email, "id", "first");
 
     if (user) {
         //we were able to find a user and get their details
@@ -286,12 +281,14 @@ async function forgotPassword (req: Request, res: Response): Promise<Response | 
                 //so we will just resend an email with the same db id
                 if (entry) {
                     sendResetEmail(req.body.email, entry.id, user.first);
+
                     return res.send(makeJSONError("You have already requested to reset your password. We have re-sent your email. Check your email and follow the instructions."));
                 }
             }
             catch (error) {
                 //the next function is throwing an error, it is basiclly saying there is no next, so we can say 
                 //there is no entry for the user currenly in the table
+                return res.send(makeJSONError("There were no password reset request requested for this user"));
             }
         }
         catch (error) {
@@ -315,7 +312,7 @@ async function forgotPassword (req: Request, res: Response): Promise<Response | 
             //now send an email with some link inside like https://ridebeep.app/password/reset/ba386adf-743a-434e-acfe-98bdce47d484	
             sendResetEmail(req.body.email, id, user.first);
 
-            return res.send(makeJSONSuccess("Successfully sent email."));
+            return res.send(makeJSONSuccess("Successfully sent email"));
         }
         catch (error) {
             //There was an error inserting a forgot password entry
@@ -323,7 +320,7 @@ async function forgotPassword (req: Request, res: Response): Promise<Response | 
         }
     }
     else {
-        return res.send(makeJSONError("User not found."));
+        return res.send(makeJSONError("User not found"));
     }
 }
 
@@ -362,9 +359,10 @@ async function resetPassword (req: Request, res: Response): Promise<Response | v
             //update user's password in their db entry
             await r.table("users").get(entry.userid).update({ password: sha256(req.body.password) }).run(conn);
 
-            res.send(makeJSONSuccess("Successfully reset your password!"));
             //incase user's password was in the hands of bad person, invalidate user's tokens after they successfully reset their password
             deactivateTokens(entry.userid);
+
+            return res.send(makeJSONSuccess("Successfully reset your password!"));
         }
         catch (error) {
             //RethinkDB unable to update user's password
