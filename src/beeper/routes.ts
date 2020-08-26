@@ -268,7 +268,7 @@ async function setBeeperQueue (req: Request, res: Response): Promise<Response | 
                 case 3:
                     break;
                default: 
-                   throw new Error("this should never happen");
+                   logger.error("Our beeper's state notification switch statement reached a point that is should not have");
             }
             
             return res.send(makeJSONSuccess("Successfully changed ride state."));
