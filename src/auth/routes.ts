@@ -9,6 +9,7 @@ import { sha256 } from 'js-sha256';
 import { getToken, setPushToken, isTokenValid, getUserFromEmail, sendResetEmail, deactivateTokens, createVerifyEmailEntryAndSendEmail } from './helpers';
 import { UserPluckResult } from "../types/beep";
 import { Validator } from "node-input-validator";
+import logger from "../utils/logger";
 
 const router: Router = express.Router();
 
@@ -40,7 +41,8 @@ async function login (req: Request, res: Response): Promise<Response | void> {
     r.table("users").filter({ "username": req.body.username }).run(conn, function (error: Error, cursor: Cursor) {
         //Handle RethinkDB error
         if (error) {
-            throw error;
+            res.send(makeJSONError("Unable to login"));
+            return logger.error(error);
         }
 
         //Iterate through user's with that given username
@@ -143,7 +145,8 @@ async function signup (req: Request, res: Response): Promise<Response | void> {
     r.table("users").insert(document).run(conn, async function (error: Error, result: WriteResult) {
         //handle a RethinkDB error
         if (error) {
-            throw error;
+            res.send(makeJSONError("Unable to signup"));
+            return logger.error(error);
         }
         //if we successfully inserted our new user...
         if (result.inserted == 1) {
@@ -202,7 +205,8 @@ async function logout (req: Request, res: Response): Promise<Response | void> {
     r.table("tokens").get(req.body.token).delete().run(conn, function (error: Error, result: WriteResult) {
         //handle a RethinkDB error
         if (error) {
-            throw error;
+            res.send(makeJSONError("Unable to logout"));
+            return logger.error(error);
         }
 
         //if RethinkDB tells us something was deleted, logout was successful
@@ -234,7 +238,8 @@ function removeToken (req: Request, res: Response): void {
     r.table("tokens").filter({'tokenid': req.body.tokenid}).delete().run(conn, function (error: Error, result: WriteResult) {
         //handle a RethinkDB error
         if (error) {
-            throw error;
+            res.send(makeJSONError("Unable to remove token"));
+            return logger.error(error);
         }
 
         //if RethinkDB tells us something was deleted, logout was successful
@@ -296,7 +301,8 @@ async function forgotPassword (req: Request, res: Response): Promise<Response | 
         }
         catch (error) {
             //there was an error establishing the cursor used for looking in passwordReset
-            throw error;
+            res.send(makeJSONError("Unable to process a forgot password request"));
+            return logger.error(error);
         }
 
         //this is what will be inserted when making a new forgot password entry
@@ -319,7 +325,8 @@ async function forgotPassword (req: Request, res: Response): Promise<Response | 
         }
         catch (error) {
             //There was an error inserting a forgot password entry
-            throw error;
+            res.send(makeJSONError("Unable to process a forgot password request"));
+            return logger.error(error);
         }
     }
     else {
@@ -369,7 +376,8 @@ async function resetPassword (req: Request, res: Response): Promise<Response | v
         }
         catch (error) {
             //RethinkDB unable to update user's password
-            throw error;
+            res.send(makeJSONError("Unable to reset your password"));
+            return logger.error(error);
         }
     }
     catch (error) {

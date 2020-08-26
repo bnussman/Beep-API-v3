@@ -1,6 +1,7 @@
 import { UserPluckResult } from "../types/beep";
 import * as r from 'rethinkdb';
 import { conn } from "../utils/db";
+import logger from "../utils/logger";
 
 /**
  * checks last 4 characters of an email address
@@ -23,6 +24,7 @@ export async function getEmail(id: string): Promise<string | undefined> {
     }
     catch (error) {
         //error getting user with id from users table and plucking email
-        throw error;
+        logger.error(error);
+        return undefined;
     }
 }

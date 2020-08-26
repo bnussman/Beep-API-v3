@@ -4,6 +4,7 @@ import { WriteResult, Cursor } from 'rethinkdb';
 import { TokenData, UserPluckResult, User } from '../types/beep';
 import { conn } from '../utils/db';
 import * as nodemailer from "nodemailer";
+import logger from '../utils/logger';
 
 /**
  * Generates an authentication token and a token for that token (for offline logouts), stores
@@ -20,21 +21,37 @@ export async function getToken(userid: string): Promise<TokenData> {
     };
 
     //insert our new auth token into our tokens table
-    const result: WriteResult = await r.table("tokens").insert(document).run(conn);
+    try {
+        const result: WriteResult = await r.table("tokens").insert(document).run(conn);
 
-    //if nothing was inserted into the tokens table, we know something is wrong
-    if (result.inserted == 0) {
-        throw "Unable to insert new token into db.";
+        //if nothing was inserted into the tokens table, we know something is wrong
+        if (result.inserted == 0) {
+            logger.error("Somehow, tokenData was not inserted, this is very bad");
+            return ({
+                'userid': userid,
+                'tokenid': "yikes",
+                'token': "yikes"
+            });
+        }
+
+        const token: string = result.generated_keys[0];
+
+        //return the data we generated
+        return ({
+            'userid': document.userid,
+            'tokenid': document.tokenid,
+            'token': token
+        });
+    } 
+    catch (error) {
+        logger.error(error);;
+
+        return ({
+            'userid': userid,
+            'tokenid': "yikes",
+            'token': "yikes"
+        });
     }
-
-    const token: string = result.generated_keys[0];
-
-    //return the data we generated
-    return ({
-        'userid': document.userid,
-        'tokenid': document.tokenid,
-        'token': token
-    });
 }
 
 /**
@@ -45,7 +62,12 @@ export async function getToken(userid: string): Promise<TokenData> {
 export async function setPushToken(id: string | null, token: string | null): Promise<void> {
     if (!id) return;
     //run query to get user and update their pushToken
-    await r.table("users").get(id).update({pushToken: token}).run(conn);
+    try {
+        await r.table("users").get(id).update({pushToken: token}).run(conn);
+    }
+    catch(error) {
+        logger.error(error);
+    }
 }
 
 /**
@@ -57,14 +79,20 @@ export async function setPushToken(id: string | null, token: string | null): Pro
 export async function isTokenValid(token: string): Promise<string | null> {
     //get (only) user's id from tokens db where the token is the token passed to this function
     //NOTE: filter must be used over get here because token is not a primary (or secondary) key
-    const result: any = await r.table("tokens").get(token).run(conn);
+    try {
+        const result: any = await r.table("tokens").get(token).run(conn);
 
-    if (result) {
-        return result.userid;
+        if (result) {
+            return result.userid;
+        }
+
+        //we did not find this token in the tokens table, so it is not valid,
+        //rather then returning a userid, return null to signify that token is not valid.
+    }
+    catch (error) {
+        logger.error(error);
     }
 
-    //we did not find this token in the tokens table, so it is not valid,
-    //rather then returning a userid, return null to signify that token is not valid.
     return null;
 }
 
@@ -83,7 +111,7 @@ export async function hasUserLevel(userid: string, level: number): Promise<boole
     }
     catch (error) {
         //in prod, log error with our logger i guess
-        console.error(error);
+        logger.error(error);
     }
     return false;
 }
@@ -137,9 +165,9 @@ export async function getUserFromEmail(email: string, ...pluckItems: string[]): 
         }
     }
     catch (error) {
-        //error establishing rethinkdb cursor in the user's table when we filtered by email
-        throw error;
+        logger.error(error);
     }
+    return null;
 }
 
 /**
@@ -201,10 +229,9 @@ export function sendResetEmail(email: string, id: string, first: string | undefi
 
     transporter.sendMail(mailOptions, (error: Error | null, info: nodemailer.SentMessageInfo) => { 
         if (error) { 
-            throw error;
+            logger.error(info);
         } 
-        //Successfully sent email. TODO log the event
-        console.log("Successfully sent email: ", info); 
+        logger.info(info);
     });     
 }
 
@@ -219,7 +246,7 @@ export function deactivateTokens(userid: string): void {
     }
     catch (error) {
         //RethinkDB error when deleteing push tokens for userid
-        throw error;
+        logger.error(error);
     }
 }
 
@@ -249,10 +276,10 @@ export function sendVerifyEmailEmail(email: string, id: string, first: string | 
 
     transporter.sendMail(mailOptions, (error: Error | null, info: nodemailer.SentMessageInfo) => { 
         if (error) { 
-            throw error;
+            logger.error(error);
         } 
         //Successfully sent email TODO use logger to log email events
-        console.log("Successfully sent email: ", info); 
+        logger.info(info);
     });     
 }
 
@@ -282,6 +309,6 @@ export async function createVerifyEmailEntryAndSendEmail(id: string, email: stri
     }
     catch (error) {
         //RethinkDB unable to insert into verifyEmail table
-        throw error;
+        logger.error(error);
     }
 }

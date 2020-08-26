@@ -7,7 +7,7 @@ class Logger {
     private hostname: string;
 
     constructor() {
-        this.ws = new WebSocket("ws://192.168.1.57:8080");
+        this.ws = new WebSocket("ws://192.168.1.114:8080");
         this.hostname = os.hostname();
     }
 

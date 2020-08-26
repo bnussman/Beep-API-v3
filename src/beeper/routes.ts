@@ -9,6 +9,7 @@ import { sendNotification } from '../utils/notifications';
 import { getQueueSize, getPersonalInfo } from './helpers';
 import { UserPluckResult } from "../types/beep";
 import {Validator} from 'node-input-validator';
+import logger from '../utils/logger';
 
 const router: Router = express.Router();
 
@@ -25,7 +26,8 @@ function getBeeperStatus (req: Request, res: Response): Response | void {
     r.table("users").get(req.params.id).pluck('isBeeping').run(conn, function (error: ReqlError, result: UserPluckResult) {
         //if there was an error, notify user with REST API.
         if (error) {
-            throw error;
+            res.send(makeJSONError("Unable to get beeper status"));
+            return logger.error(error);
         }
         //We have no error, send the resulting data from query.
         return res.send({
@@ -74,7 +76,8 @@ async function setBeeperStatus (req: Request, res: Response): Promise<Response |
     r.table('users').get(id).update({isBeeping: req.body.isBeeping, singlesRate: req.body.singlesRate, groupRate: req.body.groupRate, capacity: req.body.capacity}).run(conn, function(error: Error) {
         //handle any RethinkDB error
         if (error) {
-            throw error;
+            res.send(makeJSONError("Unable to set beeper status"));
+            return logger.error(error);
         }
         //If there was no DB error, our update query was successful. return success with REST API
         return res.send(makeJSONSuccess("Successfully updated beeping status."));
@@ -98,7 +101,8 @@ async function getBeeperQueue (req: Request, res: Response): Promise<Response | 
     r.table(id).orderBy('timeEnteredQueue').run(connQueues, async function (error: Error, result: any) {
         //Handle any RethinkDB error
         if (error) {
-            throw error;
+            res.send(makeJSONError("Unable to get beeper queue"));
+            return logger.error(error);
         }
 
         //for every entry in a beeper's queue, add personal info
@@ -148,7 +152,8 @@ async function setBeeperQueue (req: Request, res: Response): Promise<Response | 
             }
         }
         catch (error) {
-            throw error;
+            res.send(makeJSONError("Unable set beeper queue item"));
+            return logger.error(error);
         }
     }
     else {
@@ -170,7 +175,8 @@ async function setBeeperQueue (req: Request, res: Response): Promise<Response | 
             }
         }
         catch (error) {
-            throw error;
+            res.send(makeJSONError("Unable set beeper queue item"));
+            return logger.error(error);
         }
     }
 
@@ -179,7 +185,8 @@ async function setBeeperQueue (req: Request, res: Response): Promise<Response | 
         r.table(id).get(req.body.queueID).update({'isAccepted': true}).run(connQueues, function (error: Error) {
             //handle RethinkDB errors
             if (error) {
-                throw error;
+                res.send(makeJSONError("Unable set beeper queue item"));
+                return logger.error(error);
             }
 
             //if we made it here, accept occoured successfully
@@ -194,7 +201,8 @@ async function setBeeperQueue (req: Request, res: Response): Promise<Response | 
         r.table(id).get(req.body.queueID).delete().run(connQueues, function (error: Error, result: WriteResult) {
             //handle any RethinkDB error
             if (error) {
-                throw error;
+                res.send(makeJSONError("Unable set beeper queue item"));
+                return logger.error(error);
             }
 
             //ensure we actually deleted something
@@ -207,7 +215,8 @@ async function setBeeperQueue (req: Request, res: Response): Promise<Response | 
         r.table('users').get(id).update({'queueSize': r.row('queueSize').sub(1)}).run(conn, function (error: Error, result: WriteResult) {
             //handle any RethinkDB error
             if (error) {
-                throw error;
+                res.send(makeJSONError("Unable set beeper queue item"));
+                return logger.error(error);
             }
 
             //ensure we actually updated something
@@ -220,7 +229,8 @@ async function setBeeperQueue (req: Request, res: Response): Promise<Response | 
         r.table('users').get(req.body.riderID).update({'inQueueOfUserID': null}).run(conn, function (error: Error, result: WriteResult) {
             //handle any RethinkDB error
             if (error) {
-                throw error;
+                res.send(makeJSONError("Unable set beeper queue item"));
+                return logger.error(error);
             }
 
             //ensure we actually updated something
@@ -242,7 +252,8 @@ async function setBeeperQueue (req: Request, res: Response): Promise<Response | 
         r.table(id).get(req.body.queueID).update({'state': r.row('state').add(1)}, {returnChanges: true}).run(connQueues, function (error: Error, result: WriteResult) {
             //handle any RethinkDB error
             if (error) {
-                throw error;
+                res.send(makeJSONError("Unable set beeper queue item"));
+                return logger.error(error);
             }
            
             const newState = result.changes[0].new_val.state;

@@ -7,6 +7,7 @@ import { isTokenValid } from "../auth/helpers";
 import { conn, connQueues } from '../utils/db';
 import { sendNotification } from '../utils/notifications';
 import { Validator } from "node-input-validator";
+import logger from '../utils/logger';
 
 const router: Router = express.Router();
 
@@ -65,7 +66,8 @@ async function chooseBeep (req: Request, res: Response): Promise<Response | void
     catch (error) {
         //RethinkDB error while inserting beep entery into beeper's queue table
         //TODO because no insert happended we proabably want to return to stop further damage
-        throw error;
+        res.send(makeJSONError("Unable to choose beep"));
+        return logger.error(error);
     }
 
     try {
@@ -74,7 +76,8 @@ async function chooseBeep (req: Request, res: Response): Promise<Response | void
     }
     catch (error) {
         //RethinkDB error while trying to increment beeper's queue size in the users table
-        throw error;
+        res.send(makeJSONError("Unable to choose beep"));
+        return logger.error(error);
     }
 
     try {
@@ -83,7 +86,8 @@ async function chooseBeep (req: Request, res: Response): Promise<Response | void
     }
     catch (error) {
         //unable to set inQueueOfUserID for rider in users table
-        throw error;
+        res.send(makeJSONError("Unable to choose beep"));
+        return logger.error(error);
     }
 
     //Tell Beeper someone entered their queue asyncronously
@@ -125,7 +129,8 @@ async function findBeep (req: Request, res: Response): Promise<Response | void> 
     r.table('users').orderBy({'index': 'queueSize'}).filter(r.row('isBeeping').eq(true).and(r.row('id').ne(id))).limit(1).run(conn, function (error: Error, cursor: Cursor) {
         //Handle any RethinkDB error
         if (error) {
-            throw error;
+            res.send(makeJSONError("Unable to find beep"));
+            return logger.error(error);
         }
 
         //this paticular RethinkDB query will return an iterable object, so use next to get the beeper
@@ -141,7 +146,8 @@ async function findBeep (req: Request, res: Response): Promise<Response | void> 
                 }
                 else {
                     //the error was proabably serious, log it
-                    throw error;
+                    res.send(makeJSONError("Unable to find beep"));
+                    return logger.error(error);
                 }
             }
 
@@ -254,7 +260,8 @@ async function getRiderStatus (req: Request, res: Response): Promise<Response | 
             return res.send(output);
         }
         catch (error) {
-            throw error;
+            res.send(makeJSONError("Unable to get rider status"));
+            return logger.error(error);
         }
     }
     else {
@@ -280,7 +287,8 @@ async function riderLeaveQueue (req: Request, res: Response): Promise<Response |
         r.table(req.body.beepersID).filter({'riderid': id}).delete().run(connQueues);
     }
     catch (error) {
-        throw error;
+        res.send(makeJSONError("Unable to leave queue"));
+        return logger.error(error);
     }
     
     try {
@@ -288,7 +296,8 @@ async function riderLeaveQueue (req: Request, res: Response): Promise<Response |
         r.table('users').get(req.body.beepersID).update({'queueSize': r.row('queueSize').sub(1)}).run(conn);
     }
     catch (error) {
-        throw error;
+        res.send(makeJSONError("Unable to leave queue"));
+        return logger.error(error);
     }
 
     try {
@@ -296,7 +305,8 @@ async function riderLeaveQueue (req: Request, res: Response): Promise<Response |
         r.table('users').get(id).update({'inQueueOfUserID': null}).run(conn);
     }
     catch (error) {
-        throw error;
+        res.send(makeJSONError("Unable to leave queue"));
+        return logger.error(error);
     }
 
     //if we made it to this point, we successfully removed a user from the queue.
@@ -309,7 +319,8 @@ async function riderLeaveQueue (req: Request, res: Response): Promise<Response |
 function getBeeperList (req: Request, res: Response): Response | void {
     r.table("users").filter({isBeeping: true}).pluck('first', 'last', 'queueSize', 'id', 'singlesRate', 'groupRate', 'capacity', 'userLevel', 'isStudent').run(conn, async function (error: Error, result) {
         if (error) {
-            throw error;
+            res.send(makeJSONError("Unable to get beeper list"));
+            return logger.error(error);
         }
 
         const list = await result.toArray();

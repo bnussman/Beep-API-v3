@@ -9,6 +9,7 @@ import { conn } from '../utils/db';
 import { isEduEmail, getEmail } from './helpers';
 import { Validator } from "node-input-validator";
 import { UserPluckResult } from '../types/beep';
+import logger from '../utils/logger';
 
 const router: Router = express.Router();
 
@@ -47,7 +48,8 @@ async function editAccount (req: Request, res: Response): Promise<Response | voi
 
     r.table("users").get(id).update({first: req.body.first, last: req.body.last, email: req.body.email, phone: req.body.phone, venmo: req.body.venmo}, {returnChanges: true}).run(conn, async function (error: Error, result: WriteResult) {
         if (error) {
-            throw error;
+            res.send(makeJSONError("Unable to edit account"));
+            return logger.error(error);
         }
 
         if (result.unchanged > 0) {
@@ -61,7 +63,8 @@ async function editAccount (req: Request, res: Response): Promise<Response | voi
                 await r.table("verifyEmail").filter({ userid: id }).delete().run(conn);
             }
             catch (error) {
-                throw error;
+                res.send(makeJSONError("Unable to edit account"));
+                return logger.error(error);
             }
 
             //if user made a change to their email, we need set their status to not verified and make them re-verify
@@ -69,7 +72,8 @@ async function editAccount (req: Request, res: Response): Promise<Response | voi
                 r.table("users").get(id).update({isEmailVerified: false, isStudent: false}).run(conn);
             }
             catch (error) {
-                throw error;
+                res.send(makeJSONError("Unable to edit account"));
+                return logger.error(error);
             }
             
             //calles helper function that will create a db entry for email varification and also send the email
@@ -107,7 +111,8 @@ async function changePassword (req: Request, res: Response): Promise<Response | 
     //update the user's password
     r.table("users").get(id).update({password: encryptedPassword}).run(conn, function (error: Error) {
         if (error) {
-            throw error;
+            res.send(makeJSONError("Unable to change password"));
+            return logger.error(error);
         }
 
         return res.send(makeJSONSuccess("Successfully changed password."));
@@ -126,7 +131,8 @@ async function updatePushToken (req: Request, res: Response): Promise<Response |
     //update user's push token
     r.table("users").get(id).update({pushToken: req.body.expoPushToken}).run(conn, function (error: Error) {
         if (error) {
-            throw error;
+            res.send(makeJSONError("Unable to update push token"));
+            return logger.error(error);
         }
 
         res.send(makeJSONSuccess("Successfully updated push token."));
@@ -182,7 +188,8 @@ async function verifyAccount (req: Request, res: Response): Promise<Response | v
             });
         }
         catch(error) {
-            throw error;
+            res.send(makeJSONError("Unable to verify account"));
+            return logger.error(error);
         }
     }
     catch (error) {
@@ -207,7 +214,8 @@ async function getAccountStatus(req: Request, res: Response): Promise<Response |
 
     r.table("users").get(id).pluck("isEmailVerified", "isStudent", "email").run(conn, function(error: Error, result: UserPluckResult) {
         if (error) {
-            throw error;
+            res.send(makeJSONError("Unable to get account status"));
+            return logger.error(error);
         }
 
         return res.send(makeJSONSuccess(result));
@@ -228,7 +236,8 @@ async function resendEmailVarification(req: Request, res: Response) {
         await r.table("verifyEmail").filter({ userid: id }).delete().run(conn);
     }
     catch (error) {
-        throw error;
+        res.send(makeJSONError("Unable to resend varification email"));
+        return logger.error(error);
     }
 
     //get user's current email and first name

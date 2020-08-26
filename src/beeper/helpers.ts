@@ -1,6 +1,7 @@
 import * as r from 'rethinkdb';
 import { conn } from '../utils/db';
 import { UserPluckResult } from "../types/beep";
+import logger from '../utils/logger';
 
 /**
  * Retuns user's id if their token is valid, null otherwise
@@ -14,8 +15,8 @@ export async function getQueueSize(userid: string): Promise<number> {
         return result.queueSize;
     }
     catch(error) {
-        //TODO even when i replace the throw with the logger, I should still return something to prevent a promise that never resolves
-        throw error;
+        logger.error(error);
+        return 0;
     }
 }
 
@@ -33,6 +34,7 @@ export async function getPersonalInfo (userid: string): Promise<UserPluckResult>
     }
     catch (error) {
         //TODO even when i replace the throw with the logger, I should still return something to prevent a promise that never resolves
-        throw error;
+        logger.error(error);
+        return { first: "error" };
     }
 }
