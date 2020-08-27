@@ -1,6 +1,11 @@
 import * as WebSocket from "ws";
 import * as os from "os";
 
+interface defaults {
+    time: number,
+    server: string
+}
+
 class Logger {
 
     private ws: WebSocket;
@@ -11,30 +16,34 @@ class Logger {
         this.hostname = os.hostname();
     }
 
-    async info(message: any) {
+    getDefaults(): defaults {
+        return({
+            time: Date.now(),
+            server: this.hostname,
+        });
+    }
+
+    async info(event: any): Promise<void> {
         this.ws.send(JSON.stringify({
             level: "info",
-            time: Date.now(),
-            server: this.hostname,
-            message: message
+            ...this.getDefaults(),
+            event: event
         }));
     }
 
-    async warning(message: any) {
+    async warning(event: any): Promise<void> {
         this.ws.send(JSON.stringify({
             level: "warning",
-            time: Date.now(),
-            server: this.hostname,
-            message: message
+            ...this.getDefaults(),
+            event: event
         }));
     }
 
-    async error(message: any) {
+    async error(event: any): Promise<void> {
         this.ws.send(JSON.stringify({
-            level: "warning",
-            time: Date.now(),
-            server: this.hostname,
-            message: message
+            level: "error",
+            ...this.getDefaults(),
+            event: event
         }));
     }
 }

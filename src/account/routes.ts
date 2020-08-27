@@ -49,7 +49,7 @@ async function editAccount (req: Request, res: Response): Promise<Response | voi
     r.table("users").get(id).update({first: req.body.first, last: req.body.last, email: req.body.email, phone: req.body.phone, venmo: req.body.venmo}, {returnChanges: true}).run(conn, async function (error: Error, result: WriteResult) {
         if (error) {
             res.send(makeJSONError("Unable to edit account"));
-            return logger.error(error);
+            return logger.error({ error, user: id});
         }
 
         if (result.unchanged > 0) {
