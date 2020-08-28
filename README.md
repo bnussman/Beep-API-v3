@@ -14,10 +14,10 @@ Installation and Run
 ```cd Beep-API-v3```
 
 3. Install dependencies
-```npm install```
+```npm i```
 
 4. Compile the Typescript. (A tsconfig.json is included)
-```tsc```
+```npm run build```
 
 5. Run with Node.js
-```node build/index.js```
+```npm run start```
