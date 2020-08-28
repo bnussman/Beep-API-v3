@@ -6,7 +6,7 @@ import { conn, connQueues } from '../utils/db';
 import { User } from '../types/beep';
 import { makeJSONSuccess, makeJSONError } from '../utils/json';
 import { sha256 } from 'js-sha256';
-import { getToken, setPushToken, isTokenValid, getUserFromEmail, sendResetEmail, deactivateTokens, createVerifyEmailEntryAndSendEmail } from './helpers';
+import { getToken, setPushToken, isTokenValid, getUserFromEmail, sendResetEmail, deactivateTokens, createVerifyEmailEntryAndSendEmail, doesUserExist } from './helpers';
 import { UserPluckResult } from "../types/beep";
 import { Validator } from "node-input-validator";
 import logger from "../utils/logger";
@@ -120,6 +120,11 @@ async function signup (req: Request, res: Response): Promise<Response | void> {
         //users input did not match our criteria, send the validator's error
         return res.send(makeJSONError(v.errors));
     }
+
+    if (doesUserExist(req.body.username)) {
+        return res.send(makeJSONError("That username is already in use"));
+    }
+
     //This is the row that will be inserted into our users RethinkDB table
     const document = {
         'first': req.body.first,
@@ -148,6 +153,7 @@ async function signup (req: Request, res: Response): Promise<Response | void> {
             res.send(makeJSONError("Unable to signup"));
             return logger.error(error);
         }
+
         //if we successfully inserted our new user...
         if (result.inserted == 1) {
             //line below uses the RethinkDB result to get us the user's id the rethinkdb generated for us

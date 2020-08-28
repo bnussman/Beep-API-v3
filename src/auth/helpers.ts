@@ -294,3 +294,22 @@ export async function createVerifyEmailEntryAndSendEmail(id: string, email: stri
         logger.error(error);
     }
 }
+
+/**
+ * function to tell you if a user exists by a username
+ * @param username string 
+ * @returns Promise<boolean> true if user exists by username
+ */
+export async function doesUserExist(username: string): Promise<boolean> {
+    try {
+        const count: number = await r.table("users").filter({ username: username }).count().run(conn);
+        
+        if (count >= 1) {
+            return true;        
+        }
+    }
+    catch (error) {
+        logger.error(error);
+    }
+    return false;
+}
