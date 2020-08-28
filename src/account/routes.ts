@@ -6,7 +6,7 @@ import { sha256 } from 'js-sha256';
 import { makeJSONSuccess, makeJSONError, makeJSONWarning } from '../utils/json';
 import { isTokenValid, createVerifyEmailEntryAndSendEmail, getUserFromId } from "../auth/helpers";
 import { conn } from '../utils/db';
-import { isEduEmail, getEmail } from './helpers';
+import { isEduEmail, getEmail, deleteUser } from './helpers';
 import { Validator } from "node-input-validator";
 import { UserPluckResult } from '../types/beep';
 import logger from '../utils/logger';
@@ -14,6 +14,7 @@ import logger from '../utils/logger';
 const router: Router = express.Router();
 
 router.post('/edit', editAccount);
+router.post('/delete', deleteAccount);
 router.post('/password', changePassword);
 router.post('/pushtoken', updatePushToken);
 router.post('/verify', verifyAccount);
@@ -251,6 +252,23 @@ async function resendEmailVarification(req: Request, res: Response) {
     await createVerifyEmailEntryAndSendEmail(id, user.email, user.first);
 
     return res.send(makeJSONSuccess("Successfully re-sent varification email to " + user.email));
+}
+
+async function deleteAccount(req: Request, res: Response) {
+    //check if auth token is valid before processing the request to update push token
+    const id = await isTokenValid(req.body.token);
+
+    if (!id) {
+        //if there is no id returned, the token is not valid.
+        return res.send(makeJSONError("Your auth token is not valid."));
+    }
+
+    if (deleteUser(id)) {
+        res.send(makeJSONSuccess("Successfully deleted user"));
+    }
+    else {
+        res.send(makeJSONError("Unable to delete user"));
+    }
 }
 
 export = router;
