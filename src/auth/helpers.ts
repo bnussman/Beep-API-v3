@@ -1,9 +1,10 @@
 import { v4 as uuidv4 } from 'uuid';
 import * as r from 'rethinkdb';
 import { WriteResult, Cursor } from 'rethinkdb';
-import { TokenData, UserPluckResult, User } from '../types/beep';
+import { TokenData, UserPluckResult } from '../types/beep';
 import { conn } from '../utils/db';
 import * as nodemailer from "nodemailer";
+import { transporter } from "../utils/mailer";
 import logger from '../utils/logger';
 
 /**
@@ -204,20 +205,11 @@ export async function getUserFromId(id: string, ...pluckItems: string[]): Promis
  * @param first is the first name of the recipiant so email is more personal
  */
 export function sendResetEmail(email: string, id: string, first: string | undefined): void {
-    const transporter = nodemailer.createTransport({
-        host: "smtp.gmail.com",
-        port: 465,
-        secure: true,
-        auth: {
-            user: "banks@nussman.us",
-            pass: process.env.MAIL_PASSWORD
-        }
-    }); 
 
     const url: string = process.env.NODE_ENV === "development" ? "https://dev.ridebeep.app" : "https://ridebeep.app";
  
     const mailOptions: nodemailer.SendMailOptions = { 
-        from : 'banks@ridebeep.app', 
+        from : 'Beep App <banks@ridebeep.app>', 
         to : email, 
         subject : 'Change your Beep App password', 
         html: `Hey ${first}, <br><br>
@@ -251,20 +243,11 @@ export function deactivateTokens(userid: string): void {
 }
 
 export function sendVerifyEmailEmail(email: string, id: string, first: string | undefined): void {
-    const transporter = nodemailer.createTransport({
-        host: "smtp.gmail.com",
-        port: 465,
-        secure: true,
-        auth: {
-            user: "banks@nussman.us",
-            pass: process.env.MAIL_PASSWORD
-        }
-    }); 
 
     const url: string = process.env.NODE_ENV === "development" ? "https://dev.ridebeep.app" : "https://ridebeep.app";
  
     const mailOptions: nodemailer.SendMailOptions = { 
-        from : 'banks@ridebeep.app', 
+        from : 'Beep App <banks@ridebeep.app>', 
         to : email, 
         subject : 'Verify your Beep App Email!', 
         html: `Hey ${first}, <br><br>
@@ -278,7 +261,6 @@ export function sendVerifyEmailEmail(email: string, id: string, first: string | 
         if (error) { 
             logger.error(error);
         } 
-        //Successfully sent email TODO use logger to log email events
         logger.info(info);
     });     
 }

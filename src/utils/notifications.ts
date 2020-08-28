@@ -1,6 +1,7 @@
 import * as r from 'rethinkdb';
 import { request } from "https";
 import { conn } from "../utils/db";
+import logger from './logger';
 
 /**
  * Use Expo's API to send a push notification
@@ -32,9 +33,16 @@ export async function sendNotification(userid: string, title: string, message: s
 /**
  * Given a user's id, query the db and return their Expo push token
  * @param userid a user's id
- * @return string of users Expo push token
+ * @return string of users Expo push token or null if error
  */
-async function getPushToken(userid: string): Promise<string> {
-    const output = await r.table("users").get(userid).pluck('pushToken').run(conn);
-    return output.pushToken;
+async function getPushToken(userid: string): Promise<string | null> {
+    try {
+        const output = await r.table("users").get(userid).pluck('pushToken').run(conn);
+
+        return output.pushToken;
+    }
+    catch(error) {
+       logger.error(error); 
+    }
+    return null;
 }
