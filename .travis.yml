@@ -4,6 +4,7 @@ node_js:
   - 'node' 
 
 install:
+  - npm i -g typescript
   - npm ci
 
 script:
