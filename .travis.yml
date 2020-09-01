@@ -6,4 +6,5 @@ node_js:
 install:
   - npm ci
 
-script: gulp
+script:
+  - npm run build
