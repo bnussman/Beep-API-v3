@@ -1,0 +1,22 @@
+postgresql:
+  enabled: false
+  install: false
+service:
+  enabled: true
+  name: web
+  type: ClusterIP
+  url: https://ridebeep.app/api
+  externalPort: 3001
+  internalPort: 3001
+livenessProbe:
+  path: "/rider/list"
+  initialDelaySeconds: 20
+  timeoutSeconds: 15
+  scheme: "HTTP"
+  probeType: "httpGet"
+readinessProbe:
+  path: "/rider/list"
+  initialDelaySeconds: 20
+  timeoutSeconds: 15
+  scheme: "HTTP"
+  probeType: "httpGet"
