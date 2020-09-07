@@ -4,10 +4,6 @@
         "module": "commonjs",
         "outDir": "./build",
         "rootDir": "./src",
-        "typeRoots": [
-            "./src/types"
-        ],
         "strict": true
-    },
-    "exclude": ["./src/tests/*"]
+    }
 }
