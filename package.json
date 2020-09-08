@@ -12,6 +12,11 @@
         "type": "git",
         "url": "https://gitlab.nussman.us/banks/Beep-API-v3.git"
     },
+    "jest": {
+        "preset": "ts-jest",
+        "testEnvironment": "node",
+        "roots": ["<rootDir>/src"]
+    },
     "author": "Banks Nussman",
     "license": "ISC",
     "dependencies": {
