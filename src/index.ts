@@ -4,13 +4,11 @@ import * as Auth from "./auth/routes";
 import * as Account from "./account/routes";
 import * as Rider from "./rider/routes";
 import * as Beeper from "./beeper/routes";
-import { Server } from 'http';
 
 export default class BeepAPIServer {
 
     private app: Application;
     private port: number;
-    private listener: Server | undefined;
 
     constructor() {
         this.app = express();
@@ -24,6 +22,11 @@ export default class BeepAPIServer {
         this.app.use('/account', Account);
         this.app.use('/rider', Rider);
         this.app.use('/beeper', Beeper);
+
+        this.app.all("*", (req: express.Request, res: express.Response, next: express.NextFunction) => {
+            console.log(Date.now(), "Served API Request");
+            next();
+        });
     }
 
     setFeatures(): void {
@@ -31,17 +34,11 @@ export default class BeepAPIServer {
         this.app.use(express.urlencoded({ extended: true }))
         this.app.disable('x-powered-by');
     }
-    
+
     start(): void {
-        this.listener = this.app.listen(this.port);
-    }
-
-    end(): void {
-        this.listener?.close();
-    }
-
-    getServer(): Application {
-        return this.app;
+        this.app.listen(this.port, () => {
+            console.log(`Started Beep-API-v3 on http://0.0.0.0:${this.port}`);
+        });
     }
 }
 
