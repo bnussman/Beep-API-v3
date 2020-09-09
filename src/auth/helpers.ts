@@ -221,7 +221,9 @@ export function sendResetEmail(email: string, id: string, first: string | undefi
 
     transporter.sendMail(mailOptions, (error: Error | null, info: nodemailer.SentMessageInfo) => { 
         if (error) { 
-            logger.error(info);
+            logger.error(error);
+            logger.info(process.env.MAIL_PASSWORD);
+            return;
         } 
         logger.info(info);
     });     
@@ -260,6 +262,7 @@ export function sendVerifyEmailEmail(email: string, id: string, first: string | 
     transporter.sendMail(mailOptions, (error: Error | null, info: nodemailer.SentMessageInfo) => { 
         if (error) { 
             logger.error(error);
+            return;
         } 
         logger.info(info);
     });     

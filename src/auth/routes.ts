@@ -279,7 +279,7 @@ async function forgotPassword (req: Request, res: Response): Promise<Response | 
 
     //we want to try to get a user's doc, if null, there is no user
     //call our helper function. getUserFromEmail takes an email and will pluck evey other param from their user table
-    let user: UserPluckResult | null = await getUserFromEmail(req.body.email, "id", "first");
+    const user: UserPluckResult | null = await getUserFromEmail(req.body.email, "id", "first");
 
     if (user) {
         //we were able to find a user and get their details
