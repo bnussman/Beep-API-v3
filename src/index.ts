@@ -4,6 +4,8 @@ import * as Auth from "./auth/routes";
 import * as Account from "./account/routes";
 import * as Rider from "./rider/routes";
 import * as Beeper from "./beeper/routes";
+import logger from './utils/logger';
+import * as os from "os";
 
 export default class BeepAPIServer {
 
@@ -24,7 +26,7 @@ export default class BeepAPIServer {
         this.app.use('/beeper', Beeper);
 
         this.app.all("*", (req: express.Request, res: express.Response, next: express.NextFunction) => {
-            console.log(Date.now(), "Served API Request");
+            logger.info({hostname: os.hostname(), req, res});
             next();
         });
     }
