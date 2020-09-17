@@ -4,6 +4,7 @@ import * as Auth from "./auth/routes";
 import * as Account from "./account/routes";
 import * as Rider from "./rider/routes";
 import * as Beeper from "./beeper/routes";
+import * as Sentry from "@sentry/node";
 
 export default class BeepAPIServer {
 
@@ -15,6 +16,13 @@ export default class BeepAPIServer {
         this.port = 3001;
         this.setFeatures();
         this.setEndpoints();
+    }
+
+    initializeSentry(): void {
+        Sentry.init({
+            dsn: "https://1588498392e8472697b3c496de6a3a53@sentry.nussman.us/2",
+            tracesSampleRate: 1.0,
+        });
     }
 
     setEndpoints(): void {

@@ -1,7 +1,7 @@
 import * as r from 'rethinkdb';
 import { request } from "https";
 import { conn } from "../utils/db";
-import logger from './logger';
+import * as Sentry from "@sentry/node";
 
 /**
  * Use Expo's API to send a push notification
@@ -42,7 +42,7 @@ async function getPushToken(userid: string): Promise<string | null> {
         return output.pushToken;
     }
     catch(error) {
-       logger.error(error); 
+       Sentry.captureException(error); 
     }
     return null;
 }

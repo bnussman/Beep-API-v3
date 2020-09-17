@@ -1,8 +1,8 @@
 import { UserPluckResult } from "../types/beep";
 import * as r from 'rethinkdb';
 import { conn, connQueues } from "../utils/db";
-import logger from "../utils/logger";
 import { deactivateTokens } from "../auth/helpers";
+import * as Sentry from "@sentry/node";
 
 /**
  * checks last 4 characters of an email address
@@ -25,7 +25,7 @@ export async function getEmail(id: string): Promise<string | undefined> {
     }
     catch (error) {
         //error getting user with id from users table and plucking email
-        logger.error(error);
+        Sentry.captureException(error);
         return undefined;
     }
 }
@@ -36,7 +36,7 @@ export function deleteUser(id: string): boolean {
         r.table("users").get(id).delete().run(conn);
     }
     catch (error) {
-        logger.error(error);
+        Sentry.captureException(error);
         return false;
     }
 
@@ -45,7 +45,7 @@ export function deleteUser(id: string): boolean {
         r.db("beepQueues").tableDrop(id).run(connQueues);
     }
     catch (error) {
-        logger.error(error);
+        Sentry.captureException(error);
         return false;
     }
 

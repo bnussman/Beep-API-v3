@@ -7,7 +7,7 @@ import { isTokenValid } from "../auth/helpers";
 import { conn, connQueues } from '../utils/db';
 import { sendNotification } from '../utils/notifications';
 import { Validator } from "node-input-validator";
-import logger from '../utils/logger';
+import * as Sentry from "@sentry/node";
 
 const router: Router = express.Router();
 
@@ -66,8 +66,8 @@ async function chooseBeep (req: Request, res: Response): Promise<Response | void
     catch (error) {
         //RethinkDB error while inserting beep entery into beeper's queue table
         //TODO because no insert happended we proabably want to return to stop further damage
-        res.send(makeJSONError("Unable to choose beep"));
-        return logger.error(error);
+        Sentry.captureException(error);
+        return res.send(makeJSONError("Unable to choose beep"));
     }
 
     try {
@@ -76,8 +76,8 @@ async function chooseBeep (req: Request, res: Response): Promise<Response | void
     }
     catch (error) {
         //RethinkDB error while trying to increment beeper's queue size in the users table
-        res.send(makeJSONError("Unable to choose beep"));
-        return logger.error(error);
+        Sentry.captureException(error);
+        return res.send(makeJSONError("Unable to choose beep"));
     }
 
     try {
@@ -86,8 +86,8 @@ async function chooseBeep (req: Request, res: Response): Promise<Response | void
     }
     catch (error) {
         //unable to set inQueueOfUserID for rider in users table
-        res.send(makeJSONError("Unable to choose beep"));
-        return logger.error(error);
+        Sentry.captureException(error);
+        return res.send(makeJSONError("Unable to choose beep"));
     }
 
     //Tell Beeper someone entered their queue asyncronously
@@ -129,8 +129,8 @@ async function findBeep (req: Request, res: Response): Promise<Response | void> 
     r.table('users').orderBy({'index': 'queueSize'}).filter(r.row('isBeeping').eq(true).and(r.row('id').ne(id))).limit(1).run(conn, function (error: Error, cursor: Cursor) {
         //Handle any RethinkDB error
         if (error) {
-            res.send(makeJSONError("Unable to find beep"));
-            return logger.error(error);
+            Sentry.captureException(error);
+            return res.send(makeJSONError("Unable to find beep"));
         }
 
         //this paticular RethinkDB query will return an iterable object, so use next to get the beeper
@@ -146,8 +146,8 @@ async function findBeep (req: Request, res: Response): Promise<Response | void> 
                 }
                 else {
                     //the error was proabably serious, log it
-                    res.send(makeJSONError("Unable to find beep"));
-                    return logger.error(error);
+                    Sentry.captureException(error);
+                    return res.send(makeJSONError("Unable to find beep"));
                 }
             }
 
@@ -207,10 +207,10 @@ async function getRiderStatus (req: Request, res: Response): Promise<Response | 
 
             //get rider's position in the queue by using a count query where we count entries where they entered the queue earlier
             //(they have an earlier timestamp)
-            let ridersQueuePosition = await r.table(beepersID).filter(r.row('timeEnteredQueue').lt(queueEntry.timeEnteredQueue).and(r.row('isAccepted').eq(true))).count().run(connQueues);
+            const ridersQueuePosition = await r.table(beepersID).filter(r.row('timeEnteredQueue').lt(queueEntry.timeEnteredQueue).and(r.row('isAccepted').eq(true))).count().run(connQueues);
 
             //get beeper's information
-            let beepersInfo = await r.table('users').get(beepersID).pluck('first', 'last', 'phone', 'venmo', 'singlesRate', 'groupRate', 'queueSize', 'userLevel', 'isStudent', 'capacity').run(conn);
+            const beepersInfo = await r.table('users').get(beepersID).pluck('first', 'last', 'phone', 'venmo', 'singlesRate', 'groupRate', 'queueSize', 'userLevel', 'isStudent', 'capacity').run(conn);
 
             let output;
 
@@ -260,8 +260,8 @@ async function getRiderStatus (req: Request, res: Response): Promise<Response | 
             return res.send(output);
         }
         catch (error) {
-            res.send(makeJSONError("Unable to get rider status"));
-            return logger.error(error);
+            Sentry.captureException(error);
+            return res.send(makeJSONError("Unable to get rider status"));
         }
     }
     else {
@@ -287,8 +287,8 @@ async function riderLeaveQueue (req: Request, res: Response): Promise<Response |
         r.table(req.body.beepersID).filter({'riderid': id}).delete().run(connQueues);
     }
     catch (error) {
-        res.send(makeJSONError("Unable to leave queue"));
-        return logger.error(error);
+        Sentry.captureException(error);
+        return res.send(makeJSONError("Unable to leave queue"));
     }
     
     try {
@@ -296,8 +296,8 @@ async function riderLeaveQueue (req: Request, res: Response): Promise<Response |
         r.table('users').get(req.body.beepersID).update({'queueSize': r.row('queueSize').sub(1)}).run(conn);
     }
     catch (error) {
-        res.send(makeJSONError("Unable to leave queue"));
-        return logger.error(error);
+        Sentry.captureException(error);
+        return res.send(makeJSONError("Unable to leave queue"));
     }
 
     try {
@@ -305,8 +305,8 @@ async function riderLeaveQueue (req: Request, res: Response): Promise<Response |
         r.table('users').get(id).update({'inQueueOfUserID': null}).run(conn);
     }
     catch (error) {
-        res.send(makeJSONError("Unable to leave queue"));
-        return logger.error(error);
+        Sentry.captureException(error);
+        return res.send(makeJSONError("Unable to leave queue"));
     }
 
     //if we made it to this point, we successfully removed a user from the queue.
@@ -319,8 +319,8 @@ async function riderLeaveQueue (req: Request, res: Response): Promise<Response |
 function getBeeperList (req: Request, res: Response): Response | void {
     r.table("users").filter({isBeeping: true}).pluck('first', 'last', 'queueSize', 'id', 'singlesRate', 'groupRate', 'capacity', 'userLevel', 'isStudent').run(conn, async function (error: Error, result) {
         if (error) {
-            res.send(makeJSONError("Unable to get beeper list"));
-            return logger.error(error);
+            Sentry.captureException(error);
+            return res.send(makeJSONError("Unable to get beeper list"));
         }
 
         const list = await result.toArray();

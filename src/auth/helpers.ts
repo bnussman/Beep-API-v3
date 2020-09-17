@@ -5,7 +5,7 @@ import { TokenData, UserPluckResult } from '../types/beep';
 import { conn } from '../utils/db';
 import * as nodemailer from "nodemailer";
 import { transporter } from "../utils/mailer";
-import logger from '../utils/logger';
+import * as Sentry from "@sentry/node";
 
 /**
  * Generates an authentication token and a token for that token (for offline logouts), stores
@@ -27,7 +27,7 @@ export async function getToken(userid: string): Promise<TokenData> {
 
         //if nothing was inserted into the tokens table, we know something is wrong
         if (result.inserted == 0) {
-            logger.error("Somehow, tokenData was not inserted, this is very bad");
+            Sentry.captureException("Somehow, tokenData was not inserted, this is very bad");
             return ({
                 'userid': userid,
                 'tokenid': "yikes",
@@ -45,7 +45,7 @@ export async function getToken(userid: string): Promise<TokenData> {
         });
     } 
     catch (error) {
-        logger.error(error);;
+        Sentry.captureException(error);
 
         return ({
             'userid': userid,
@@ -67,7 +67,7 @@ export async function setPushToken(id: string | null, token: string | null): Pro
         await r.table("users").get(id).update({pushToken: token}).run(conn);
     }
     catch(error) {
-        logger.error(error);
+        Sentry.captureException(error);
     }
 }
 
@@ -91,7 +91,7 @@ export async function isTokenValid(token: string): Promise<string | null> {
         //rather then returning a userid, return null to signify that token is not valid.
     }
     catch (error) {
-        logger.error(error);
+        Sentry.captureException(error);
     }
 
     return null;
@@ -112,7 +112,7 @@ export async function hasUserLevel(userid: string, level: number): Promise<boole
     }
     catch (error) {
         //in prod, log error with our logger i guess
-        logger.error(error);
+        Sentry.captureException(error);
     }
     return false;
 }
@@ -166,7 +166,7 @@ export async function getUserFromEmail(email: string, ...pluckItems: string[]): 
         }
     }
     catch (error) {
-        logger.error(error);
+        Sentry.captureException(error);
     }
     return null;
 }
@@ -221,11 +221,8 @@ export function sendResetEmail(email: string, id: string, first: string | undefi
 
     transporter.sendMail(mailOptions, (error: Error | null, info: nodemailer.SentMessageInfo) => { 
         if (error) { 
-            logger.error(error);
-            logger.info(process.env.MAIL_PASSWORD);
-            return;
+            Sentry.captureException(error);
         } 
-        logger.info(info);
     });     
 }
 
@@ -240,7 +237,7 @@ export function deactivateTokens(userid: string): void {
     }
     catch (error) {
         //RethinkDB error when deleteing push tokens for userid
-        logger.error(error);
+        Sentry.captureException(error);
     }
 }
 
@@ -261,10 +258,8 @@ export function sendVerifyEmailEmail(email: string, id: string, first: string | 
 
     transporter.sendMail(mailOptions, (error: Error | null, info: nodemailer.SentMessageInfo) => { 
         if (error) { 
-            logger.error(error);
-            return;
+            Sentry.captureException(error);
         } 
-        logger.info(info);
     });     
 }
 
@@ -294,7 +289,7 @@ export async function createVerifyEmailEntryAndSendEmail(id: string, email: stri
     }
     catch (error) {
         //RethinkDB unable to insert into verifyEmail table
-        logger.error(error);
+        Sentry.captureException(error);
     }
 }
 
@@ -312,7 +307,7 @@ export async function doesUserExist(username: string): Promise<boolean> {
         }
     }
     catch (error) {
-        logger.error(error);
+        Sentry.captureException(error);
     }
     return false;
 }

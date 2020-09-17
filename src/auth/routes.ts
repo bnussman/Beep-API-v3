@@ -9,7 +9,7 @@ import { sha256 } from 'js-sha256';
 import { getToken, setPushToken, isTokenValid, getUserFromEmail, sendResetEmail, deactivateTokens, createVerifyEmailEntryAndSendEmail, doesUserExist } from './helpers';
 import { UserPluckResult } from "../types/beep";
 import { Validator } from "node-input-validator";
-import logger from "../utils/logger";
+import * as Sentry from "@sentry/node";
 
 const router: Router = express.Router();
 
@@ -41,8 +41,8 @@ async function login (req: Request, res: Response): Promise<Response | void> {
     r.table("users").filter({ "username": req.body.username }).run(conn, function (error: Error, cursor: Cursor) {
         //Handle RethinkDB error
         if (error) {
-            res.send(makeJSONError("Unable to login"));
-            return logger.error(error);
+            Sentry.captureException(error);
+            return res.send(makeJSONError("Unable to login"));
         }
 
         //Iterate through user's with that given username
@@ -150,8 +150,8 @@ async function signup (req: Request, res: Response): Promise<Response | void> {
     r.table("users").insert(document).run(conn, async function (error: Error, result: WriteResult) {
         //handle a RethinkDB error
         if (error) {
-            res.send(makeJSONError("Unable to signup"));
-            return logger.error(error);
+            Sentry.captureException(error);
+            return res.send(makeJSONError("Unable to signup"));
         }
 
         //if we successfully inserted our new user...
@@ -211,8 +211,8 @@ async function logout (req: Request, res: Response): Promise<Response | void> {
     r.table("tokens").get(req.body.token).delete().run(conn, function (error: Error, result: WriteResult) {
         //handle a RethinkDB error
         if (error) {
-            res.send(makeJSONError("Unable to logout"));
-            return logger.error(error);
+            Sentry.captureException(error);
+            return res.send(makeJSONError("Unable to logout"));
         }
 
         //if RethinkDB tells us something was deleted, logout was successful
@@ -244,8 +244,8 @@ function removeToken (req: Request, res: Response): void {
     r.table("tokens").filter({'tokenid': req.body.tokenid}).delete().run(conn, function (error: Error, result: WriteResult) {
         //handle a RethinkDB error
         if (error) {
-            res.send(makeJSONError("Unable to remove token"));
-            return logger.error(error);
+            Sentry.captureException(error);
+            return res.send(makeJSONError("Unable to remove token"));
         }
 
         //if RethinkDB tells us something was deleted, logout was successful
@@ -307,8 +307,8 @@ async function forgotPassword (req: Request, res: Response): Promise<Response | 
         }
         catch (error) {
             //there was an error establishing the cursor used for looking in passwordReset
-            res.send(makeJSONError("Unable to process a forgot password request"));
-            return logger.error(error);
+            Sentry.captureException(error);
+            return res.send(makeJSONError("Unable to process a forgot password request"));
         }
 
         //this is what will be inserted when making a new forgot password entry
@@ -331,8 +331,8 @@ async function forgotPassword (req: Request, res: Response): Promise<Response | 
         }
         catch (error) {
             //There was an error inserting a forgot password entry
-            res.send(makeJSONError("Unable to process a forgot password request"));
-            return logger.error(error);
+            Sentry.captureException(error);
+            return res.send(makeJSONError("Unable to process a forgot password request"));
         }
     }
     else {
@@ -382,13 +382,13 @@ async function resetPassword (req: Request, res: Response): Promise<Response | v
         }
         catch (error) {
             //RethinkDB unable to update user's password
+            Sentry.captureException(error);
             res.send(makeJSONError("Unable to reset your password"));
-            return logger.error(error);
         }
     }
     catch (error) {
         //the entry with the user's specifed token does not exists in the passwordReset table
-        return res.send(makeJSONError("Invalid password reset token"));
+        res.send(makeJSONError("Invalid password reset token"));
     }
 }
 
