@@ -12,6 +12,7 @@ export default class BeepAPIServer {
     private port: number;
 
     constructor() {
+        this.initializeSentry();
         this.app = express();
         this.port = 3001;
         this.setFeatures();
