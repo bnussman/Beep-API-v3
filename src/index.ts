@@ -41,12 +41,12 @@ export default class BeepAPIServer {
     }
 
     setFeatures(): void {
-        this.app.use(express.json())
-        this.app.use(express.urlencoded({ extended: true }))
-        this.app.disable('x-powered-by');
         this.app.use(Sentry.Handlers.requestHandler());
         this.app.use(Sentry.Handlers.tracingHandler());
         this.app.use(Sentry.Handlers.errorHandler());
+        this.app.use(express.json())
+        this.app.use(express.urlencoded({ extended: true }))
+        this.app.disable('x-powered-by');
     }
 
     start(): void {
