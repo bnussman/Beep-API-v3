@@ -13,11 +13,10 @@ export default class BeepAPIServer {
     private port: number;
 
     constructor() {
+        this.port = 3001;
         this.app = express();
         this.initializeSentry(this.app);
-        this.port = 3001;
         this.setFeatures();
-        this.setEndpoints();
     }
 
     initializeSentry(app: Application): void {
@@ -33,16 +32,13 @@ export default class BeepAPIServer {
         });
     }
 
-    setEndpoints(): void {
+    setFeatures(): void {
+        this.app.use(Sentry.Handlers.requestHandler());
+        this.app.use(Sentry.Handlers.tracingHandler());
         this.app.use('/auth', Auth);
         this.app.use('/account', Account);
         this.app.use('/rider', Rider);
         this.app.use('/beeper', Beeper);
-    }
-
-    setFeatures(): void {
-        this.app.use(Sentry.Handlers.requestHandler());
-        this.app.use(Sentry.Handlers.tracingHandler());
         this.app.use(Sentry.Handlers.errorHandler());
         this.app.use(express.json())
         this.app.use(express.urlencoded({ extended: true }))
