@@ -1,5 +1,5 @@
 import { Application } from 'express';
-import { healthcheck } from './utils/status';
+import { healthcheck } from './utils/healthcheck';
 import * as express from 'express';
 import * as Auth from "./auth/routes";
 import * as Account from "./account/routes";
@@ -20,6 +20,12 @@ export default class BeepAPIServer {
     }
 
     setFeatures(app: Application): void {
+        this.app.use(express.json())
+        this.app.use(express.urlencoded({ extended: true }))
+        this.app.disable('x-powered-by');
+
+        this.app.use('/healthcheck', healthcheck);
+
         Sentry.init({
             dsn: "http://ddeca23af15c47a7819d89a0d92e3d68@192.168.1.124:9000/2",
             integrations: [
@@ -31,13 +37,12 @@ export default class BeepAPIServer {
             tracesSampleRate: 1.0
         });
 
-        this.app.use(Sentry.Handlers.requestHandler());
-        this.app.use(Sentry.Handlers.tracingHandler());
-        this.app.use(express.json())
-        this.app.use(express.urlencoded({ extended: true }))
-        this.app.disable('x-powered-by');
+        this.app.use(Sentry.Handlers.requestHandler({
+            user: ['id', 'username', 'token']
+        }));
 
-        this.app.use('/healthcheck', healthcheck);
+        this.app.use(Sentry.Handlers.tracingHandler());
+
         this.app.use('/auth', Auth);
         this.app.use('/account', Account);
         this.app.use('/rider', Rider);
