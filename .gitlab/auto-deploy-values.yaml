@@ -9,14 +9,14 @@ service:
   externalPort: 3001
   internalPort: 3001
 livenessProbe:
-  path: "/rider/list"
+  path: "/healthcheck"
   initialDelaySeconds: 20
-  timeoutSeconds: 15
+  timeoutSeconds: 5
   scheme: "HTTP"
   probeType: "httpGet"
 readinessProbe:
-  path: "/rider/list"
-  initialDelaySeconds: 20
-  timeoutSeconds: 15
+  path: "/healthcheck"
+  initialDelaySeconds: 15
+  timeoutSeconds: 5
   scheme: "HTTP"
   probeType: "httpGet"

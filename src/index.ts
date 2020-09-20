@@ -1,4 +1,5 @@
 import { Application } from 'express';
+import { healthcheck } from './utils/status';
 import * as express from 'express';
 import * as Auth from "./auth/routes";
 import * as Account from "./account/routes";
@@ -36,10 +37,13 @@ export default class BeepAPIServer {
         this.app.use(express.json())
         this.app.use(express.urlencoded({ extended: true }))
         this.app.disable('x-powered-by');
+
+        this.app.use('/healthcheck', healthcheck);
         this.app.use('/auth', Auth);
         this.app.use('/account', Account);
         this.app.use('/rider', Rider);
         this.app.use('/beeper', Beeper);
+
         this.app.use(Sentry.Handlers.errorHandler());
 
         this.app.listen(this.port, () => {
