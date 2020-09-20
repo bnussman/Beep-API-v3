@@ -16,7 +16,7 @@ livenessProbe:
   probeType: "httpGet"
 readinessProbe:
   path: "/healthcheck"
-  initialDelaySeconds: 15
-  timeoutSeconds: 5
+  initialDelaySeconds: 20
+  timeoutSeconds: 15
   scheme: "HTTP"
   probeType: "httpGet"
