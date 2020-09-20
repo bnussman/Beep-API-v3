@@ -15,13 +15,12 @@ export default class BeepAPIServer {
     constructor() {
         this.port = 3001;
         this.app = express();
-        this.initializeSentry(this.app);
-        this.setFeatures();
+        this.setFeatures(this.app);
     }
 
-    initializeSentry(app: Application): void {
+    setFeatures(app: Application): void {
         Sentry.init({
-            dsn: "https://1588498392e8472697b3c496de6a3a53@sentry.nussman.us/2",
+            dsn: "http://ddeca23af15c47a7819d89a0d92e3d68@192.168.1.124:9000/2",
             integrations: [
                 // enable HTTP calls tracing
                 new Sentry.Integrations.Http({ tracing: true }),
@@ -31,9 +30,7 @@ export default class BeepAPIServer {
             tracesSampleRate: 1.0,
             debug: true
         });
-    }
 
-    setFeatures(): void {
         this.app.use(Sentry.Handlers.requestHandler());
         this.app.use(Sentry.Handlers.tracingHandler());
         this.app.use(express.json())
@@ -44,15 +41,11 @@ export default class BeepAPIServer {
         this.app.use('/rider', Rider);
         this.app.use('/beeper', Beeper);
         this.app.use(Sentry.Handlers.errorHandler());
-    }
 
-    start(): void {
         this.app.listen(this.port, () => {
             console.log(`Started Beep-API-v3 on http://0.0.0.0:${this.port}`);
         });
     }
 }
 
-const s = new BeepAPIServer();
-
-s.start();
+new BeepAPIServer();
