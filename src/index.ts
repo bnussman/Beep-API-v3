@@ -7,6 +7,19 @@ import * as Rider from "./rider/routes";
 import * as Beeper from "./beeper/routes";
 import * as Sentry from "@sentry/node";
 import * as Tracing from "@sentry/tracing";
+import { RewriteFrames } from "@sentry/integrations";
+
+// This allows TypeScript to detect our global value
+declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
+  namespace NodeJS {
+    interface Global {
+      __rootdir__: string;
+    }
+  }
+}
+
+global.__rootdir__ = __dirname || process.cwd();
 
 export default class BeepAPIServer {
 
@@ -33,13 +46,15 @@ export default class BeepAPIServer {
                 new Sentry.Integrations.Http({ tracing: true }),
                 // enable Express.js middleware tracing
                 new Tracing.Integrations.Express({ app }),
+                //for ts :(
+                new RewriteFrames({
+                    root: global.__rootdir__,
+                }),
             ],
             tracesSampleRate: 1.0
         });
 
-        this.app.use(Sentry.Handlers.requestHandler({
-            user: ['id', 'username', 'token']
-        }));
+        this.app.use(Sentry.Handlers.requestHandler());
 
         this.app.use(Sentry.Handlers.tracingHandler());
 
