@@ -29,6 +29,7 @@ export default class BeepAPIServer {
                 new Tracing.Integrations.Express({ app }),
             ],
             tracesSampleRate: 1.0,
+            debug: true
         });
     }
 
