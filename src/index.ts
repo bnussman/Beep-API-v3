@@ -28,8 +28,7 @@ export default class BeepAPIServer {
                 // enable Express.js middleware tracing
                 new Tracing.Integrations.Express({ app }),
             ],
-            tracesSampleRate: 1.0,
-            debug: true
+            tracesSampleRate: 1.0
         });
 
         this.app.use(Sentry.Handlers.requestHandler());
