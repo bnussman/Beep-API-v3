@@ -1,11 +1,13 @@
-import { v4 as uuidv4 } from 'uuid';
 import * as r from 'rethinkdb';
 import { WriteResult, Cursor } from 'rethinkdb';
-import { TokenData, UserPluckResult } from '../types/beep';
+import { TokenData, UserPluckResult, TokenEntry } from '../types/beep';
 import { conn } from '../utils/db';
 import * as nodemailer from "nodemailer";
 import { transporter } from "../utils/mailer";
 import * as Sentry from "@sentry/node";
+import { Request, Response, NextFunction } from "express";
+import { makeJSONError } from '../utils/json';
+import { v4 as uuidv4 } from "uuid";
 
 /**
  * Generates an authentication token and a token for that token (for offline logouts), stores
@@ -46,7 +48,6 @@ export async function getToken(userid: string): Promise<TokenData> {
     } 
     catch (error) {
         Sentry.captureException(error);
-
         return ({
             'userid': userid,
             'tokenid': "yikes",
@@ -68,6 +69,37 @@ export async function setPushToken(id: string | null, token: string | null): Pro
     }
     catch(error) {
         Sentry.captureException(error);
+    }
+}
+
+/**
+ * Retuns user's id if their token is valid, null otherwise
+ *
+ * @param token takes a user's auth token as input
+ * @return userid if token is valid, null otherwise
+ */
+export async function isAuthenticated(req: Request, res: Response, next: NextFunction): Promise<Response | undefined> {
+    //get the Authorization header and split after the first space because it will say Bearer first
+    const token: string | undefined = req.get("Authorization")?.split(" ")[1];
+
+    if (!token) {
+        return res.status(401).send(makeJSONError("You did not provide an authentication token."));
+    }
+
+    try {
+        const result: TokenEntry | null = await r.table("tokens").get(token).run(conn) as TokenEntry;
+
+        if (result) {
+            req.user = { token: token, id: result.userid };
+            next();
+        }
+        else {
+            res.status(401).send(makeJSONError("Your token is not valid."));
+        }
+    }
+    catch (error) {
+        Sentry.captureException(error);
+        res.status(500).send(makeJSONError("Unable to access the database to check token."));
     }
 }
 
@@ -99,6 +131,7 @@ export async function isTokenValid(token: string): Promise<string | null> {
 
 /**
  * function to tell if user has a specific user level
+ *
  * @param userid is the user's id
  * @prarm level is the desired user level
  * @returns a promice that is a boolean. True if user has level, false otherwise
@@ -119,6 +152,7 @@ export async function hasUserLevel(userid: string, level: number): Promise<boole
 
 /**
  * works exactly like isTokenValid, but only returns a userid if user has userLevel == 1 (meaning they are an admin)
+ *
  * @param token a user's auth token
  * @returns promice that resolves to null or a user's id
  */
@@ -137,6 +171,7 @@ export async function isAdmin(token: string): Promise<string | null> {
 
 /**
  * get user data given an email
+ *
  * @param email string of user's email
  * @param pluckItems are items we want to pluck in the db query 
  * @returns Promise<UserPluckResult>
@@ -173,14 +208,15 @@ export async function getUserFromEmail(email: string, ...pluckItems: string[]): 
 
 /**
  * get user data given an email
+ *
  * @param email string of user's email
  * @param pluckItems are items we want to pluck in the db query 
  * @returns Promise<UserPluckResult>
  */
-export async function getUserFromId(id: string, ...pluckItems: string[]): Promise<any | null> {
-    try {
-        let result;
+export async function getUserFromId(id: string, ...pluckItems: string[]): Promise<UserPluckResult | null> {
+    let result = null;
 
+    try {
         //if no pluck items were passed in, don't pluck anything
         if (pluckItems.length == 0) {
             result = await r.table("users").get(id).run(conn);
@@ -190,16 +226,18 @@ export async function getUserFromId(id: string, ...pluckItems: string[]): Promis
             result = await r.table("users").get(id).pluck(...pluckItems).run(conn);
         }
         
-        return result;
     }
     catch (error) {
         //there was nothing to 'get'
-        return null;
+        Sentry.captureException(error);
     }
+
+    return result;
 }
 
 /**
  * Helper function to send password reset email to user
+ *
  * @param email who to send the email to
  * @param id is the passowrdReset entry (NOT the user's id)
  * @param first is the first name of the recipiant so email is more personal
@@ -228,7 +266,9 @@ export function sendResetEmail(email: string, id: string, first: string | undefi
 
 /**
  * Helper function that deactives all auth tokens for user by their userid
+ *
  * @param userid string of their user id
+ * @returns void
  */
 export function deactivateTokens(userid: string): void {
     try {
@@ -241,6 +281,14 @@ export function deactivateTokens(userid: string): void {
     }
 }
 
+/**
+ * Send Very Email Email to user
+ *
+ * @param email string user's email
+ * @param id string is the eventid in the verifyEmail database
+ * @param first string is the user's first name to make the email more personalized
+ * @returns void
+ */
 export function sendVerifyEmailEmail(email: string, id: string, first: string | undefined): void {
 
     const url: string = process.env.NODE_ENV === "development" ? "https://dev.ridebeep.app" : "https://ridebeep.app";
@@ -266,11 +314,18 @@ export function sendVerifyEmailEmail(email: string, id: string, first: string | 
 /**
  * Helper function for email verfication. This function will create and insert a new email verification entry and 
  * it will call the other helper function to actually send the email.
+ *
  * @param id is the user's is
  * @param email is the user's email
  * @param first is the user's first name so we can make the email more personal
+ * @returns void
  */
-export async function createVerifyEmailEntryAndSendEmail(id: string, email: string, first: string): Promise<void> {
+export async function createVerifyEmailEntryAndSendEmail(id: string, email: string | undefined, first: string | undefined): Promise<void> {
+    if (!email || !first) {
+        Sentry.captureException(new Error("Did not create verify email entry or send email due to no email or first name"));
+        return;
+    }
+
     //this is what will be inserted into the verifyEmail table
     const document = {
         "time": Date.now(),
@@ -295,6 +350,7 @@ export async function createVerifyEmailEntryAndSendEmail(id: string, email: stri
 
 /**
  * function to tell you if a user exists by a username
+ *
  * @param username string 
  * @returns Promise<boolean> true if user exists by username
  */

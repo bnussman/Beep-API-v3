@@ -30,6 +30,11 @@ export async function getEmail(id: string): Promise<string | undefined> {
     }
 }
 
+/**
+ * delete a user based on their id
+ * @param id string the user's id
+ * @returns boolean true if delete was successful
+ */
 export function deleteUser(id: string): boolean {
     //delete user document in user table
     try {

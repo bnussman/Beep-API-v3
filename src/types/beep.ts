@@ -45,3 +45,28 @@ export interface UserPluckResult {
     isEmailVerified?: boolean;
     isStudent?: boolean;
 }
+
+export interface TokenEntry {
+    id: string,
+    tokenid: string,
+    userid: string
+}
+
+export interface TokenPluckResult {
+    id?: string,
+    tokenid?: string,
+    userid?: string
+}
+
+export interface AuthUser {
+    id: string,
+    token: string
+}
+
+declare global {
+    namespace Express {
+        export interface Request {
+            user: AuthUser;
+        }
+    }
+}

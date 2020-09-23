@@ -1,4 +1,4 @@
-import express = require('express');
+import * as express from 'express';
 import { Router, Request, Response } from 'express';
 import * as r from 'rethinkdb';
 import { Cursor, CursorError, WriteResult } from 'rethinkdb';
@@ -6,7 +6,7 @@ import { conn, connQueues } from '../utils/db';
 import { User } from '../types/beep';
 import { makeJSONSuccess, makeJSONError } from '../utils/json';
 import { sha256 } from 'js-sha256';
-import { getToken, setPushToken, isTokenValid, getUserFromEmail, sendResetEmail, deactivateTokens, createVerifyEmailEntryAndSendEmail, doesUserExist } from './helpers';
+import { getToken, setPushToken, getUserFromEmail, sendResetEmail, deactivateTokens, createVerifyEmailEntryAndSendEmail, doesUserExist, isAuthenticated } from './helpers';
 import { UserPluckResult } from "../types/beep";
 import { Validator } from "node-input-validator";
 import * as Sentry from "@sentry/node";
@@ -15,7 +15,7 @@ const router: Router = express.Router();
 
 router.post('/login', login);
 router.post('/signup', signup);
-router.post('/logout', logout);
+router.post('/logout', isAuthenticated, logout);
 router.post('/token', removeToken);
 router.post('/password/forgot', forgotPassword);
 router.post('/password/reset', resetPassword);
@@ -34,7 +34,7 @@ async function login (req: Request, res: Response): Promise<Response | void> {
 
     if (!matched) {
         //users input did not match our criteria, send the validator's error
-        return res.send(makeJSONError(v.errors));
+        return res.status(422).send(makeJSONError(v.errors));
     }
 
     //RethinkDB Query to see if there is a user with POSTed username
@@ -42,7 +42,7 @@ async function login (req: Request, res: Response): Promise<Response | void> {
         //Handle RethinkDB error
         if (error) {
             Sentry.captureException(error);
-            return res.send(makeJSONError("Unable to login"));
+            return res.status(500).send(makeJSONError("Unable to access users table to login"));
         }
 
         //Iterate through user's with that given username
@@ -52,7 +52,7 @@ async function login (req: Request, res: Response): Promise<Response | void> {
                 //close the RethinkDB cursor
                 cursor.close();
                 //tell the client no user exists
-                return res.send(makeJSONError("User not found"));
+                return res.status(401).send(makeJSONError("User not found"));
             }
             //hash the input, and compare it to user's encrypted password
             if (result.password == sha256(req.body.password)) {
@@ -92,7 +92,7 @@ async function login (req: Request, res: Response): Promise<Response | void> {
                 //close the RethinkDB cursor to prevent leak
                 cursor.close();
                 //send message to client
-                return res.send(makeJSONError("Password is incorrect."));
+                return res.status(401).send(makeJSONError("Password is incorrect."));
             }
         });
     });
@@ -100,7 +100,6 @@ async function login (req: Request, res: Response): Promise<Response | void> {
 
 /**
  * API function to handle a sign up
- * TODO: ensure username is not taken before signup
  */
 async function signup (req: Request, res: Response): Promise<Response | void> {
     //validator to check if all signup feilds are valid
@@ -118,11 +117,11 @@ async function signup (req: Request, res: Response): Promise<Response | void> {
 
     if (!matched) {
         //users input did not match our criteria, send the validator's error
-        return res.send(makeJSONError(v.errors));
+        return res.status(422).send(makeJSONError(v.errors));
     }
 
     if (doesUserExist(req.body.username)) {
-        return res.send(makeJSONError("That username is already in use"));
+        return res.status(409).send(makeJSONError("That username is already in use"));
     }
 
     //This is the row that will be inserted into our users RethinkDB table
@@ -151,7 +150,7 @@ async function signup (req: Request, res: Response): Promise<Response | void> {
         //handle a RethinkDB error
         if (error) {
             Sentry.captureException(error);
-            return res.send(makeJSONError("Unable to signup"));
+            return res.status(500).send(makeJSONError("Unable to establish the new user in the database"));
         }
 
         //if we successfully inserted our new user...
@@ -190,7 +189,7 @@ async function signup (req: Request, res: Response): Promise<Response | void> {
         }
         else {
             //RethinkDB says that a new entry was NOT inserted, something went wrong...
-            return res.send(makeJSONError("New user was not inserted into the database."));
+            return res.status(500).send(makeJSONError("New user was not inserted into the database"));
         }
     });
 }
@@ -199,20 +198,12 @@ async function signup (req: Request, res: Response): Promise<Response | void> {
  * API function to handle a logout
  */
 async function logout (req: Request, res: Response): Promise<Response | void> {
-    //check if auth token is valid before processing the request to update push token
-    const id = await isTokenValid(req.body.token);
-
-    if (!id) {
-        //if there is no id returned, the token is not valid.
-        return res.send(makeJSONError("Your auth token is not valid."));
-    }
-
     //RethinkDB query to delete entry in tokens table.
-    r.table("tokens").get(req.body.token).delete().run(conn, function (error: Error, result: WriteResult) {
+    r.table("tokens").get(req.user.token).delete().run(conn, function (error: Error, result: WriteResult) {
         //handle a RethinkDB error
         if (error) {
             Sentry.captureException(error);
-            return res.send(makeJSONError("Unable to logout"));
+            return res.status(500).send(makeJSONError("Unable to logout"));
         }
 
         //if RethinkDB tells us something was deleted, logout was successful
@@ -221,14 +212,14 @@ async function logout (req: Request, res: Response): Promise<Response | void> {
             if (req.body.isApp) {
                 //if user signs out in our iOS or Android app, unset their push token.
                 //We must check this beacuse we don't want the website to un-set a push token
-                setPushToken(id, null);
+                setPushToken(req.user.id, null);
             }
             //return success message
             return res.send(makeJSONSuccess("Token was revoked."));
         }
         else {
             //Nothing was deleted in the db, so there was some kind of error
-            return res.send(makeJSONError("Token was not deleted in our database."));
+            return res.status(500).send(makeJSONError("Token was not deleted in our database."));
         }
     });
 }
@@ -245,7 +236,7 @@ function removeToken (req: Request, res: Response): void {
         //handle a RethinkDB error
         if (error) {
             Sentry.captureException(error);
-            return res.send(makeJSONError("Unable to remove token"));
+            return res.status(500).send(makeJSONError("Unable to remove token"));
         }
 
         //if RethinkDB tells us something was deleted, logout was successful
@@ -254,7 +245,7 @@ function removeToken (req: Request, res: Response): void {
         }
         else {
             //Nothing was deleted in the db, so there was some kind of error
-            return res.send(makeJSONError("Token was not deleted in our database."));
+            return res.status(500).send(makeJSONError("Token was not deleted in our database."));
         }
     });
 }
@@ -274,7 +265,7 @@ async function forgotPassword (req: Request, res: Response): Promise<Response | 
 
     if (!matched) {
         //if input did not match criteria, give user error
-        return res.send(makeJSONError(v.errors));
+        return res.status(422).send(makeJSONError(v.errors));
     }
 
     //we want to try to get a user's doc, if null, there is no user
@@ -297,7 +288,7 @@ async function forgotPassword (req: Request, res: Response): Promise<Response | 
                 if (entry) {
                     sendResetEmail(req.body.email, entry.id, user.first);
 
-                    return res.send(makeJSONError("You have already requested to reset your password. We have re-sent your email. Check your email and follow the instructions."));
+                    return res.status(409).send(makeJSONError("You have already requested to reset your password. We have re-sent your email. Check your email and follow the instructions."));
                 }
             }
             catch (error) {
@@ -308,7 +299,7 @@ async function forgotPassword (req: Request, res: Response): Promise<Response | 
         catch (error) {
             //there was an error establishing the cursor used for looking in passwordReset
             Sentry.captureException(error);
-            return res.send(makeJSONError("Unable to process a forgot password request"));
+            return res.status(500).send(makeJSONError("Unable to process a forgot password request"));
         }
 
         //this is what will be inserted when making a new forgot password entry
@@ -332,11 +323,11 @@ async function forgotPassword (req: Request, res: Response): Promise<Response | 
         catch (error) {
             //There was an error inserting a forgot password entry
             Sentry.captureException(error);
-            return res.send(makeJSONError("Unable to process a forgot password request"));
+            return res.status(500).send(makeJSONError("Unable to process a forgot password request"));
         }
     }
     else {
-        return res.send(makeJSONError("User not found"));
+        return res.status(404).send(makeJSONError("User not found"));
     }
 }
 
@@ -355,7 +346,7 @@ async function resetPassword (req: Request, res: Response): Promise<Response | v
 
     if (!matched) {
         //user did not match the password criteria, send them the validation errors
-        return res.send(makeJSONError(v.errors));
+        return res.status(422).send(makeJSONError(v.errors));
     }
 
     try {
@@ -368,7 +359,7 @@ async function resetPassword (req: Request, res: Response): Promise<Response | v
 
         //check if request time was made over an hour ago
         if ((entry.time + (3600 * 1000)) < Date.now()) {
-            return res.send(makeJSONError("Your verification token has expired. You must re-request to reset your password."));
+            return res.status(410).send(makeJSONError("Your verification token has expired. You must re-request to reset your password."));
         }
 
         try {
@@ -383,12 +374,12 @@ async function resetPassword (req: Request, res: Response): Promise<Response | v
         catch (error) {
             //RethinkDB unable to update user's password
             Sentry.captureException(error);
-            res.send(makeJSONError("Unable to reset your password"));
+            res.status(500).send(makeJSONError("Unable to reset your password"));
         }
     }
     catch (error) {
         //the entry with the user's specifed token does not exists in the passwordReset table
-        res.send(makeJSONError("Invalid password reset token"));
+        res.status(404).send(makeJSONError("Invalid password reset token"));
     }
 }
 
