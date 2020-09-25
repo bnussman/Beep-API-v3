@@ -82,7 +82,7 @@ async function chooseBeep (req: Request, res: Response): Promise<Response | void
     }
 
     //Tell Beeper someone entered their queue asyncronously
-    sendNotification(req.body.beepersID, "A rider has entered your queue", "Please open your app to accept or deny them.");
+    sendNotification(req.body.beepersID, "A rider has entered your queue", "Please open your app to accept or deny them.", "enteredBeeperQueue");
 
     //if we made it to this point, user has found a beep and it has been
     //registered in our db. Send output with nessesary data to rider.

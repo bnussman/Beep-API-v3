@@ -9,8 +9,10 @@ import * as Sentry from "@sentry/node";
  * @param title for the notification
  * @param message is the body of the push notification
  */
-export async function sendNotification(userid: string, title: string, message: string): Promise<void> {
+export async function sendNotification(userid: string, title: string, message: string, categoryIdentifier?: string): Promise<void> {
     const pushToken = await getPushToken(userid);
+
+    if (!pushToken) return;
 
     const req = request({
         host: "exp.host",
@@ -24,7 +26,8 @@ export async function sendNotification(userid: string, title: string, message: s
     req.write(JSON.stringify({
         "to": pushToken,
         "title": title,
-        "body": message 
+        "body": message,
+        "_category": categoryIdentifier
     }));
 
     req.end();
