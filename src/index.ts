@@ -1,7 +1,9 @@
 import { Application } from 'express';
+import { db } from './utils/db';
 import { healthcheck } from './utils/healthcheck';
 import { handleNotFound } from './utils/404';
 import { initializeSentry } from './utils/sentry';
+import { Server } from "http";
 import * as express from 'express';
 import * as Auth from "./auth/routes";
 import * as Account from "./account/routes";
@@ -14,11 +16,14 @@ export default class BeepAPIServer {
 
     private app: Application;
     private port: number;
+    private server: Server | null;
 
     constructor() {
         this.port = 3001;
+        this.server = null;
         this.app = express();
         this.initializeServer();
+        this.start();
     }
 
     /**
@@ -75,16 +80,37 @@ export default class BeepAPIServer {
     }
 
     /**
-     * Starts the ExpressJS Server
-     * @returns void
+     * Get the ExpressJS Application
+     * @returns app ExpressJS Application
      */
-    public start(): void {
-        this.app.listen(this.port, () => {
+    public getApp(): Application {
+        return this.app;
+    }
+
+    /**
+     * Connects to RethinkDB and starts the ExpressJS server
+     * @returns Promise<void>
+     */
+    public async start(): Promise<void> {
+        //wait for the database connnection to be active before listening for requests
+        await db.connect();
+
+        this.server = this.app.listen(this.port, () => {
             console.log("Started Beep-API-v3 on http://0.0.0.0:" + this.port);
         });
     }
+
+    /**
+     * Disconnects RethinkDB and stops ExpressJS server
+     * @returns Promise<void>
+     */
+    public async close(): Promise<void> {
+        //close the db connections
+        await db.close();
+
+        //close the ExpressJS server
+        this.server?.close();
+    }
 }
 
-const s = new BeepAPIServer();
-
-s.start();
+new BeepAPIServer();

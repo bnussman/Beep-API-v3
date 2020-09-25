@@ -1,6 +1,6 @@
 import * as r from 'rethinkdb';
 import { request } from "https";
-import { conn } from "../utils/db";
+import { db } from "../utils/db";
 import * as Sentry from "@sentry/node";
 
 /**
@@ -37,7 +37,7 @@ export async function sendNotification(userid: string, title: string, message: s
  */
 async function getPushToken(userid: string): Promise<string | null> {
     try {
-        const output = await r.table("users").get(userid).pluck('pushToken').run(conn);
+        const output = await r.table("users").get(userid).pluck('pushToken').run(db.getConn());
 
         return output.pushToken;
     }

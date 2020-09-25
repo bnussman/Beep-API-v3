@@ -4,7 +4,7 @@ import * as r from 'rethinkdb';
 import { ReqlError, WriteResult } from 'rethinkdb';
 import { makeJSONSuccess, makeJSONError } from '../utils/json';
 import { isAuthenticated } from "../auth/helpers";
-import { conn, connQueues } from '../utils/db';
+import { db } from '../utils/db';
 import { sendNotification } from '../utils/notifications';
 import { getQueueSize, getPersonalInfo } from './helpers';
 import { UserPluckResult } from "../types/beep";
@@ -23,7 +23,7 @@ router.post('/queue/status', isAuthenticated, setBeeperQueue);
  */
 function getBeeperStatus (req: Request, res: Response): Response | void {
     //get isBeeping from user with id GET param in users db
-    r.table("users").get(req.params.id).pluck('isBeeping').run(conn, function (error: ReqlError, result: UserPluckResult) {
+    r.table("users").get(req.params.id).pluck('isBeeping').run(db.getConn(), function (error: ReqlError, result: UserPluckResult) {
         //if there was an error, notify user with REST API.
         if (error) {
             Sentry.captureException(error);
@@ -65,7 +65,7 @@ async function setBeeperStatus (req: Request, res: Response): Promise<Response |
     }
 
     //query updates beepers isBeeping, singlesRate, and groupRate values, and capacity
-    r.table('users').get(req.user.id).update({isBeeping: req.body.isBeeping, singlesRate: req.body.singlesRate, groupRate: req.body.groupRate, capacity: req.body.capacity}).run(conn, function(error: Error) {
+    r.table('users').get(req.user.id).update({isBeeping: req.body.isBeeping, singlesRate: req.body.singlesRate, groupRate: req.body.groupRate, capacity: req.body.capacity}).run(db.getConn(), function(error: Error) {
         //handle any RethinkDB error
         if (error) {
             Sentry.captureException(error);
@@ -82,7 +82,7 @@ async function setBeeperStatus (req: Request, res: Response): Promise<Response |
  */
 async function getBeeperQueue (req: Request, res: Response): Promise<Response | void> {
     //get beeper's queue ordered by the time each rider entered the queue so the order makes sence for the beeper
-    r.table(req.user.id).orderBy('timeEnteredQueue').run(connQueues, async function (error: Error, result: any) {
+    r.table(req.user.id).orderBy('timeEnteredQueue').run(db.getConnQueues(), async function (error: Error, result: any) {
         //Handle any RethinkDB error
         if (error) {
             Sentry.captureException(error);
@@ -113,13 +113,13 @@ async function setBeeperQueue (req: Request, res: Response): Promise<Response | 
         try {
             //in beeper's queue table, get the time the rider entered the queue
             //we need this to count the number of people before this rider in the queue
-            const cursor = await r.table(req.user.id).filter({'riderid': req.body.riderID}).pluck('timeEnteredQueue').run(connQueues);
+            const cursor = await r.table(req.user.id).filter({'riderid': req.body.riderID}).pluck('timeEnteredQueue').run(db.getConnQueues());
 
             //resolve the query and get the time this rider entered the queue as a const
             const timeEnteredQueue = (await cursor.next()).timeEnteredQueue;
 
             //query to get rider's actual position in the queue
-            const ridersQueuePosition = await r.table(req.user.id).filter(r.row('timeEnteredQueue').lt(timeEnteredQueue).and(r.row('isAccepted').eq(false))).count().run(connQueues);
+            const ridersQueuePosition = await r.table(req.user.id).filter(r.row('timeEnteredQueue').lt(timeEnteredQueue).and(r.row('isAccepted').eq(false))).count().run(db.getConnQueues());
 
             //if there are riders before this rider that have not been accepted,
             //tell the beeper they must respond to them first.
@@ -136,13 +136,13 @@ async function setBeeperQueue (req: Request, res: Response): Promise<Response | 
         try {
             //in beeper's queue table, get the time the rider entered the queue
             //we need this to count the number of people before this rider in the queue
-            const cursor = await r.table(req.user.id).filter({'riderid': req.body.riderID}).pluck('timeEnteredQueue').run(connQueues);
+            const cursor = await r.table(req.user.id).filter({'riderid': req.body.riderID}).pluck('timeEnteredQueue').run(db.getConnQueues());
 
             //resolve the query and get the time this rider entered the queue as a const
             const timeEnteredQueue = (await cursor.next()).timeEnteredQueue;
 
             //query to get rider's actual position in the queue
-            const ridersQueuePosition = await r.table(req.user.id).filter(r.row('timeEnteredQueue').lt(timeEnteredQueue).and(r.row('isAccepted').eq(true))).count().run(connQueues);
+            const ridersQueuePosition = await r.table(req.user.id).filter(r.row('timeEnteredQueue').lt(timeEnteredQueue).and(r.row('isAccepted').eq(true))).count().run(db.getConnQueues());
 
             //if there are riders before this rider that have been accepted,
             //tell the beeper they must respond to them first.
@@ -158,7 +158,7 @@ async function setBeeperQueue (req: Request, res: Response): Promise<Response | 
 
     if (req.body.value == 'accept') {
         //RethinkDB query that modifies record in beeper's queue, setting isAccepted to true for specific rider
-        r.table(req.user.id).get(req.body.queueID).update({'isAccepted': true}).run(connQueues, function (error: Error) {
+        r.table(req.user.id).get(req.body.queueID).update({'isAccepted': true}).run(db.getConnQueues(), function (error: Error) {
             //handle RethinkDB errors
             if (error) {
                 Sentry.captureException(error);
@@ -174,7 +174,7 @@ async function setBeeperQueue (req: Request, res: Response): Promise<Response | 
     }
     else if (req.body.value == 'deny' || req.body.value == 'complete') {
         //delete entry in beeper's queues table
-        r.table(req.user.id).get(req.body.queueID).delete().run(connQueues, function (error: Error, result: WriteResult) {
+        r.table(req.user.id).get(req.body.queueID).delete().run(db.getConnQueues(), function (error: Error, result: WriteResult) {
             //handle any RethinkDB error
             if (error) {
                 Sentry.captureException(error);
@@ -188,7 +188,7 @@ async function setBeeperQueue (req: Request, res: Response): Promise<Response | 
         });
 
         //decrease beeper's queue size
-        r.table('users').get(req.user.id).update({'queueSize': r.row('queueSize').sub(1)}).run(conn, function (error: Error, result: WriteResult) {
+        r.table('users').get(req.user.id).update({'queueSize': r.row('queueSize').sub(1)}).run(db.getConn(), function (error: Error, result: WriteResult) {
             //handle any RethinkDB error
             if (error) {
                 Sentry.captureException(error);
@@ -202,7 +202,7 @@ async function setBeeperQueue (req: Request, res: Response): Promise<Response | 
         });
 
         //set rider's inQueueOfUserID value to null because they are no longer in a queue
-        r.table('users').get(req.body.riderID).update({'inQueueOfUserID': null}).run(conn, function (error: Error, result: WriteResult) {
+        r.table('users').get(req.body.riderID).update({'inQueueOfUserID': null}).run(db.getConn(), function (error: Error, result: WriteResult) {
             //handle any RethinkDB error
             if (error) {
                 Sentry.captureException(error);
@@ -225,7 +225,7 @@ async function setBeeperQueue (req: Request, res: Response): Promise<Response | 
     }
     else {
         //we can just increment the state number in the queue doccument
-        r.table(req.user.id).get(req.body.queueID).update({'state': r.row('state').add(1)}, {returnChanges: true}).run(connQueues, function (error: Error, result: WriteResult) {
+        r.table(req.user.id).get(req.body.queueID).update({'state': r.row('state').add(1)}, {returnChanges: true}).run(db.getConnQueues(), function (error: Error, result: WriteResult) {
             //handle any RethinkDB error
             if (error) {
                 Sentry.captureException(error);

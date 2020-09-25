@@ -5,7 +5,7 @@ import * as r from 'rethinkdb';
 import { sha256 } from 'js-sha256';
 import { makeJSONSuccess, makeJSONError, makeJSONWarning } from '../utils/json';
 import { createVerifyEmailEntryAndSendEmail, getUserFromId, isAuthenticated } from "../auth/helpers";
-import { conn } from '../utils/db';
+import { db } from '../utils/db';
 import { isEduEmail, getEmail, deleteUser } from './helpers';
 import { Validator } from "node-input-validator";
 import { UserPluckResult } from '../types/beep';
@@ -38,7 +38,7 @@ async function editAccount(req: Request, res: Response): Promise<Response | void
         return res.status(422).send(makeJSONError(v.errors));
     }
 
-    r.table("users").get(req.user.id).update({first: req.body.first, last: req.body.last, email: req.body.email, phone: req.body.phone, venmo: req.body.venmo}, {returnChanges: true}).run(conn, async function (error: Error, result: WriteResult) {
+    r.table("users").get(req.user.id).update({first: req.body.first, last: req.body.last, email: req.body.email, phone: req.body.phone, venmo: req.body.venmo}, {returnChanges: true}).run(db.getConn(), async function (error: Error, result: WriteResult) {
         if (error) {
             Sentry.captureException(error);
             return res.status(500).send(makeJSONError("Unable to edit account"));
@@ -52,7 +52,7 @@ async function editAccount(req: Request, res: Response): Promise<Response | void
         if (result.changes[0].old_val.email !== result.changes[0].new_val.email) {
             try {
                 //delete user's existing email varification entries
-                await r.table("verifyEmail").filter({ userid: req.user.id }).delete().run(conn);
+                await r.table("verifyEmail").filter({ userid: req.user.id }).delete().run(db.getConn());
             }
             catch (error) {
                 Sentry.captureException(error);
@@ -61,7 +61,7 @@ async function editAccount(req: Request, res: Response): Promise<Response | void
 
             //if user made a change to their email, we need set their status to not verified and make them re-verify
             try {
-                r.table("users").get(req.user.id).update({isEmailVerified: false, isStudent: false}).run(conn);
+                r.table("users").get(req.user.id).update({isEmailVerified: false, isStudent: false}).run(db.getConn());
             }
             catch (error) {
                 Sentry.captureException(error);
@@ -93,7 +93,7 @@ async function changePassword (req: Request, res: Response): Promise<Response | 
     const encryptedPassword = sha256(req.body.password);
 
     //update the user's password
-    r.table("users").get(req.user.id).update({password: encryptedPassword}).run(conn, function (error: Error) {
+    r.table("users").get(req.user.id).update({password: encryptedPassword}).run(db.getConn(), function (error: Error) {
         if (error) {
             Sentry.captureException(error);
             return res.status(500).send(makeJSONError("Unable to change password"));
@@ -105,7 +105,7 @@ async function changePassword (req: Request, res: Response): Promise<Response | 
 
 async function updatePushToken (req: Request, res: Response): Promise<Response | void> {
     //update user's push token
-    r.table("users").get(req.user.id).update({ pushToken: req.body.expoPushToken }).run(conn, function (error: Error) {
+    r.table("users").get(req.user.id).update({ pushToken: req.body.expoPushToken }).run(db.getConn(), function (error: Error) {
         if (error) {
             Sentry.captureException(error);
             return res.status(500).send(makeJSONError("Unable to update push token"));
@@ -118,7 +118,7 @@ async function updatePushToken (req: Request, res: Response): Promise<Response |
 async function verifyAccount (req: Request, res: Response): Promise<Response | void> {
     try {
         //this seems weird, but verifying the account by deleteing the entry in the db, but tell RethinkDB to retun changes
-        const result: WriteResult = await r.table("verifyEmail").get(req.body.id).delete({returnChanges: true}).run(conn);
+        const result: WriteResult = await r.table("verifyEmail").get(req.body.id).delete({returnChanges: true}).run(db.getConn());
 
         //get the changes reported by RethinkDB
         const entry = result.changes[0].old_val;
@@ -155,7 +155,7 @@ async function verifyAccount (req: Request, res: Response): Promise<Response | v
 
         try {
             //update the user's tabe with the new values
-            await r.table("users").get(entry.userid).update(update).run(conn);
+            await r.table("users").get(entry.userid).update(update).run(db.getConn());
 
             return res.send({
                 "status": "success",
@@ -174,7 +174,7 @@ async function verifyAccount (req: Request, res: Response): Promise<Response | v
 }
 
 async function getAccountStatus(req: Request, res: Response): Promise<Response | void> {
-    r.table("users").get(req.user.id).pluck("isEmailVerified", "isStudent", "email").run(conn, function(error: Error, result: UserPluckResult) {
+    r.table("users").get(req.user.id).pluck("isEmailVerified", "isStudent", "email").run(db.getConn(), function(error: Error, result: UserPluckResult) {
         if (error) {
             Sentry.captureException(error);
             return res.status(500).send(makeJSONError("Unable to get account status"));
@@ -187,7 +187,7 @@ async function getAccountStatus(req: Request, res: Response): Promise<Response |
 async function resendEmailVarification(req: Request, res: Response) {
     try {
         //delete user's existing email varification entries
-        await r.table("verifyEmail").filter({ userid: req.user.id }).delete().run(conn);
+        await r.table("verifyEmail").filter({ userid: req.user.id }).delete().run(db.getConn());
     }
     catch (error) {
         Sentry.captureException(error);
@@ -209,7 +209,7 @@ async function resendEmailVarification(req: Request, res: Response) {
 }
 
 async function deleteAccount(req: Request, res: Response) {
-    if (deleteUser(req.user.id)) {
+    if (await deleteUser(req.user.id)) {
         res.send(makeJSONSuccess("Successfully deleted user"));
     }
     else {

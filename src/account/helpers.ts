@@ -1,6 +1,6 @@
 import { UserPluckResult } from "../types/beep";
 import * as r from 'rethinkdb';
-import { conn, connQueues } from "../utils/db";
+import { db } from "../utils/db";
 import { deactivateTokens } from "../auth/helpers";
 import * as Sentry from "@sentry/node";
 
@@ -20,7 +20,7 @@ export function isEduEmail(email: string): boolean {
  */
 export async function getEmail(id: string): Promise<string | undefined> {
     try {
-        const result: UserPluckResult = await r.table("users").get(id).pluck("email").run(conn);
+        const result: UserPluckResult = await r.table("users").get(id).pluck("email").run(db.getConn());
         return result.email;
     }
     catch (error) {
@@ -35,10 +35,10 @@ export async function getEmail(id: string): Promise<string | undefined> {
  * @param id string the user's id
  * @returns boolean true if delete was successful
  */
-export function deleteUser(id: string): boolean {
+export async function deleteUser(id: string): Promise<boolean> {
     //delete user document in user table
     try {
-        r.table("users").get(id).delete().run(conn);
+        r.table("users").get(id).delete().run(db.getConn());
     }
     catch (error) {
         Sentry.captureException(error);
@@ -47,7 +47,7 @@ export function deleteUser(id: string): boolean {
 
     //delete user's queue table from beepQueues 
     try {
-        r.db("beepQueues").tableDrop(id).run(connQueues);
+        r.db("beepQueues").tableDrop(id).run(db.getConnQueues());
     }
     catch (error) {
         Sentry.captureException(error);

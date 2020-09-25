@@ -1,5 +1,5 @@
 import * as r from 'rethinkdb';
-import { conn } from '../utils/db';
+import { db } from '../utils/db';
 import { UserPluckResult } from "../types/beep";
 import * as Sentry from "@sentry/node";
 
@@ -11,7 +11,7 @@ import * as Sentry from "@sentry/node";
  */
 export async function getQueueSize(userid: string): Promise<number> {
     try {
-        const result = await r.table("users").get(userid).pluck('queueSize').run(conn);
+        const result = await r.table("users").get(userid).pluck('queueSize').run(db.getConn());
         return result.queueSize;
     }
     catch(error) {
@@ -28,7 +28,7 @@ export async function getQueueSize(userid: string): Promise<number> {
 export async function getPersonalInfo (userid: string): Promise<UserPluckResult> {
     try {
         //RethinkDB query gets data from users db at userid
-        const result: UserPluckResult = await r.table('users').get(userid).pluck('first', 'last', 'phone', 'venmo', 'isStudent').run(conn);
+        const result: UserPluckResult = await r.table('users').get(userid).pluck('first', 'last', 'phone', 'venmo', 'isStudent').run(db.getConn());
 
         return result;
     }

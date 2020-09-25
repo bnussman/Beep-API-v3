@@ -23,6 +23,8 @@ export interface User {
     userLevel: number;
     isEmailVerified: boolean;
     isStudent: boolean;
+    token: string;
+    tokenid: string;
 }
 
 export interface UserPluckResult {
