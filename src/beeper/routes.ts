@@ -8,7 +8,7 @@ import { db } from '../utils/db';
 import { sendNotification } from '../utils/notifications';
 import { getQueueSize, getPersonalInfo, storeBeepEvent } from './helpers';
 import { UserPluckResult } from "../types/beep";
-import {Validator} from 'node-input-validator';
+import { Validator } from 'node-input-validator';
 import * as Sentry from "@sentry/node";
 
 const router: Router = express.Router();

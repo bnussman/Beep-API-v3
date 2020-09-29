@@ -8,7 +8,7 @@ import { createVerifyEmailEntryAndSendEmail, getUserFromId, isAuthenticated } fr
 import { db } from '../utils/db';
 import { isEduEmail, getEmail, deleteUser } from './helpers';
 import { Validator } from "node-input-validator";
-import { UserPluckResult } from '../types/beep';
+import { BeepTableResult, UserPluckResult } from '../types/beep';
 import * as Sentry from "@sentry/node";
 
 const router: Router = express.Router();
@@ -221,24 +221,64 @@ async function deleteAccount(req: Request, res: Response) {
 
 async function getRideHistory(req: Request, res: Response) {
     try {
-        const cursor: r.Cursor = await r.table("beeps").filter({ riderid: req.user.id }).orderBy("timeEnteredQueue").run(db.getConnHistory());
-        const result = await cursor.toArray();
+        const cursor: r.Cursor = await r.table("beeps").filter({ riderid: req.user.id }).orderBy(r.desc("timeEnteredQueue")).run(db.getConnHistory());
+        const result: BeepTableResult[] = await cursor.toArray();
+
+        for (let i = 0; i < result.length; i++) {
+            let user = {
+                first: "Deleted",
+                last: "User"
+            };
+
+            const userData = await getUserFromId(result[i].beepersid, "first", "last");
+
+            if (userData && userData.first != undefined && userData.last != undefined) {
+                user = {
+                    first: userData.first,
+                    last: userData.last
+                };
+            }
+
+            result[i].beepersName = user.first + " " + user.last;
+        }
+
         res.send(result);
     }
     catch (error) {
         Sentry.captureException(error);
+        console.error(error);
         return res.status(500).send(makeJSONError("Unable to get ride history"));
     }
 }
 
 async function getBeepHistory(req: Request, res: Response) {
     try {
-        const cursor: r.Cursor = await r.table("beeps").filter({ beepersid: req.user.id }).orderBy("timeEnteredQueue").run(db.getConnHistory());
+        const cursor: r.Cursor = await r.table("beeps").filter({ beepersid: req.user.id }).orderBy(r.desc("timeEnteredQueue")).run(db.getConnHistory());
         const result = await cursor.toArray();
+
+        for (let i = 0; i < result.length; i++) {
+            let user = {
+                first: "Deleted",
+                last: "User"
+            };
+
+            const userData = await getUserFromId(result[i].riderid, "first", "last");
+
+            if (userData && userData.first != undefined && userData.last != undefined) {
+                user = {
+                    first: userData.first,
+                    last: userData.last
+                };
+            }
+
+            result[i].riderName = user.first + " " + user.last;
+        }
+
         res.send(result);
     }
     catch (error) {
         Sentry.captureException(error);
+        console.error(error);
         return res.status(500).send(makeJSONError("Unable to get ride history"));
     }
 }

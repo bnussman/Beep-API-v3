@@ -66,12 +66,15 @@ export interface AuthUser {
 }
 
 export interface BeepTableResult {
-    id: string;
+    beepersid: string;
+    beepersName?: string;
+    id?: string;
     destination: string;
     origin: string;
     groupSize: number | string;
     isAccepted: boolean;
     riderid: string;
+    riderName: string;
     state: number;
     timeEnteredQueue: number;
 }
