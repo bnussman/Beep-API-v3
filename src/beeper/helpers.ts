@@ -1,6 +1,6 @@
 import * as r from 'rethinkdb';
 import { db } from '../utils/db';
-import { UserPluckResult } from "../types/beep";
+import { BeepTableResult, UserPluckResult } from "../types/beep";
 import * as Sentry from "@sentry/node";
 
 /**
@@ -33,8 +33,22 @@ export async function getPersonalInfo (userid: string): Promise<UserPluckResult>
         return result;
     }
     catch (error) {
-        //TODO even when i replace the throw with the logger, I should still return something to prevent a promise that never resolves
         Sentry.captureException(error);
     }
     return { first: "error" };
+}
+
+/**
+ * Record the beep in the historal beep table
+ *
+ * @param event
+ * @return void
+ */
+export async function storeBeepEvent (event: BeepTableResult): Promise<void> {
+    try {
+        r.table("beeps").insert(event).run(db.getConnHistory());
+    }
+    catch (error) {
+        Sentry.captureException(error);
+    }
 }

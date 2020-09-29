@@ -65,6 +65,17 @@ export interface AuthUser {
     token: string
 }
 
+export interface BeepTableResult {
+    id: string;
+    destination: string;
+    origin: string;
+    groupSize: number | string;
+    isAccepted: boolean;
+    riderid: string;
+    state: number;
+    timeEnteredQueue: number;
+}
+
 declare global {
     namespace Express {
         export interface Request {

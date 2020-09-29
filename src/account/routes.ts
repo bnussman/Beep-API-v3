@@ -20,6 +20,8 @@ router.post('/pushtoken', isAuthenticated, updatePushToken);
 router.post('/verify', verifyAccount);
 router.post('/verify/resend', isAuthenticated, resendEmailVarification);
 router.post('/status', isAuthenticated, getAccountStatus);
+router.post('/history/rider', isAuthenticated, getRideHistory);
+router.post('/history/beeper', isAuthenticated, getBeepHistory);
 
 async function editAccount(req: Request, res: Response): Promise<Response | void> {
     //Create a new validator to ensure user matches criteria when updating profile
@@ -214,6 +216,30 @@ async function deleteAccount(req: Request, res: Response) {
     }
     else {
         res.status(500).send(makeJSONError("Unable to delete user"));
+    }
+}
+
+async function getRideHistory(req: Request, res: Response) {
+    try {
+        const cursor: r.Cursor = await r.table("beeps").filter({ riderid: req.user.id }).orderBy("timeEnteredQueue").run(db.getConnHistory());
+        const result = await cursor.toArray();
+        res.send(result);
+    }
+    catch (error) {
+        Sentry.captureException(error);
+        return res.status(500).send(makeJSONError("Unable to get ride history"));
+    }
+}
+
+async function getBeepHistory(req: Request, res: Response) {
+    try {
+        const cursor: r.Cursor = await r.table("beeps").filter({ beepersid: req.user.id }).orderBy("timeEnteredQueue").run(db.getConnHistory());
+        const result = await cursor.toArray();
+        res.send(result);
+    }
+    catch (error) {
+        Sentry.captureException(error);
+        return res.status(500).send(makeJSONError("Unable to get ride history"));
     }
 }
 

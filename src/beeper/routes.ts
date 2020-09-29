@@ -6,7 +6,7 @@ import { makeJSONSuccess, makeJSONError } from '../utils/json';
 import { isAuthenticated } from "../auth/helpers";
 import { db } from '../utils/db';
 import { sendNotification } from '../utils/notifications';
-import { getQueueSize, getPersonalInfo } from './helpers';
+import { getQueueSize, getPersonalInfo, storeBeepEvent } from './helpers';
 import { UserPluckResult } from "../types/beep";
 import {Validator} from 'node-input-validator';
 import * as Sentry from "@sentry/node";
@@ -174,7 +174,7 @@ async function setBeeperQueue (req: Request, res: Response): Promise<Response | 
     }
     else if (req.body.value == 'deny' || req.body.value == 'complete') {
         //delete entry in beeper's queues table
-        r.table(req.user.id).get(req.body.queueID).delete().run(db.getConnQueues(), function (error: Error, result: WriteResult) {
+        r.table(req.user.id).get(req.body.queueID).delete({ returnChanges: true }).run(db.getConnQueues(), function (error: Error, result: WriteResult) {
             //handle any RethinkDB error
             if (error) {
                 Sentry.captureException(error);
@@ -184,6 +184,12 @@ async function setBeeperQueue (req: Request, res: Response): Promise<Response | 
             //ensure we actually deleted something
             if (result.deleted != 1) {
                 return res.status(500).send(makeJSONError("Nothing was deleted into beeper's queue table. This should not have happended..."));
+            }
+            else {
+                const finishedBeep = result.changes[0].old_val;
+                finishedBeep.beepersid = req.user.id;
+
+                storeBeepEvent(finishedBeep);
             }
         });
 

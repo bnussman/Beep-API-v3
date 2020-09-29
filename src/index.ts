@@ -23,7 +23,6 @@ export default class BeepAPIServer {
         this.server = null;
         this.app = express();
         this.initializeServer();
-        this.start();
     }
 
     /**
@@ -113,4 +112,6 @@ export default class BeepAPIServer {
     }
 }
 
-new BeepAPIServer();
+const server = new BeepAPIServer();
+
+server.start();
