@@ -27,6 +27,7 @@ export default class BeepAPIServer {
 
     /**
      * Set the Beep API's routes
+     *
      * @returns void
      */
     private setRoutes(): void {
@@ -38,6 +39,7 @@ export default class BeepAPIServer {
 
     /**
      * Sets the ExpressJS options we need
+     *
      * @returns void
      */
     private setFeatures(): void {
@@ -49,6 +51,7 @@ export default class BeepAPIServer {
 
     /**
      * Use helper functions to initialize this REST API server
+     *
      * @returns void
      */
     private initializeServer(): void {
@@ -80,6 +83,7 @@ export default class BeepAPIServer {
 
     /**
      * Get the ExpressJS Application
+     *
      * @returns app ExpressJS Application
      */
     public getApp(): Application {
@@ -88,6 +92,7 @@ export default class BeepAPIServer {
 
     /**
      * Connects to RethinkDB and starts the ExpressJS server
+     *
      * @returns Promise<void>
      */
     public async start(): Promise<void> {
@@ -101,6 +106,7 @@ export default class BeepAPIServer {
 
     /**
      * Disconnects RethinkDB and stops ExpressJS server
+     *
      * @returns Promise<void>
      */
     public async close(): Promise<void> {

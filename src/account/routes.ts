@@ -19,7 +19,6 @@ router.post('/password', isAuthenticated, changePassword);
 router.post('/pushtoken', isAuthenticated, updatePushToken);
 router.post('/verify', verifyAccount);
 router.post('/verify/resend', isAuthenticated, resendEmailVarification);
-router.post('/status', isAuthenticated, getAccountStatus);
 router.post('/history/rider', isAuthenticated, getRideHistory);
 router.post('/history/beeper', isAuthenticated, getBeepHistory);
 
@@ -175,17 +174,6 @@ async function verifyAccount (req: Request, res: Response): Promise<Response | v
     }
 }
 
-async function getAccountStatus(req: Request, res: Response): Promise<Response | void> {
-    r.table("users").get(req.user.id).pluck("isEmailVerified", "isStudent", "email").run(db.getConn(), function(error: Error, result: UserPluckResult) {
-        if (error) {
-            Sentry.captureException(error);
-            return res.status(500).send(makeJSONError("Unable to get account status"));
-        }
-
-        return res.send(makeJSONSuccess(result));
-    });
-}
-
 async function resendEmailVarification(req: Request, res: Response) {
     try {
         //delete user's existing email varification entries
@@ -246,7 +234,6 @@ async function getRideHistory(req: Request, res: Response) {
     }
     catch (error) {
         Sentry.captureException(error);
-        console.error(error);
         return res.status(500).send(makeJSONError("Unable to get ride history"));
     }
 }
@@ -278,7 +265,6 @@ async function getBeepHistory(req: Request, res: Response) {
     }
     catch (error) {
         Sentry.captureException(error);
-        console.error(error);
         return res.status(500).send(makeJSONError("Unable to get ride history"));
     }
 }
