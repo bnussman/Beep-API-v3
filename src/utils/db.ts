@@ -23,11 +23,22 @@ export default class Database {
             this.conn = await r.connect(this.getConnectionOptions("beep"));
             this.connQueues = await r.connect(this.getConnectionOptions("beepQueues"));
             this.connHisory = await r.connect(this.getConnectionOptions("beepHistory"));
+            this.conn.on("close", () => this.reconnect());
         } 
         catch (error) {
             Sentry.captureException(error);
             console.error(error);
+            this.reconnect();
         }
+    
+    }
+
+    private reconnect(): void {
+        Sentry.captureException(new Error("Lost connection to RethinkDB"));
+        setTimeout(() => {
+            console.log("Attempting Reconnection...");
+            this.connect();
+        }, 5000);
     }
 
     public async close(): Promise<void> {
