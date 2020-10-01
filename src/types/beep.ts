@@ -25,6 +25,7 @@ export interface User {
     isStudent: boolean;
     token: string;
     tokenid: string;
+    masksRequired: boolean;
 }
 
 export interface UserPluckResult {

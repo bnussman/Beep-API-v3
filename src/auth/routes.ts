@@ -64,7 +64,6 @@ async function login (req: Request, res: Response): Promise<Response | void> {
                 }
 
                 //close the RethinkDB cursor to prevent leak
-                //TODO closing the cursour here could break everything , check and make sure it did not
                 cursor.close();
 
                 //send out data to REST API
@@ -85,7 +84,8 @@ async function login (req: Request, res: Response): Promise<Response | void> {
                     'isBeeping': result.isBeeping,
                     'userLevel': result.userLevel,
                     'isEmailVerified': result.isEmailVerified,
-                    'isStudent': result.isStudent
+                    'isStudent': result.isStudent,
+                    'masksRequired': result.masksRequired
                 });
             }
             else {
@@ -142,7 +142,8 @@ async function signup (req: Request, res: Response): Promise<Response | void> {
         'capacity': 4,
         'userLevel': 0,
         'isEmailVerified': false,
-        'isStudent': false
+        'isStudent': false,
+        'masksRequired': false
     };
 
     //insert a new user into our users table
@@ -184,7 +185,8 @@ async function signup (req: Request, res: Response): Promise<Response | void> {
                 'isBeeping': false,
                 'userLevel': 0,
                 'isEmailVerified': false,
-                'isStudent': false
+                'isStudent': false,
+                'masksRequired': false
             });
         }
         else {

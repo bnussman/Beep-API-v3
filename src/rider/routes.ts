@@ -98,7 +98,8 @@ async function chooseBeep (req: Request, res: Response): Promise<Response | void
             'groupRate': result.groupRate,
             'userLevel': result.userLevel,
             'isStudent': result.isStudent,
-            'capacity': result.capacity
+            'capacity': result.capacity,
+            'masksRequired': result.masksRequired
         }
     });
 }
@@ -147,7 +148,8 @@ async function findBeep (req: Request, res: Response): Promise<Response | void> 
                     'groupRate': result.groupRate,
                     'capacity': result.capacity,
                     'userLevel': result.userLevel,
-                    'isStudent': result.isStudent
+                    'isStudent': result.isStudent,
+                    'masksRequired': result.masksRequired
                 }
             });
         });
@@ -185,7 +187,7 @@ async function getRiderStatus (req: Request, res: Response): Promise<Response | 
             const ridersQueuePosition = await r.table(beepersID).filter(r.row('timeEnteredQueue').lt(queueEntry.timeEnteredQueue).and(r.row('isAccepted').eq(true))).count().run(db.getConnQueues());
 
             //get beeper's information
-            const beepersInfo = await r.table('users').get(beepersID).pluck('first', 'last', 'phone', 'venmo', 'singlesRate', 'groupRate', 'queueSize', 'userLevel', 'isStudent', 'capacity').run(db.getConn());
+            const beepersInfo = await r.table('users').get(beepersID).pluck('first', 'last', 'phone', 'venmo', 'singlesRate', 'groupRate', 'queueSize', 'userLevel', 'isStudent', 'capacity', 'masksRequired').run(db.getConn());
 
             let output;
 
@@ -208,7 +210,8 @@ async function getRiderStatus (req: Request, res: Response): Promise<Response | 
                         "groupRate": beepersInfo.groupRate,
                         'capacity': beepersInfo.capacity,
                         'userLevel': beepersInfo.userLevel,
-                        'isStudent': beepersInfo.isStudent
+                        'isStudent': beepersInfo.isStudent,
+                        'masksRequired': beepersInfo.masksRequired
                     }
                 };
             }
@@ -227,7 +230,8 @@ async function getRiderStatus (req: Request, res: Response): Promise<Response | 
                         "groupRate": beepersInfo.groupRate,
                         'capacity': beepersInfo.capacity,
                         'userLevel': beepersInfo.userLevel,
-                        'isStudent': beepersInfo.isStudent
+                        'isStudent': beepersInfo.isStudent,
+                        'masksRequired': beepersInfo.masksRequired
                     }
                 };
             }
@@ -284,7 +288,7 @@ async function riderLeaveQueue (req: Request, res: Response): Promise<Response |
  * API endpoint to return a JSON responce with a status and list of all users beeping
  */
 function getBeeperList (req: Request, res: Response): Response | void {
-    r.table("users").filter({ isBeeping: true }).pluck('first', 'last', 'queueSize', 'id', 'singlesRate', 'groupRate', 'capacity', 'userLevel', 'isStudent').run(db.getConn(), async function (error: Error, result) {
+    r.table("users").filter({ isBeeping: true }).pluck('first', 'last', 'queueSize', 'id', 'singlesRate', 'groupRate', 'capacity', 'userLevel', 'isStudent', 'masksRequired').run(db.getConn(), async function (error: Error, result) {
         if (error) {
             Sentry.captureException(error);
             return res.status(500).send(makeJSONError("Unable to get beeper list"));

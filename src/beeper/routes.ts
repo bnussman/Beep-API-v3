@@ -45,7 +45,8 @@ async function setBeeperStatus (req: Request, res: Response): Promise<Response |
         singlesRate: "required|numeric",
         groupRate: "required|numeric",
         capacity: "required|numeric",
-        isBeeping: "boolean"
+        isBeeping: "boolean",
+        masksRequired: "boolean"
     });
 
     const matched = await v.check();
@@ -65,7 +66,7 @@ async function setBeeperStatus (req: Request, res: Response): Promise<Response |
     }
 
     //query updates beepers isBeeping, singlesRate, and groupRate values, and capacity
-    r.table('users').get(req.user.id).update({isBeeping: req.body.isBeeping, singlesRate: req.body.singlesRate, groupRate: req.body.groupRate, capacity: req.body.capacity}).run(db.getConn(), function(error: Error) {
+    r.table('users').get(req.user.id).update({ isBeeping: req.body.isBeeping, singlesRate: req.body.singlesRate, groupRate: req.body.groupRate, capacity: req.body.capacity, masksRequired: req.body.masksRequired }).run(db.getConn(), function(error: Error) {
         //handle any RethinkDB error
         if (error) {
             Sentry.captureException(error);
