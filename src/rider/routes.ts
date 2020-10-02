@@ -33,7 +33,7 @@ async function chooseBeep (req: Request, res: Response): Promise<Response | void
     }
    
     //get beeper's information
-    const result = await r.table('users').get(req.body.beepersID).pluck('first', 'last', 'queueSize', 'singlesRate', 'groupRate', 'isBeeping', 'capacity', 'isStudent', 'userLevel').run(db.getConn());
+    const result = await r.table('users').get(req.body.beepersID).pluck('first', 'last', 'queueSize', 'singlesRate', 'groupRate', 'isBeeping', 'capacity', 'isStudent', 'userLevel', 'masksRequired').run(db.getConn());
 
     //make sure beeper is still beeping. This case WILL happen because a beeper may turn off isBeeping and rider's client may have not updated
     if (!result.isBeeping) {
