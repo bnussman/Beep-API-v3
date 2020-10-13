@@ -9,6 +9,7 @@ import * as Auth from "./auth/routes";
 import * as Account from "./account/routes";
 import * as Rider from "./rider/routes";
 import * as Beeper from "./beeper/routes";
+import * as User from "./user/routes";
 import * as Sentry from "@sentry/node";
 import * as cors from "cors";
 
@@ -35,6 +36,7 @@ export default class BeepAPIServer {
         this.app.use('/account', Account);
         this.app.use('/rider', Rider);
         this.app.use('/beeper', Beeper);
+        this.app.use('/user', User);
     }
 
     /**
