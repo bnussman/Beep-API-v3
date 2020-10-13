@@ -12,11 +12,13 @@ const router: Router = express.Router();
 router.get('/:id', getUser);
 
 async function getUser (req: Request, res: Response): Promise<Response | void> {
-    r.table("users").get(req.params.id).pluck('first', 'last', 'capacity', 'isStudent', 'masksRequired', 'queueSize', 'singlesRate', 'groupRate', 'venmo', 'isBeeping').run(db.getConn(), function (error: ReqlError, result: UserPluckResult) {
+    const userItems = ['first', 'last', 'capacity', 'isStudent', 'masksRequired', 'queueSize', 'singlesRate', 'groupRate', 'venmo', 'isBeeping'];
+
+    r.table("users").get(req.params.id).pluck(...userItems).run(db.getConn(), function (error: ReqlError, result: UserPluckResult) {
         //if there was an error, notify user with REST API.
         if (error) {
             Sentry.captureException(error);
-            return res.status(500).send(makeJSONError("Unable to get beeper status"));
+            return res.status(500).send(makeJSONError("Unable to get user profile"));
         }
         //We have no error, send the resulting data from query.
         return res.send({
