@@ -1,41 +1,20 @@
 import * as express from 'express';
 import { Router, Request, Response } from 'express';
 import * as r from 'rethinkdb';
-import { ReqlError, WriteResult } from 'rethinkdb';
+import { WriteResult } from 'rethinkdb';
 import { makeJSONSuccess, makeJSONError } from '../utils/json';
 import { isAuthenticated } from "../auth/helpers";
 import { db } from '../utils/db';
 import { sendNotification } from '../utils/notifications';
 import { getQueueSize, getPersonalInfo, storeBeepEvent } from './helpers';
-import { UserPluckResult } from "../types/beep";
 import { Validator } from 'node-input-validator';
 import * as Sentry from "@sentry/node";
 
 const router: Router = express.Router();
 
-router.get('/status/:id', getBeeperStatus);
 router.post('/status', isAuthenticated, setBeeperStatus);
 router.post('/queue', isAuthenticated, getBeeperQueue);
 router.post('/queue/status', isAuthenticated, setBeeperQueue);
-
-/**
- * API function that returns a beeper's isBeeing status
- */
-function getBeeperStatus (req: Request, res: Response): Response | void {
-    //get isBeeping from user with id GET param in users db
-    r.table("users").get(req.params.id).pluck('isBeeping').run(db.getConn(), function (error: ReqlError, result: UserPluckResult) {
-        //if there was an error, notify user with REST API.
-        if (error) {
-            Sentry.captureException(error);
-            return res.status(500).send(makeJSONError("Unable to get beeper status"));
-        }
-        //We have no error, send the resulting data from query.
-        return res.send({
-            'status': 'success',
-            'isBeeping': result.isBeeping
-        });
-    });
-}
 
 /**
  * API function that allows beeper to update isBeeping
