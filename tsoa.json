@@ -1,0 +1,20 @@
+{
+    "entryFile": "src/app.ts",
+    "noImplicitAdditionalProperties": "throw-on-extras",
+    "controllerPathGlobs": ["src/**/routes.ts"],
+    "spec": {
+        "outputDirectory": "build",
+        "specVersion": 3,
+        "securityDefinitions": {
+            "token": {
+                "type": "apiKey",
+                "name": "access_token",
+                "in": "query"
+            }
+        }
+    },
+    "routes": {
+        "routesDir": "build",
+        "authenticationModule": "src/utils/authentication.ts"
+    }
+}

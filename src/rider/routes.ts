@@ -4,7 +4,7 @@ import * as r from 'rethinkdb';
 import { CursorError, Cursor } from 'rethinkdb';
 import { makeJSONSuccess, makeJSONError } from '../utils/json';
 import { isAuthenticated } from "../auth/helpers";
-import { db } from '../utils/db';
+import { conn, connQueues } from '../utils/db';
 import { sendNotification } from '../utils/notifications';
 import { Validator } from "node-input-validator";
 import * as Sentry from "@sentry/node";
@@ -33,7 +33,7 @@ async function chooseBeep (req: Request, res: Response): Promise<Response | void
     }
    
     //get beeper's information
-    const result = await r.table('users').get(req.body.beepersID).pluck('first', 'last', 'queueSize', 'singlesRate', 'groupRate', 'isBeeping', 'capacity', 'isStudent', 'userLevel', 'masksRequired').run(db.getConn());
+    const result = await r.table('users').get(req.body.beepersID).pluck('first', 'last', 'queueSize', 'singlesRate', 'groupRate', 'isBeeping', 'capacity', 'isStudent', 'userLevel', 'masksRequired').run(conn);
 
     //make sure beeper is still beeping. This case WILL happen because a beeper may turn off isBeeping and rider's client may have not updated
     if (!result.isBeeping) {
@@ -53,7 +53,7 @@ async function chooseBeep (req: Request, res: Response): Promise<Response | void
 
     try {
         //insert newEntry into beeper's queue table
-        r.table(req.body.beepersID).insert(newEntry).run(db.getConnQueues());
+        r.table(req.body.beepersID).insert(newEntry).run(connQueues);
     }
     catch (error) {
         //RethinkDB error while inserting beep entery into beeper's queue table
@@ -63,7 +63,7 @@ async function chooseBeep (req: Request, res: Response): Promise<Response | void
 
     try {
         //update beeper's queue size in the users table
-        r.table('users').get(req.body.beepersID).update({'queueSize': r.row('queueSize').add(1)}).run(db.getConn());
+        r.table('users').get(req.body.beepersID).update({'queueSize': r.row('queueSize').add(1)}).run(conn);
     }
     catch (error) {
         //RethinkDB error while trying to increment beeper's queue size in the users table
@@ -73,7 +73,7 @@ async function chooseBeep (req: Request, res: Response): Promise<Response | void
 
     try {
         //update rider's inQueueOfUserID
-        r.table('users').get(req.user.id).update({'inQueueOfUserID': req.body.beepersID}).run(db.getConn());
+        r.table('users').get(req.user.id).update({'inQueueOfUserID': req.body.beepersID}).run(conn);
     }
     catch (error) {
         //unable to set inQueueOfUserID for rider in users table
@@ -110,7 +110,7 @@ async function chooseBeep (req: Request, res: Response): Promise<Response | void
 async function findBeep (req: Request, res: Response): Promise<Response | void> {
     //rethinkdb query to search users table (in acending order by queueSize) for users where isBeeping is true
     //and id is not equal to requester's, and limit by 1 to decide a riders beeper
-    r.table('users').orderBy({'index': 'queueSize'}).filter(r.row('isBeeping').eq(true).and(r.row('id').ne(req.user.id))).limit(1).run(db.getConn(), function (error: Error, cursor: Cursor) {
+    r.table('users').orderBy({'index': 'queueSize'}).filter(r.row('isBeeping').eq(true).and(r.row('id').ne(req.user.id))).limit(1).run(conn, function (error: Error, cursor: Cursor) {
         //Handle any RethinkDB error
         if (error) {
             Sentry.captureException(error);
@@ -161,7 +161,7 @@ async function getRiderStatus (req: Request, res: Response): Promise<Response | 
 
     //get rider's inQueueOfUserID in our user's db so we know what queue to look into
     try {
-        result = await r.table('users').get(req.user.id).pluck('inQueueOfUserID').run(db.getConn());
+        result = await r.table('users').get(req.user.id).pluck('inQueueOfUserID').run(conn);
     } 
     catch (error) {
         //TODO: user's account was deleted, we need to somehow get the client to logout
@@ -177,17 +177,17 @@ async function getRiderStatus (req: Request, res: Response): Promise<Response | 
     if (beepersID) {
         try {
             //since we are in a queue, we need to find the db entry where the rider has you id
-            const result = await r.table(beepersID).filter({ riderid: req.user.id }).run(db.getConnQueues());
+            const result = await r.table(beepersID).filter({ riderid: req.user.id }).run(connQueues);
 
             //resolve the next element so we have a const of the db entry
             const queueEntry = await result.next();
 
             //get rider's position in the queue by using a count query where we count entries where they entered the queue earlier
             //(they have an earlier timestamp)
-            const ridersQueuePosition = await r.table(beepersID).filter(r.row('timeEnteredQueue').lt(queueEntry.timeEnteredQueue).and(r.row('isAccepted').eq(true))).count().run(db.getConnQueues());
+            const ridersQueuePosition = await r.table(beepersID).filter(r.row('timeEnteredQueue').lt(queueEntry.timeEnteredQueue).and(r.row('isAccepted').eq(true))).count().run(connQueues);
 
             //get beeper's information
-            const beepersInfo = await r.table('users').get(beepersID).pluck('first', 'last', 'phone', 'venmo', 'singlesRate', 'groupRate', 'queueSize', 'userLevel', 'isStudent', 'capacity', 'masksRequired').run(db.getConn());
+            const beepersInfo = await r.table('users').get(beepersID).pluck('first', 'last', 'phone', 'venmo', 'singlesRate', 'groupRate', 'queueSize', 'userLevel', 'isStudent', 'capacity', 'masksRequired').run(conn);
 
             let output;
 
@@ -255,7 +255,7 @@ async function getRiderStatus (req: Request, res: Response): Promise<Response | 
 async function riderLeaveQueue (req: Request, res: Response): Promise<Response | void> {
     try {
         //delete entry in beeper's queue table
-        r.table(req.body.beepersID).filter({'riderid': req.user.id}).delete().run(db.getConnQueues());
+        r.table(req.body.beepersID).filter({'riderid': req.user.id}).delete().run(connQueues);
     }
     catch (error) {
         Sentry.captureException(error);
@@ -264,7 +264,7 @@ async function riderLeaveQueue (req: Request, res: Response): Promise<Response |
     
     try {
         //decreace beeper's queue size
-        r.table('users').get(req.body.beepersID).update({'queueSize': r.row('queueSize').sub(1)}).run(db.getConn());
+        r.table('users').get(req.body.beepersID).update({'queueSize': r.row('queueSize').sub(1)}).run(conn);
     }
     catch (error) {
         Sentry.captureException(error);
@@ -273,7 +273,7 @@ async function riderLeaveQueue (req: Request, res: Response): Promise<Response |
 
     try {
         //set rider's inQueueOfUserID value to null because they are no longer in a queue
-        r.table('users').get(req.user.id).update({'inQueueOfUserID': null}).run(db.getConn());
+        r.table('users').get(req.user.id).update({'inQueueOfUserID': null}).run(conn);
     }
     catch (error) {
         Sentry.captureException(error);
@@ -288,7 +288,7 @@ async function riderLeaveQueue (req: Request, res: Response): Promise<Response |
  * API endpoint to return a JSON responce with a status and list of all users beeping
  */
 function getBeeperList (req: Request, res: Response): Response | void {
-    r.table("users").filter({ isBeeping: true }).pluck('first', 'last', 'queueSize', 'id', 'singlesRate', 'groupRate', 'capacity', 'userLevel', 'isStudent', 'masksRequired').run(db.getConn(), async function (error: Error, result) {
+    r.table("users").filter({ isBeeping: true }).pluck('first', 'last', 'queueSize', 'id', 'singlesRate', 'groupRate', 'capacity', 'userLevel', 'isStudent', 'masksRequired').run(conn, async function (error: Error, result) {
         if (error) {
             Sentry.captureException(error);
             return res.status(500).send(makeJSONError("Unable to get beeper list"));

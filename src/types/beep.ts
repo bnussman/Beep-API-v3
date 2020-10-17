@@ -4,6 +4,11 @@ export interface TokenData {
     tokenid: string
 }
 
+export interface BeepError {
+    status: string;
+    message: string;
+}
+
 export interface User {
     id: string;
     first: string;

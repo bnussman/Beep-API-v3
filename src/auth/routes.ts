@@ -2,7 +2,7 @@ import * as express from 'express';
 import { Router, Request, Response } from 'express';
 import * as r from 'rethinkdb';
 import { Cursor, CursorError, WriteResult } from 'rethinkdb';
-import { db } from '../utils/db';
+import { conn, connQueues } from '../utils/db';
 import { User } from '../types/beep';
 import { makeJSONSuccess, makeJSONError } from '../utils/json';
 import { sha256 } from 'js-sha256';
@@ -38,7 +38,7 @@ async function login (req: Request, res: Response): Promise<Response | void> {
     }
 
     //RethinkDB Query to see if there is a user with POSTed username
-    r.table("users").filter({ "username": req.body.username }).run(db.getConn(), function (error: Error, cursor: Cursor) {
+    r.table("users").filter({ "username": req.body.username }).run(conn, function (error: Error, cursor: Cursor) {
         //Handle RethinkDB error
         if (error) {
             Sentry.captureException(error);
@@ -147,7 +147,7 @@ async function signup (req: Request, res: Response): Promise<Response | void> {
     };
 
     //insert a new user into our users table
-    r.table("users").insert(document).run(db.getConn(), async function (error: Error, result: WriteResult) {
+    r.table("users").insert(document).run(conn, async function (error: Error, result: WriteResult) {
         //handle a RethinkDB error
         if (error) {
             Sentry.captureException(error);
@@ -162,7 +162,7 @@ async function signup (req: Request, res: Response): Promise<Response | void> {
             const tokenData = await getToken(userid);
 
             //because signup was successful we must make their queue table
-            r.db("beepQueues").tableCreate(userid).run(db.getConnQueues());
+            r.db("beepQueues").tableCreate(userid).run(connQueues);
 
             //because user signed up, create a verify email entry in the db, this function will send the email
             createVerifyEmailEntryAndSendEmail(userid, req.body.email, req.body.first);
@@ -201,7 +201,7 @@ async function signup (req: Request, res: Response): Promise<Response | void> {
  */
 async function logout (req: Request, res: Response): Promise<Response | void> {
     //RethinkDB query to delete entry in tokens table.
-    r.table("tokens").get(req.user.token).delete().run(db.getConn(), function (error: Error, result: WriteResult) {
+    r.table("tokens").get(req.user.token).delete().run(conn, function (error: Error, result: WriteResult) {
         //handle a RethinkDB error
         if (error) {
             Sentry.captureException(error);
@@ -234,7 +234,7 @@ async function logout (req: Request, res: Response): Promise<Response | void> {
  */
 function removeToken (req: Request, res: Response): void {
     //RethinkDB query to delete entry in tokens table.
-    r.table("tokens").filter({'tokenid': req.body.tokenid}).delete().run(db.getConn(), function (error: Error, result: WriteResult) {
+    r.table("tokens").filter({'tokenid': req.body.tokenid}).delete().run(conn, function (error: Error, result: WriteResult) {
         //handle a RethinkDB error
         if (error) {
             Sentry.captureException(error);
@@ -279,7 +279,7 @@ async function forgotPassword (req: Request, res: Response): Promise<Response | 
         //everything in this try-catch is to handle if a request has already been made for forgot password
         try {
             //query the db for any password reset entries with the same userid
-            const cursor: Cursor = await r.table("passwordReset").filter({ userid: user.id }).run(db.getConn());
+            const cursor: Cursor = await r.table("passwordReset").filter({ userid: user.id }).run(conn);
 
             try { 
                 //we try to take the cursor and get the next item
@@ -312,7 +312,7 @@ async function forgotPassword (req: Request, res: Response): Promise<Response | 
 
         try {
             //insert the new entry
-            const result: WriteResult = await r.table("passwordReset").insert(doccument).run(db.getConn());
+            const result: WriteResult = await r.table("passwordReset").insert(doccument).run(conn);
 
             //use the RethinkDB write result as the forgot password token
             const id: string = result.generated_keys[0];
@@ -354,7 +354,7 @@ async function resetPassword (req: Request, res: Response): Promise<Response | v
     try {
         //this seems odd, but we delete the forgot password entry but use RethinkDB returnChanges to invalidate the entry and complete this 
         //new password request
-        const result: WriteResult = await r.table("passwordReset").get(req.body.id).delete({ returnChanges: true }).run(db.getConn());
+        const result: WriteResult = await r.table("passwordReset").get(req.body.id).delete({ returnChanges: true }).run(conn);
 
         //get the db entry from the RethinkDB changes
         const entry = result.changes[0].old_val;
@@ -366,7 +366,7 @@ async function resetPassword (req: Request, res: Response): Promise<Response | v
 
         try {
             //update user's password in their db entry
-            await r.table("users").get(entry.userid).update({ password: sha256(req.body.password) }).run(db.getConn());
+            await r.table("users").get(entry.userid).update({ password: sha256(req.body.password) }).run(conn);
 
             //incase user's password was in the hands of bad person, invalidate user's tokens after they successfully reset their password
             deactivateTokens(entry.userid);
