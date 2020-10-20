@@ -1,7 +1,5 @@
-/*
 import { Response, Request, NextFunction} from "express";
 import { ValidateError } from "tsoa";
-*/
 
 export enum APIStatus {
     Success = "success",
@@ -19,19 +17,22 @@ export class APIResponse {
     }
 }
 
-/*
 export function errorHandler(error: unknown, request: Request, response: Response, next: NextFunction): Response | void {
-    console.log("Error handler caught: ", error);
     if (error instanceof ValidateError) {
         return response.status(422).json({
             status: "error",
-            message: "Validation Failed",
+            message: "You did not provide the correct paramaters to use this api endpoint",
+        });
+        /*
+        return response.status(422).json({
+            status: "error",
+            message: "You did not provide the correct paramaters to use this api endpoint",
             details: error?.fields,
         });
+        */
     }
     if (error instanceof Error) {
         return response.status(500).json(new APIResponse(APIStatus.Error, error.message));
     }
     next();
 }
-*/

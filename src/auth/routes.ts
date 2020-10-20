@@ -1,4 +1,4 @@
-import { Request, Controller, Route, Example, Post, Security, Body, Tags }  from 'tsoa';
+import { Response, Request, Controller, Route, Example, Post, Security, Body, Tags }  from 'tsoa';
 import * as r from 'rethinkdb';
 import express from 'express';
 import { Cursor, WriteResult } from 'rethinkdb';
@@ -22,6 +22,42 @@ export class AuthController extends Controller {
      * @param {LoginParams} requestBody - Conatins a username and password and optional Expo push token
      */
     @Post("login")
+    @Example<LoginResponse>({
+        capacity: 4,
+        email: "nussmanwb@appstate.edu",
+        first: "Banks",
+        groupRate: "2",
+        id: "22192b90-54f8-49b5-9dcf-26049454716b",
+        isBeeping: false,
+        isEmailVerified: true,
+        isStudent: true,
+        last: "Nussman",
+        masksRequired: true,
+        phone: "7049968597",
+        singlesRate: "3",
+        status: APIStatus.Success,
+        token: "657c2dde-649e-4271-9ffd-73ecbdd854f2",
+        tokenid: "7ab19f41-f0cf-4a86-ba56-def56a0576f6",
+        userLevel: 0,
+        username: "banks",
+        venmo: "banksnussman"
+    })
+    @Response<APIResponse>(422, "Invalid Input", {
+        status: APIStatus.Error, 
+        message: {
+            password: {
+                message: "The password field is mandatory.", rule: "required"
+            }
+        }
+    })
+    @Response<APIResponse>(401, "Unauthorized", {
+        status: APIStatus.Error, 
+        message: "Password is incorrect"
+    })
+    @Response<APIResponse>(500, "Server Error", {
+        status: APIStatus.Error, 
+        message: "Unable to login due to a server error"
+    })
     public async login (@Body() requestBody: LoginParams): Promise<LoginResponse | APIResponse> {
         const v = new Validator(requestBody, {
             username: "required",
@@ -79,7 +115,7 @@ export class AuthController extends Controller {
                     cursor.close();
                     //send message to client
                     this.setStatus(401);
-                    return new APIResponse(APIStatus.Error, "Password is incorrect.");
+                    return new APIResponse(APIStatus.Error, "Password is incorrect");
                 }
             }
             catch (error) {
@@ -103,6 +139,26 @@ export class AuthController extends Controller {
      * This endpoint will return the same thing login would asuming signup was successful.
      * @param {SignUpParams} requestBody - Conatins a signup params and optional Expo push token
      */
+    @Example<LoginResponse>({
+        capacity: 4,
+        email: "nussmanwb@appstate.edu",
+        first: "Banks",
+        groupRate: "2",
+        id: "22192b90-54f8-49b5-9dcf-26049454716b",
+        isBeeping: false,
+        isEmailVerified: true,
+        isStudent: true,
+        last: "Nussman",
+        masksRequired: true,
+        phone: "7049968597",
+        singlesRate: "3",
+        status: APIStatus.Success,
+        token: "657c2dde-649e-4271-9ffd-73ecbdd854f2",
+        tokenid: "7ab19f41-f0cf-4a86-ba56-def56a0576f6",
+        userLevel: 0,
+        username: "banks",
+        venmo: "banksnussman"
+    })
     @Post("signup")
     public async signup (@Body() requestBody: SignUpParams): Promise<LoginResponse | APIResponse> {
         const v = new Validator(requestBody, {

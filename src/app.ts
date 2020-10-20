@@ -1,7 +1,7 @@
 import express from "express";
 import { RegisterRoutes } from "../build/routes";
 import { connect } from "./utils/db";
-//import { errorHandler } from "./utils/Error";
+import { errorHandler } from "./utils/Error";
 import { handleNotFound } from "./utils/404";
 import cors from "cors";
 
@@ -17,4 +17,4 @@ RegisterRoutes(app);
 
 app.use(handleNotFound);
 
-//app.use(errorHandler);
+app.use(errorHandler);
