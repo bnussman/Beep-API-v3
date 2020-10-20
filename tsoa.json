@@ -1,0 +1,22 @@
+{
+    "entryFile": "src/app.ts",
+    "noImplicitAdditionalProperties": "throw-on-extras",
+    "controllerPathGlobs": ["src/**/routes.ts"],
+    "spec": {
+        "outputDirectory": "build",
+        "specVersion": 3,
+        "securityDefinitions": {
+            "token": {
+                "type": "apiKey",
+                "name": "Authorization",
+                "in": "header"
+            }
+        },
+        "host": "ridebeep.app",
+        "basePath": "/api"
+    },
+    "routes": {
+        "routesDir": "build",
+        "authenticationModule": "src/utils/authentication.ts"
+    }
+}

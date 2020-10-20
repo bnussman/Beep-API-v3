@@ -1,13 +1,13 @@
 import * as r from 'rethinkdb';
 import { WriteResult, Cursor } from 'rethinkdb';
 import { TokenData, UserPluckResult, TokenEntry } from '../types/beep';
-import { db } from '../utils/db';
+import { conn } from '../utils/db';
 import * as nodemailer from "nodemailer";
 import { transporter } from "../utils/mailer";
 import * as Sentry from "@sentry/node";
 import { Request, Response, NextFunction } from "express";
-import { makeJSONError } from '../utils/json';
 import { v4 as uuidv4 } from "uuid";
+import {APIResponse, APIStatus} from 'src/utils/Error';
 
 /**
  * Generates an authentication token and a token for that token (for offline logouts), stores
@@ -25,7 +25,7 @@ export async function getToken(userid: string): Promise<TokenData> {
 
     //insert our new auth token into our tokens table
     try {
-        const result: WriteResult = await r.table("tokens").insert(document).run(db.getConn());
+        const result: WriteResult = await r.table("tokens").insert(document).run(conn);
 
         //if nothing was inserted into the tokens table, we know something is wrong
         if (result.inserted == 0) {
@@ -65,41 +65,10 @@ export async function setPushToken(id: string | null, token: string | null): Pro
     if (!id) return;
     //run query to get user and update their pushToken
     try {
-        await r.table("users").get(id).update({pushToken: token}).run(db.getConn());
+        await r.table("users").get(id).update({pushToken: token}).run(conn);
     }
     catch(error) {
         Sentry.captureException(error);
-    }
-}
-
-/**
- * Retuns user's id if their token is valid, null otherwise
- *
- * @param token takes a user's auth token as input
- * @return userid if token is valid, null otherwise
- */
-export async function isAuthenticated(req: Request, res: Response, next: NextFunction): Promise<Response | undefined> {
-    //get the Authorization header and split after the first space because it will say Bearer first
-    const token: string | undefined = req.get("Authorization")?.split(" ")[1];
-
-    if (!token) {
-        return res.status(401).send(makeJSONError("You did not provide an authentication token."));
-    }
-
-    try {
-        const result: TokenEntry | null = await r.table("tokens").get(token).run(db.getConn()) as TokenEntry;
-
-        if (result) {
-            req.user = { token: token, id: result.userid };
-            next();
-        }
-        else {
-            res.status(401).send(makeJSONError("Your token is not valid."));
-        }
-    }
-    catch (error) {
-        Sentry.captureException(error);
-        res.status(500).send(makeJSONError("Unable to access the database to check token."));
     }
 }
 
@@ -113,7 +82,7 @@ export async function isTokenValid(token: string): Promise<string | null> {
     //get (only) user's id from tokens db where the token is the token passed to this function
     //NOTE: filter must be used over get here because token is not a primary (or secondary) key
     try {
-        const result: any = await r.table("tokens").get(token).run(db.getConn());
+        const result: any = await r.table("tokens").get(token).run(conn);
 
         if (result) {
             return result.userid;
@@ -138,7 +107,7 @@ export async function isTokenValid(token: string): Promise<string | null> {
  */
 export async function hasUserLevel(userid: string, level: number): Promise<boolean> {
     try {
-        const userLevel: number = await r.table("users").get(userid).pluck('userLevel').run(db.getConn());
+        const userLevel: number = await r.table("users").get(userid).pluck('userLevel').run(conn);
 
         //return a boolean, true if user has desired level, false otherwise
         return level == userLevel;
@@ -182,11 +151,11 @@ export async function getUserFromEmail(email: string, ...pluckItems: string[]): 
 
         //if no pluck items were passed in, don't pluck anything
         if (pluckItems.length == 0) {
-            cursor = await r.table("users").filter({ 'email': email }).limit(1).run(db.getConn());
+            cursor = await r.table("users").filter({ 'email': email }).limit(1).run(conn);
         }
         else {
             //expand all the pluck paramaters and rethinkdb query to get them
-            cursor = await r.table("users").filter({ 'email': email }).pluck(...pluckItems).limit(1).run(db.getConn());
+            cursor = await r.table("users").filter({ 'email': email }).pluck(...pluckItems).limit(1).run(conn);
         }
         
         try {
@@ -219,11 +188,11 @@ export async function getUserFromId(id: string, ...pluckItems: string[]): Promis
     try {
         //if no pluck items were passed in, don't pluck anything
         if (pluckItems.length == 0) {
-            result = await r.table("users").get(id).run(db.getConn());
+            result = await r.table("users").get(id).run(conn);
         }
         else {
             //expand all the pluck paramaters and rethinkdb query to get them
-            result = await r.table("users").get(id).pluck(...pluckItems).run(db.getConn());
+            result = await r.table("users").get(id).pluck(...pluckItems).run(conn);
         }
         
     }
@@ -273,7 +242,7 @@ export function sendResetEmail(email: string, id: string, first: string | undefi
 export function deactivateTokens(userid: string): void {
     try {
         //delete all entries in the tokens db where userid matches
-        r.table("tokens").filter({ userid: userid }).delete().run(db.getConn());
+        r.table("tokens").filter({ userid: userid }).delete().run(conn);
     }
     catch (error) {
         //RethinkDB error when deleteing push tokens for userid
@@ -334,7 +303,7 @@ export async function createVerifyEmailEntryAndSendEmail(id: string, email: stri
     };
 
     try {
-        const result: WriteResult = await r.table("verifyEmail").insert(document).run(db.getConn());
+        const result: WriteResult = await r.table("verifyEmail").insert(document).run(conn);
 
         //get the generated id from RethinkDB write result because that id is the token the user uses for varification
         const verifyId: string = result.generated_keys[0];
@@ -356,7 +325,7 @@ export async function createVerifyEmailEntryAndSendEmail(id: string, email: stri
  */
 export async function doesUserExist(username: string): Promise<boolean> {
     try {
-        const count: number = await r.table("users").filter({ username: username }).count().run(db.getConn());
+        const count: number = await r.table("users").filter({ username: username }).count().run(conn);
         
         if (count >= 1) {
             return true;        

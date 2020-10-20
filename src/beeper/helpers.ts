@@ -1,5 +1,5 @@
 import * as r from 'rethinkdb';
-import { db } from '../utils/db';
+import { conn, connHistory } from '../utils/db';
 import { BeepTableResult, UserPluckResult } from "../types/beep";
 import * as Sentry from "@sentry/node";
 
@@ -11,7 +11,7 @@ import * as Sentry from "@sentry/node";
  */
 export async function getQueueSize(userid: string): Promise<number> {
     try {
-        const result = await r.table("users").get(userid).pluck('queueSize').run(db.getConn());
+        const result = await r.table("users").get(userid).pluck('queueSize').run(conn);
         return result.queueSize;
     }
     catch(error) {
@@ -28,7 +28,7 @@ export async function getQueueSize(userid: string): Promise<number> {
 export async function getPersonalInfo (userid: string): Promise<UserPluckResult> {
     try {
         //RethinkDB query gets data from users db at userid
-        const result: UserPluckResult = await r.table('users').get(userid).pluck('first', 'last', 'phone', 'venmo', 'isStudent').run(db.getConn());
+        const result: UserPluckResult = await r.table('users').get(userid).pluck('first', 'last', 'phone', 'venmo', 'isStudent').run(conn);
 
         return result;
     }
@@ -46,7 +46,7 @@ export async function getPersonalInfo (userid: string): Promise<UserPluckResult>
  */
 export async function storeBeepEvent (event: BeepTableResult): Promise<void> {
     try {
-        r.table("beeps").insert(event).run(db.getConnHistory());
+        r.table("beeps").insert(event).run(connHistory);
     }
     catch (error) {
         Sentry.captureException(error);
