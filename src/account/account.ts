@@ -1,4 +1,4 @@
-import {APIStatus} from "src/utils/Error";
+import { APIStatus } from "../utils/Error";
 
 export interface EditAccountParams {
     first: string;

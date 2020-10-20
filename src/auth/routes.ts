@@ -10,7 +10,7 @@ import { UserPluckResult } from "../types/beep";
 import { Validator } from "node-input-validator";
 import * as Sentry from "@sentry/node";
 import { ForgotPasswordParams, LoginParams, LoginResponse, LogoutParams, RemoveTokenParams, ResetPasswordParams, SignUpParams } from "./auth";
-import { APIResponse, APIStatus } from 'src/utils/Error';
+import { APIResponse, APIStatus } from '../utils/Error';
 
 @Tags("Auth")
 @Route("auth")
