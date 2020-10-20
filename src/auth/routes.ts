@@ -1,4 +1,4 @@
-import { Request, Controller, Route, Get, Path, Example, Post, Security, Body, Tags }  from 'tsoa';
+import { Request, Controller, Route, Example, Post, Security, Body, Tags }  from 'tsoa';
 import * as r from 'rethinkdb';
 import express from 'express';
 import { Cursor, WriteResult } from 'rethinkdb';
@@ -16,6 +16,11 @@ import { APIResponse, APIStatus } from '../utils/Error';
 @Route("auth")
 export class AuthController extends Controller {
 
+    /**
+     * Checks provided credentials and provides a responce with user data and authentication tokens.
+     * Provide a username and password to login successfully
+     * @param {LoginParams} requestBody - Conatins a username and password and optional Expo push token
+     */
     @Post("login")
     public async login (@Body() requestBody: LoginParams): Promise<LoginResponse | APIResponse> {
         const v = new Validator(requestBody, {
@@ -92,6 +97,12 @@ export class AuthController extends Controller {
         }
     }
 
+    /**
+     * Signs Up a user with the provided data. 
+     * Provide all required signup paramaters to get a new account.
+     * This endpoint will return the same thing login would asuming signup was successful.
+     * @param {SignUpParams} requestBody - Conatins a signup params and optional Expo push token
+     */
     @Post("signup")
     public async signup (@Body() requestBody: SignUpParams): Promise<LoginResponse | APIResponse> {
         const v = new Validator(requestBody, {
@@ -190,12 +201,17 @@ export class AuthController extends Controller {
         }
     }
     
+    /**
+     * Logs out a user.  
+     * This allows us to invalidate a user's authentication token upon logout
+     * @param {LogoutParams} requestBody - Param of isApp allows us to remove current pushToken if user is in the app, otheriwse don't remove it because it was a logout on the website
+     */
     @Security("token")
     @Post("logout")
     public async logout (@Request() request: express.Request, @Body() requestBody: LogoutParams): Promise<APIResponse> {
         //RethinkDB query to delete entry in tokens table.
         try {
-            const result: WriteResult = await r.table("tokens").get(request.user.token).delete().run(conn);            //handle a RethinkDB error
+            const result: WriteResult = await r.table("tokens").get(request.user.token).delete().run(conn);
 
             //if RethinkDB tells us something was deleted, logout was successful
             if (result.deleted == 1) {
@@ -222,6 +238,11 @@ export class AuthController extends Controller {
         }
     }
 
+    /**
+     * Removes any tokenid  
+     * If user's device was offline upon logout, a tokenid was kept in storage. This endpoint handles the removal of the tokenData upon the device's next login
+     * @param {RemoveTokenParams} requestBody - Includes the tokenid for the token we need to remove
+     */
     @Post("token")
     public async removeToken (@Body() requestBody: RemoveTokenParams): Promise<APIResponse> {
         //RethinkDB query to delete entry in tokens table.
@@ -246,6 +267,11 @@ export class AuthController extends Controller {
         }
     }
 
+    /**
+     * Allows user to initiate a Forgot Password event.
+     * This will send them an email that will allow them to reset their password.
+     * @param {ForgotPasswordParams} requestBody - The user only enters their email, we use that to send email and identify them
+     */
     @Post("password/forgot")
     public async forgotPassword (@Body() requestBody: ForgotPasswordParams): Promise<APIResponse> {
         const v = new Validator(requestBody, {
@@ -327,6 +353,11 @@ export class AuthController extends Controller {
         }
     }
 
+    /**
+     * Allows unauthenticated user to reset their password based on a id value sent to them via email and the /password/forgot route
+     * If a reset password token is no longer valid, this endpoint is responcible for removing it
+     * @param {ResetPasswordParams} requestBody - Request should include the passwordReset token and the new password
+     */
     @Post("password/reset")
     public async resetPassword (@Body() requestBody: ResetPasswordParams): Promise<APIResponse> {
         const v = new Validator(requestBody, {

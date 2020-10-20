@@ -18,7 +18,7 @@ export interface SignUpParams {
 }
 
 export interface LogoutParams {
-   isApp: boolean; 
+   isApp?: boolean; 
 }
 
 export interface RemoveTokenParams {
