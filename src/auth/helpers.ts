@@ -6,8 +6,8 @@ import * as nodemailer from "nodemailer";
 import { transporter } from "../utils/mailer";
 import * as Sentry from "@sentry/node";
 import { Request, Response, NextFunction } from "express";
-import { makeJSONError } from '../utils/json';
 import { v4 as uuidv4 } from "uuid";
+import {APIResponse, APIStatus} from 'src/utils/Error';
 
 /**
  * Generates an authentication token and a token for that token (for offline logouts), stores
@@ -69,37 +69,6 @@ export async function setPushToken(id: string | null, token: string | null): Pro
     }
     catch(error) {
         Sentry.captureException(error);
-    }
-}
-
-/**
- * Retuns user's id if their token is valid, null otherwise
- *
- * @param token takes a user's auth token as input
- * @return userid if token is valid, null otherwise
- */
-export async function isAuthenticated(req: Request, res: Response, next: NextFunction): Promise<Response | undefined> {
-    //get the Authorization header and split after the first space because it will say Bearer first
-    const token: string | undefined = req.get("Authorization")?.split(" ")[1];
-
-    if (!token) {
-        return res.status(401).send(makeJSONError("You did not provide an authentication token."));
-    }
-
-    try {
-        const result: TokenEntry | null = await r.table("tokens").get(token).run(conn) as TokenEntry;
-
-        if (result) {
-            req.user = { token: token, id: result.userid };
-            next();
-        }
-        else {
-            res.status(401).send(makeJSONError("Your token is not valid."));
-        }
-    }
-    catch (error) {
-        Sentry.captureException(error);
-        res.status(500).send(makeJSONError("Unable to access the database to check token."));
     }
 }
 

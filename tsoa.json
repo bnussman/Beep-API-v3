@@ -8,10 +8,12 @@
         "securityDefinitions": {
             "token": {
                 "type": "apiKey",
-                "name": "access_token",
-                "in": "query"
+                "name": "Authorization",
+                "in": "header"
             }
-        }
+        },
+        "host": "ridebeep.app",
+        "basePath": "/api"
     },
     "routes": {
         "routesDir": "build",

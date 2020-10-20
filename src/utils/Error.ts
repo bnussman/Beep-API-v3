@@ -1,26 +1,37 @@
-export class APIError {
-    
-    public status: string;
-    public statusCode: number;
+/*
+import { Response, Request, NextFunction} from "express";
+import { ValidateError } from "tsoa";
+*/
+
+export enum APIStatus {
+    Success = "success",
+    Warning = "warning",
+    Error = "error"
+}
+
+export class APIResponse {
+    public status: APIStatus;
     public message: unknown;
 
-    constructor(statusCode: number, message: unknown) {
-        this.status = "error";
-        console.log(message);
+    constructor(status: APIStatus, message: unknown) {
+        this.status = status;
         this.message = message;
-        this.statusCode = statusCode;
     }
 }
 
-export class APIWarning {
-    
-    public status: string;
-    public statusCode: number;
-    public message: unknown;
-
-    constructor(statusCode: number, message: unknown) {
-        this.status = "warning";
-        this.message = message;
-        this.statusCode = statusCode;
+/*
+export function errorHandler(error: unknown, request: Request, response: Response, next: NextFunction): Response | void {
+    console.log("Error handler caught: ", error);
+    if (error instanceof ValidateError) {
+        return response.status(422).json({
+            status: "error",
+            message: "Validation Failed",
+            details: error?.fields,
+        });
     }
+    if (error instanceof Error) {
+        return response.status(500).json(new APIResponse(APIStatus.Error, error.message));
+    }
+    next();
 }
+*/

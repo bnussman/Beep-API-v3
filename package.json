@@ -5,7 +5,7 @@
     "main": "build/src/server.js",
     "scripts": {
         "test": "jest",
-        "build": "npx tsc",
+        "build": "tsoa spec-and-routes && npx tsc",
         "start": "node build/src/server.js"
     },
     "repository": {

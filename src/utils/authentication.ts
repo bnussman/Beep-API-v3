@@ -3,7 +3,7 @@ import { TokenEntry } from "../types/beep";
 import { conn } from "./db";
 import * as r from "rethinkdb";
 import * as Sentry from "@sentry/node";
-import { APIError } from "./Error";
+import { APIStatus, APIResponse } from "./Error";
 
 export async function expressAuthentication(request: express.Request, securityName: string, scopes?: string[]): Promise<any> {
     if (securityName === "token") {
@@ -11,7 +11,7 @@ export async function expressAuthentication(request: express.Request, securityNa
         const token: string | undefined = request.get("Authorization")?.split(" ")[1];
 
         if (!token) {
-            return Promise.reject(new APIError(401, "You must provide an authentication token"));
+            return Promise.reject(new APIResponse(APIStatus.Error, "You must provide an authentication token"));
         }
 
         try {
@@ -21,12 +21,12 @@ export async function expressAuthentication(request: express.Request, securityNa
                 return Promise.resolve({ token: token, id: result.userid });
             }
             else {
-                return Promise.reject(new APIError(401, "Your token is not valid"));
+                return Promise.reject(new APIResponse(APIStatus.Error, "Your token is not valid"));
             }
         }
         catch (error) {
             Sentry.captureException(error);
-            return Promise.reject(new APIError(500, "Unable to verify token with our database"));
+            return Promise.reject(new APIResponse(APIStatus.Error, error));
         }
     }
 }
