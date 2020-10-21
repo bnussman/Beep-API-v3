@@ -6,7 +6,7 @@ import { sendNotification } from '../utils/notifications';
 import { getQueueSize, getPersonalInfo, storeBeepEvent } from './helpers';
 import { Validator } from 'node-input-validator';
 import * as Sentry from "@sentry/node";
-import { Controller, Request, Body, Tags, Security, Post, Route } from 'tsoa';
+import { Response, Controller, Request, Body, Tags, Security, Post, Route, Example } from 'tsoa';
 import { APIResponse, APIStatus } from '../utils/Error';
 import { BeepQueueTableEntry, GetBeeperQueueResult, SetBeeperQueueParams, SetBeeperStatusParams } from './beeper';
 
@@ -14,6 +14,33 @@ import { BeepQueueTableEntry, GetBeeperQueueResult, SetBeeperQueueParams, SetBee
 @Route("beeper")
 export class BeeperController extends Controller {
 
+    /**
+     * Users use this to set if they are beeping or not
+     * It also allows them to update their rates and mask settings
+     * @param {SetBeeperStatusParams} requestBody - client sends rates, isBeeping status, mask setting, and capacity
+     * @returns {APIResponse} 
+     */
+    @Example<APIResponse>({
+        status: APIStatus.Success,
+        message: "Successfully updated beeping status."
+    })
+    @Response<APIResponse>(400, "Bad Request", {
+        status: APIStatus.Error, 
+        message: "You can't stop beeping when you still have beeps to complete or riders in your queue"
+    })
+    @Response<APIResponse>(422, "Validation Error", {
+        status: APIStatus.Error,
+        message: {
+            singlesRate: {
+                message: "The singles rate must be a number.",
+                rule: "numeric"
+            }
+        }
+    })
+    @Response<APIResponse>(500, "Server Error", {
+        status: APIStatus.Error, 
+        message: "Unable to set beeper status"
+    })
     @Security("token")
     @Post("status")
     public async setBeeperStatus (@Request() request: express.Request, @Body() requestBody: SetBeeperStatusParams): Promise<APIResponse> {
@@ -58,6 +85,38 @@ export class BeeperController extends Controller {
     }
 
 
+    /**
+     * User calls this to get there queue when beeping.
+     * Our Socket server is responcible for telling a client a change occoured, it will prompt
+     * a call to this endpoint to get the queue and data
+     * @returns {GetBeeperQueueResult} 
+     */
+    @Example<GetBeeperQueueResult>({
+        status: APIStatus.Success,
+        queue: [
+            {
+                destination: "Tasty",
+                groupSize: 1,
+                id: "b500bb45-094e-437c-887b-e6b6d815ba12",
+                isAccepted: true,
+                origin: "241 Marich Ln Marich Ln Boone, NC 28607",
+                riderid: "22192b90-54f8-49b5-9dcf-26049454716b",
+                state: 0,
+                timeEnteredQueue: 1603318791872,
+                personalInfo: {
+                    first: "Banks",
+                    isStudent: true,
+                    last: "Nussman",
+                    phone: "7049968597",
+                    venmo: "banksnussman"
+                }
+            }
+        ]
+    })
+    @Response<APIResponse>(500, "Server Error", {
+        status: APIStatus.Error, 
+        message: "Unable to get beeper queue"
+    })
     @Security("token")
     @Post("queue")
     public async getBeeperQueue(@Request() request: express.Request): Promise<APIResponse | GetBeeperQueueResult> {
@@ -85,8 +144,24 @@ export class BeeperController extends Controller {
             return new APIResponse(APIStatus.Error, "Unable to get beeper queue");
         }
     }
-
-
+    
+    /**
+     * A beeper calls this to set the status of one entry in their queue
+     * @param {SetBeeperQueueParams} requestBody - beeper sends the status they want to set, the rider's id, and the queue entry id
+     * @returns {APIResponse}
+     */
+    @Example<APIResponse>({
+        status: APIStatus.Success,
+        message: "Successfully removed user from queue."
+    })
+    @Response<APIResponse>(400, "Bad Request", {
+        status: APIStatus.Error, 
+        message: "You must respond to the rider who first joined your queue."
+    })
+    @Response<APIResponse>(500, "Server Error", {
+        status: APIStatus.Error, 
+        message: "Unable to set beeper status"
+    })
     @Security("token")
     @Post("queue/status")
     public async setBeeperQueue (@Request() request: express.Request, @Body() requestBody: SetBeeperQueueParams): Promise<APIResponse> {
