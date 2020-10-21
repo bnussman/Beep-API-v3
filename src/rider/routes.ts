@@ -5,7 +5,7 @@ import { conn, connQueues } from '../utils/db';
 import { sendNotification } from '../utils/notifications';
 import { Validator } from "node-input-validator";
 import * as Sentry from "@sentry/node";
-import { Controller, Post, Route, Security, Tags, Request, Body, Get } from 'tsoa';
+import { Response, Controller, Post, Route, Security, Tags, Request, Body, Get, Example } from 'tsoa';
 import { BeeperListItem, BeeperListResult, ChooseBeepParams, ChooseBeepResponse, LeaveQueueParams, RiderStatusResult } from "./rider";
 import { APIResponse, APIStatus } from '../utils/Error';
     
@@ -13,6 +13,40 @@ import { APIResponse, APIStatus } from '../utils/Error';
 @Route("rider")
 export class RiderController extends Controller {
 
+    /**
+     * A user can use this 'rider' endpoint to to choose a beep to join their queue
+     * This endpoint handles inserting into the queue table and updating user fields
+     * @param {ChooseBeepParams} requestBody - The client must send their groupSize, origin and destination, and the beepersid
+     * @returns {ChooseBeepResponse | APIResponse}
+     */
+    @Example<ChooseBeepResponse>({
+        status: APIStatus.Success,
+        beeper: {
+            capacity: 4,
+            first: "Banks",
+            groupRate: "2",
+            id: "22192b90-54f8-49b5-9dcf-26049454716b",
+            isStudent: true,
+            last: "Nussman",
+            masksRequired: true,
+            queueSize: 1,
+            singlesRate: "3",
+            userLevel: 0
+        }
+    })
+    @Response<APIResponse>(422, "Invalid Input", {
+        status: APIStatus.Error, 
+        message: {
+            origin: {
+                message: "The origin field is mandatory.",
+                rule: "required"
+            }
+        }
+    })
+    @Response<APIResponse>(410, "Beeper is not beeping", {
+        status: APIStatus.Error, 
+        message: "The user you have chosen is no longer beeping at this time."
+    })
     @Security("token")
     @Post("choose")
     public async chooseBeep (@Request() request: express.Request, @Body() requestBody: ChooseBeepParams): Promise<ChooseBeepResponse | APIResponse> {
@@ -106,6 +140,30 @@ export class RiderController extends Controller {
         };
     }
     
+    /**
+     * The endpoint will serve the user with data of the most avalible beeper
+     * This will NOT initiate a beep, but will simplily give the client data of an avalible beeper
+     * @returns {ChooseBeepResponse | APIResponse}
+     */
+    @Example<ChooseBeepResponse>({
+        status: APIStatus.Success,
+        beeper: {
+            capacity: 4,
+            first: "Banks",
+            groupRate: "2",
+            id: "22192b90-54f8-49b5-9dcf-26049454716b",
+            isStudent: true,
+            last: "Nussman",
+            masksRequired: true,
+            queueSize: 1,
+            singlesRate: "3",
+            userLevel: 0
+        }
+    })
+    @Response<APIResponse>(204, "No body is beeping", {
+        status: APIStatus.Error,
+        message: "Nobody is beeping at the moment! Try to find a ride later."
+    })
     @Security("token")
     @Post("find")
     public async findBeep (@Request() request: express.Request): Promise<APIResponse | ChooseBeepResponse> {
@@ -141,7 +199,7 @@ export class RiderController extends Controller {
                 if (error.msg == "No more rows in the cursor.") {
                     //close the RethinkDB cursor to prevent leak
                     //Return error to REST API
-                    this.setStatus(200);
+                    this.setStatus(204);
                     return new APIResponse(APIStatus.Error, "Nobody is beeping at the moment! Try to find a ride later.");
                 }
                 else {
@@ -159,6 +217,36 @@ export class RiderController extends Controller {
         }
     }
 
+    /**
+     * Gets the current status as a rider at any given time. This is how they know anything about their current beep
+     * Our socket currently will tell clients a change happend, and this endpoint will be called to get the data
+     * @returns {RiderStatusResult | APIResponse}
+     */
+    @Example<RiderStatusResult>({
+        beeper: {
+            capacity: 4,
+            first: "Banks",
+            groupRate: "2",
+            id: "22192b90-54f8-49b5-9dcf-26049454716b",
+            isStudent: true,
+            last: "Nussman",
+            masksRequired: true,
+            phone: "7049968597",
+            queueSize: 1,
+            singlesRate: "3",
+            userLevel: 0,
+            venmo: "banksnussman",
+        },
+        groupSize: 1,
+        isAccepted: true,
+        ridersQueuePosition: 0,
+        state: 1,
+        status: APIStatus.Success
+    })
+    @Response<APIResponse>(410, "User not found", {
+        status: APIStatus.Error, 
+        message: "You are trying to get your rider status of an account that no longer exists"
+    })
     @Security("token")
     @Post("status")
     public async getRiderStatus (@Request() request: express.Request): Promise<APIResponse | RiderStatusResult> {
@@ -257,6 +345,16 @@ export class RiderController extends Controller {
         }
     }
 
+    /**
+     * A user can remove themselves from a queue. 
+     * We send beepersID so we can perfrom one less query to find that value
+     * @param {LeaveQueueParams} requestBody - user sends the beepersID so we can skip the step of finding beeperID from users table
+     * @returns {APIResponse}
+     */
+    @Example<APIResponse>({
+        status: APIStatus.Success,
+        message: "Successfully removed user from queue"
+    })
     @Security("token")
     @Post("leave")
     public async riderLeaveQueue (@Request() request: express.Request, @Body() requestBody: LeaveQueueParams): Promise<APIResponse> {
@@ -294,7 +392,26 @@ export class RiderController extends Controller {
         this.setStatus(200);
         return new APIResponse(APIStatus.Success, "Successfully removed user from queue");
     }
-
+    
+    /**
+     * Provides client with a list of all people currently beeping
+     * @returns {APIResponse | BeeperListResult}
+     */
+    @Example<BeeperListResult>({
+        status: APIStatus.Success,
+        beeperList: [{
+            capacity: 4,
+            first: "Banks",
+            groupRate: "2",
+            id: "22192b90-54f8-49b5-9dcf-26049454716b",
+            isStudent: true,
+            last: "Nussman",
+            masksRequired: true,
+            queueSize: 0,
+            singlesRate: "3",
+            userLevel: 0,
+        }]
+    })
     @Get("list")
     public async getBeeperList(): Promise<APIResponse | BeeperListResult> {
         try {

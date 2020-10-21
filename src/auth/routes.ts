@@ -46,7 +46,8 @@ export class AuthController extends Controller {
         status: APIStatus.Error, 
         message: {
             password: {
-                message: "The password field is mandatory.", rule: "required"
+                message: "The password field is mandatory.",
+                rule: "required"
             }
         }
     })
@@ -139,6 +140,7 @@ export class AuthController extends Controller {
      * This endpoint will return the same thing login would asuming signup was successful.
      * @param {SignUpParams} requestBody - Conatins a signup params and optional Expo push token
      */
+    @Post("signup")
     @Example<LoginResponse>({
         capacity: 4,
         email: "nussmanwb@appstate.edu",
@@ -159,7 +161,23 @@ export class AuthController extends Controller {
         username: "banks",
         venmo: "banksnussman"
     })
-    @Post("signup")
+    @Response<APIResponse>(422, "Invalid Input", {
+        status: APIStatus.Error, 
+        message: {
+            password: {
+                message: "The password field is mandatory.",
+                rule: "required"
+            }
+        }
+    })
+    @Response<APIResponse>(409, "Duplicate User", {
+        status: APIStatus.Error, 
+        message: "That username is already in use"
+    })
+    @Response<APIResponse>(500, "Server Error", {
+        status: APIStatus.Error, 
+        message: "Unable to sign up due to a server error"
+    })
     public async signup (@Body() requestBody: SignUpParams): Promise<LoginResponse | APIResponse> {
         const v = new Validator(requestBody, {
             first: "required|alpha",
@@ -262,6 +280,14 @@ export class AuthController extends Controller {
      * This allows us to invalidate a user's authentication token upon logout
      * @param {LogoutParams} requestBody - Param of isApp allows us to remove current pushToken if user is in the app, otheriwse don't remove it because it was a logout on the website
      */
+    @Example<APIResponse>({
+        status: APIStatus.Success,
+        message: "Token was revoked"
+    })
+    @Response<APIResponse>(500, "Server Error", {
+        status: APIStatus.Error,
+        message: "Token was not deleted in our database."
+    })
     @Security("token")
     @Post("logout")
     public async logout (@Request() request: express.Request, @Body() requestBody: LogoutParams): Promise<APIResponse> {
@@ -279,7 +305,7 @@ export class AuthController extends Controller {
                 }
                 //return success message
                 this.setStatus(200);
-                return new APIResponse(APIStatus.Success, "Token was revoked.");
+                return new APIResponse(APIStatus.Success, "Token was revoked");
             }
             else {
                 //Nothing was deleted in the db, so there was some kind of error
@@ -299,6 +325,14 @@ export class AuthController extends Controller {
      * If user's device was offline upon logout, a tokenid was kept in storage. This endpoint handles the removal of the tokenData upon the device's next login
      * @param {RemoveTokenParams} requestBody - Includes the tokenid for the token we need to remove
      */
+    @Example<APIResponse>({
+        status: APIStatus.Success,
+        message: "Token was revoked"
+    })
+    @Response<APIResponse>(500, "Server Error", {
+        status: APIStatus.Error,
+        message: "Token was not deleted in our database."
+    })
     @Post("token")
     public async removeToken (@Body() requestBody: RemoveTokenParams): Promise<APIResponse> {
         //RethinkDB query to delete entry in tokens table.
@@ -308,7 +342,7 @@ export class AuthController extends Controller {
             //if RethinkDB tells us something was deleted, logout was successful
             if (result.deleted == 1) {
                 this.setStatus(200);
-                return new APIResponse(APIStatus.Success, "Token was revoked.");
+                return new APIResponse(APIStatus.Success, "Token was revoked");
             }
             else {
                 //Nothing was deleted in the db, so there was some kind of error
@@ -328,6 +362,31 @@ export class AuthController extends Controller {
      * This will send them an email that will allow them to reset their password.
      * @param {ForgotPasswordParams} requestBody - The user only enters their email, we use that to send email and identify them
      */
+    @Example<APIResponse>({
+        status: APIStatus.Success,
+        message: "Successfully sent email"
+    })
+    @Response<APIResponse>(404, "User not found", {
+        status: APIStatus.Error, 
+        message: "User not found"
+    })
+    @Response<APIResponse>(409, "Forgot Password Request Conflict", {
+        status: APIStatus.Error, 
+        message: "You have already requested to reset your password. We have re-sent your email. Check your email and follow the instructions."
+    })
+    @Response<APIResponse>(422, "Invalid Input", {
+        status: APIStatus.Error, 
+        message: {
+            email: {
+                message: "The email field is mandatory.",
+                rule: "required"
+            }
+        }
+    })
+    @Response<APIResponse>(500, "Server Error", {
+        status: APIStatus.Error,
+        message: "Unable to process a forgot password request"
+    })
     @Post("password/forgot")
     public async forgotPassword (@Body() requestBody: ForgotPasswordParams): Promise<APIResponse> {
         const v = new Validator(requestBody, {
@@ -414,6 +473,31 @@ export class AuthController extends Controller {
      * If a reset password token is no longer valid, this endpoint is responcible for removing it
      * @param {ResetPasswordParams} requestBody - Request should include the passwordReset token and the new password
      */
+    @Example<APIResponse>({
+        status: APIStatus.Success,
+        message: "Successfully reset your password!"
+    })
+    @Response<APIResponse>(404, "Request entity not found", {
+        status: APIStatus.Error, 
+        message: "This reset password request does not exist"
+    })
+    @Response<APIResponse>(410, "Token Expired", {
+        status: APIStatus.Error,
+        message: "Your verification token has expired. You must re-request to reset your password."
+    })
+    @Response<APIResponse>(422, "Invalid Input", {
+        status: APIStatus.Error, 
+        message: {
+            password: {
+                message: "The password field is mandatory.",
+                rule: "required"
+            }
+        }
+    })
+    @Response<APIResponse>(500, "Server Error", {
+        status: APIStatus.Error,
+        message: "Unable to process a forgot password request"
+    })
     @Post("password/reset")
     public async resetPassword (@Body() requestBody: ResetPasswordParams): Promise<APIResponse> {
         const v = new Validator(requestBody, {
@@ -462,7 +546,7 @@ export class AuthController extends Controller {
         catch (error) {
             //the entry with the user's specifed token does not exists in the passwordReset table
             this.setStatus(404);
-            return new APIResponse(APIStatus.Error, error.message);
+            return new APIResponse(APIStatus.Error, "This reset password request does not exist");
         }
     }
 }

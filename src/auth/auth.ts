@@ -6,7 +6,7 @@ import { APIStatus } from "../utils/Error";
  * @example {
  *     "username": "banks",
  *     "password": "d9a63ka9cf982bf8921bs9",
- *     "expoPushToken": "ExponentPushToken[xv1qZtFzJY_yVFHK-dmWlN]"
+ *     "expoPushToken": "ExponentPushToken[xv1qZtFzJY_yVFHK-dmWlN]",
  * }
  */
 export interface LoginParams {
@@ -14,7 +14,6 @@ export interface LoginParams {
     password: string;
     expoPushToken?: string;
 }
-
 
 /**
  * Sign Up Parameters
