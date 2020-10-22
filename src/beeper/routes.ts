@@ -304,10 +304,10 @@ export class BeeperController extends Controller {
 
                 switch(newState) {
                     case 1:
-                        sendNotification(requestBody.riderID, "Your beeper is on their way!", "Your beepr is on their way to pick you up.");
+                        sendNotification(requestBody.riderID, "Your beeper is on their way!", "Your beeper is on their way to pick you up.");
                         break;
                     case 2:
-                        sendNotification(requestBody.riderID, "Your beeper is here!", "Your beepr is here to pick you up.");
+                        sendNotification(requestBody.riderID, "Your beeper is here!", "Your beeper is here to pick you up.");
                         break;
                     case 3:
                         break;
