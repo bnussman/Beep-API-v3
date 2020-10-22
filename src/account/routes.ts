@@ -9,13 +9,35 @@ import { Validator } from "node-input-validator";
 import { BeepTableResult, UserPluckResult } from '../types/beep';
 import * as Sentry from "@sentry/node";
 import { APIStatus, APIResponse } from "../utils/Error";
-import { Body, Controller, Post, Route, Security, Tags, Request, Delete } from 'tsoa';
+import { Response, Body, Controller, Post, Route, Security, Tags, Request, Delete, Example } from 'tsoa';
 import { ChangePasswordParams, EditAccountParams, UpdatePushTokenParams, VerifyAccountParams, VerifyAccountResult } from "./account";
 
 @Tags("Account")
 @Route("account")
 export class AccountController extends Controller {
 
+    /**
+     * Edit your user account
+     * @param {EditAccountParams} requestBody - user should send full account data
+     * @returns {APIResponse}
+     */
+    @Example<APIResponse>({
+        status: APIStatus.Success,
+        message: "Successfully edited profile."
+    })
+    @Response<APIResponse>(422, "Validation Error", {
+        status: APIStatus.Error,
+        message: {
+            first: {
+                message: "The first field is mandatory.",
+                rule: "numeric"
+            }
+        }
+    })
+    @Response<APIResponse>(500, "Server Error", {
+        status: APIStatus.Error,
+        message: "Unable to edit account"
+    })
     @Security("token")
     @Post("edit")
     public async editAccount(@Request() request: express.Request, @Body() requestBody: EditAccountParams): Promise<APIResponse> {
@@ -75,6 +97,28 @@ export class AccountController extends Controller {
         }
     }
 
+    /**
+     * Change your password when authenticated with this endpoint
+     * @param {ChangePasswordParams} requestBody - user should send a new password
+     * @returns {APIResponse}
+     */
+    @Example<APIResponse>({
+        status: APIStatus.Success,
+        message: "Successfully changed password."
+    })
+    @Response<APIResponse>(422, "Validation Error", {
+        status: APIStatus.Error,
+        message: {
+            password: {
+                message: "The password field is mandatory.",
+                rule: "numeric"
+            }
+        }
+    })
+    @Response<APIResponse>(500, "Server Error", {
+        status: APIStatus.Error,
+        message: "Unable to change password"
+    })
     @Security("token")
     @Post("password")
     public async changePassword (@Request() request: express.Request, @Body() requestBody: ChangePasswordParams): Promise<APIResponse> {
@@ -105,6 +149,19 @@ export class AccountController extends Controller {
         }
     }
 
+    /**
+     * Update your Push Token to a new push token to ensure mobile device gets notified by Expo
+     * @param {UpdatePushTokenParams} requestBody - user should send an Expo Push Token
+     * @returns {APIResponse}
+     */
+    @Example<APIResponse>({
+        status: APIStatus.Success,
+        message: "Successfully updated push token."
+    })
+    @Response<APIResponse>(500, "Server Error", {
+        status: APIStatus.Error,
+        message: "Unable to update push token"
+    })
     @Security("token")
     @Post("pushtoken")
     public async updatePushToken (@Request() request: express.Request, @Body() requestBody: UpdatePushTokenParams): Promise<APIResponse> {
@@ -121,6 +178,35 @@ export class AccountController extends Controller {
         }
     }
 
+    /**
+     * Verify your account by using the token sent to your email.
+     * @param {VerifyAccountParams} requestBody - user should send the token of the verify account entry
+     * @returns {VerifyAccountResult | APIResponse}
+     */
+    @Example<VerifyAccountResult>({
+        status: APIStatus.Success,
+        message: "Successfully verified email",
+        data: {
+            email: "bnussman@gmail.com",
+            isEmailVerified: true
+        }
+    })
+    @Response<APIResponse>(400, "Bad Request", {
+        status: APIStatus.Error,
+        message: "You tried to verify an email address that is not the same as your current email."
+    })
+    @Response<APIResponse>(404, "Verify account request not found", {
+        status: APIStatus.Error,
+        message: "Invalid verify email token"
+    })
+    @Response<APIResponse>(410, "Token expired", {
+        status: APIStatus.Error,
+        message: "Your verification token has expired"
+    })
+    @Response<APIResponse>(500, "Server Error", {
+        status: APIStatus.Error,
+        message: "Unable to verify account"
+    })
     @Post("verify")
     public async verifyAccount (@Body() requestBody: VerifyAccountParams): Promise<VerifyAccountResult | APIResponse> {
         try {
@@ -180,11 +266,23 @@ export class AccountController extends Controller {
             }
         }
         catch (error) {
-            this.setStatus(500);
+            this.setStatus(404);
             return new APIResponse(APIStatus.Error, "Invalid verify email token");
         }
     }
 
+    /**
+     * Resend a verification email to a user
+     * @returns {APIResponse}
+     */
+    @Example<APIResponse>({
+        status: APIStatus.Success,
+        message: "Successfully re-sent varification email to banks@nussman.us"
+    })
+    @Response<APIResponse>(500, "Server Error", {
+        status: APIStatus.Error,
+        message: "Unable to resend varification email"
+    })
     @Security("token")
     @Post("verify/resend")
     public async resendEmailVarification(@Request() request: express.Request): Promise<APIResponse> {
@@ -213,6 +311,18 @@ export class AccountController extends Controller {
         return new APIResponse(APIStatus.Success, "Successfully re-sent varification email to " + user.email);
     }
     
+    /**
+     * Delete your own user account
+     * @returns {APIResponse}
+     */
+    @Example<APIResponse>({
+        status: APIStatus.Success,
+        message: "Successfully deleted user"
+    })
+    @Response<APIResponse>(500, "Server Error", {
+        status: APIStatus.Error,
+        message: "Unable to delete user"
+    })
     @Security("token")
     @Delete()
     public async deleteAccount(@Request() request: express.Request): Promise<APIResponse> {
@@ -223,7 +333,30 @@ export class AccountController extends Controller {
         this.setStatus(500);
         return new APIResponse(APIStatus.Error, "Unable to delete user");
     }
+   
 
+    /**
+     * Get all of the rides of this user in the history table
+     * @returns {BeepTableResult[] | APIResponse}
+     */
+    @Example<BeepTableResult[]>([{
+                "beepersid": "ad072e2d-73af-4292-8e70-41c5a47bada5",
+                "destination": "Tasty",
+                "groupSize": 1,
+                "id": "b500bb45-094e-437c-887b-e6b6d815ba12",
+                "isAccepted": true,
+                "origin": "241 Marich Ln Marich Ln Boone, NC 28607",
+                "riderid": "22192b90-54f8-49b5-9dcf-26049454716b",
+                "state": 3,
+                "timeEnteredQueue": 1603318791872,
+                "riderName": "Banks Nussman"
+            }
+        ]
+    )
+    @Response<APIResponse>(500, "Server Error", {
+        status: APIStatus.Error,
+        message: "Unable to get rider history"
+    })
     @Security("token")
     @Post("history/rider")
     public async getRideHistory(@Request() request: express.Request): Promise<APIResponse | BeepTableResult[]> {
@@ -256,10 +389,32 @@ export class AccountController extends Controller {
         catch (error) {
             Sentry.captureException(error);
             this.setStatus(500);
-            return new APIResponse(APIStatus.Error, "Unable to get ride history");
+            return new APIResponse(APIStatus.Error, "Unable to get rider history");
         }
     }
 
+    /**
+     * Get all of the beeps of this user in the history table
+     * @returns {BeepTableResult[] | APIResponse}
+     */
+    @Example<BeepTableResult[]>([{
+                "beepersid": "ad072e2d-73af-4292-8e70-41c5a47bada5",
+                "destination": "Tasty",
+                "groupSize": 1,
+                "id": "b500bb45-094e-437c-887b-e6b6d815ba12",
+                "isAccepted": true,
+                "origin": "241 Marich Ln Marich Ln Boone, NC 28607",
+                "riderid": "22192b90-54f8-49b5-9dcf-26049454716b",
+                "state": 3,
+                "timeEnteredQueue": 1603318791872,
+                "riderName": "Banks Nussman"
+            }
+        ]
+    )
+    @Response<APIResponse>(500, "Server Error", {
+        status: APIStatus.Error,
+        message: "Unable to get beeper history"
+    })
     @Security("token")
     @Post("history/beeper")
     public async getBeepHistory(@Request() request: express.Request): Promise<APIResponse | BeepTableResult[]> {
@@ -291,7 +446,7 @@ export class AccountController extends Controller {
         catch (error) {
             Sentry.captureException(error);
             this.setStatus(500);
-            return new APIResponse(APIStatus.Error, "Unable to get ride history");
+            return new APIResponse(APIStatus.Error, "Unable to get beeper history");
         }
     }
 }

@@ -10,6 +10,11 @@ import { ReportUserParams, UserResult } from "../user/user";
 @Tags("User")
 @Route("user")
 export class UserController extends Controller {
+
+    /**
+     * Get public information about any user by providing their user id
+     * @
+     */
     @Example<UserResult>({
         status: APIStatus.Success, 
         user: {

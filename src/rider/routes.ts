@@ -160,7 +160,7 @@ export class RiderController extends Controller {
             userLevel: 0
         }
     })
-    @Response<APIResponse>(204, "No body is beeping", {
+    @Response<APIResponse>(200, "No body is beeping", {
         status: APIStatus.Error,
         message: "Nobody is beeping at the moment! Try to find a ride later."
     })
@@ -199,7 +199,7 @@ export class RiderController extends Controller {
                 if (error.msg == "No more rows in the cursor.") {
                     //close the RethinkDB cursor to prevent leak
                     //Return error to REST API
-                    this.setStatus(204);
+                    this.setStatus(200);
                     return new APIResponse(APIStatus.Error, "Nobody is beeping at the moment! Try to find a ride later.");
                 }
                 else {
