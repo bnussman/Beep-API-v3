@@ -1,4 +1,5 @@
 import express from "express";
+import healthcheck from "./healthcheck/routes";
 import { RegisterRoutes } from "../build/routes";
 import { connect } from "./utils/db";
 import { errorHandler } from "./utils/Error";
@@ -14,6 +15,7 @@ export const app = express();
 app.use(cors());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
+app.use(healthcheck);
 
 initializeSentry(app);
 

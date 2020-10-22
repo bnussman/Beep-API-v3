@@ -1,12 +1,6 @@
 import { APIStatus, APIResponse } from "../utils/Error";
-import { Controller, Get, Route, Tags } from "tsoa";
+import { Request, Response } from "express";
 
-@Tags("Healthcheck")
-@Route("healthcheck")
-export class HealthcheckController extends Controller {
-    @Get()
-    public healthcheck(): APIResponse {
-        this.setStatus(200);
-        return new APIResponse(APIStatus.Success, "ok");
-    }
+export default function (request: Request, response: Response): void {
+    response.send(new APIResponse(APIStatus.Success, "Ok"));
 }

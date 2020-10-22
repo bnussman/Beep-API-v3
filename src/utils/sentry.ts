@@ -12,6 +12,6 @@ export function initializeSentry(app: Application): void {
             // enable Express.js middleware tracing
             new Tracing.Integrations.Express({ app })
         ],
-        tracesSampleRate: 1.0
+        tracesSampleRate: 1.0,
     });
 }
