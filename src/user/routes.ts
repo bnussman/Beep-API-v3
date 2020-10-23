@@ -3,7 +3,7 @@ import * as express from 'express';
 import { conn } from '../utils/db';
 import { Validator } from "node-input-validator";
 import * as Sentry from "@sentry/node";
-import { Request, Controller, Route, Get, Path, Example, Post, Security, Body, Tags } from 'tsoa';
+import { Response, Request, Controller, Route, Get, Path, Example, Post, Security, Body, Tags } from 'tsoa';
 import { APIStatus, APIResponse } from "../utils/Error";
 import { ReportUserParams, UserResult } from "../user/user";
 
@@ -13,7 +13,7 @@ export class UserController extends Controller {
 
     /**
      * Get public information about any user by providing their user id
-     * @
+     * @returns {UserResult | APIResponse}
      */
     @Example<UserResult>({
         status: APIStatus.Success, 
@@ -30,7 +30,11 @@ export class UserController extends Controller {
             isBeeping: false
         }
     })
-    @Example<APIResponse>({
+    @Response<APIResponse>(404, "User not found", {
+        status: APIStatus.Error, 
+        message: "That user does not exist"
+    })
+    @Response<APIResponse>(500, "Server Error", {
         status: APIStatus.Error, 
         message: "Unable to get user profile"
     })
@@ -49,6 +53,10 @@ export class UserController extends Controller {
             };
         }
         catch (error) {
+            if (error.name == "ReqlNonExistenceError") {
+                this.setStatus(404);
+                return new APIResponse(APIStatus.Error, "That user does not exist");
+            }
             Sentry.captureException(error);
             this.setStatus(500);
             return new APIResponse(APIStatus.Error, "Unable to get user profile");

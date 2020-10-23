@@ -1,13 +1,11 @@
 import * as r from 'rethinkdb';
 import { WriteResult, Cursor } from 'rethinkdb';
-import { TokenData, UserPluckResult, TokenEntry } from '../types/beep';
+import { TokenData, UserPluckResult } from '../types/beep';
 import { conn } from '../utils/db';
 import * as nodemailer from "nodemailer";
 import { transporter } from "../utils/mailer";
 import * as Sentry from "@sentry/node";
-import { Request, Response, NextFunction } from "express";
 import { v4 as uuidv4 } from "uuid";
-import {APIResponse, APIStatus} from 'src/utils/Error';
 
 /**
  * Generates an authentication token and a token for that token (for offline logouts), stores
@@ -197,8 +195,7 @@ export async function getUserFromId(id: string, ...pluckItems: string[]): Promis
         
     }
     catch (error) {
-        //there was nothing to 'get'
-        Sentry.captureException(error);
+        //this probabaly means that the user identified by id no longer exists
     }
 
     return result;
