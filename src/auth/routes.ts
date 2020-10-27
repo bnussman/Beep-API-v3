@@ -544,9 +544,14 @@ export class AuthController extends Controller {
             }
         }
         catch (error) {
-            //the entry with the user's specifed token does not exists in the passwordReset table
-            this.setStatus(404);
-            return new APIResponse(APIStatus.Error, "This reset password request does not exist");
+            if (error.name == "ReqlNonExistenceError") {
+                //the entry with the user's specifed token does not exists in the passwordReset table
+                this.setStatus(404);
+                return new APIResponse(APIStatus.Error, "This reset password request does not exist");
+            }
+            Sentry.captureException(error);
+            this.setStatus(500);
+            return new APIResponse(APIStatus.Error, "Unable to reset your password");
         }
     }
 }

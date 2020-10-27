@@ -266,8 +266,13 @@ export class AccountController extends Controller {
             }
         }
         catch (error) {
-            this.setStatus(404);
-            return new APIResponse(APIStatus.Error, "Invalid verify email token");
+            if (error.name == "ReqlNonExistenceError") {
+                this.setStatus(404);
+                return new APIResponse(APIStatus.Error, "Invalid verify email token");
+            }
+            Sentry.captureException(error);
+            this.setStatus(500);
+            return new APIResponse(APIStatus.Error, "Unable to verify account");
         }
     }
 
