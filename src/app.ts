@@ -1,34 +1,64 @@
 import express from "express";
+import { Express, Application } from "express";
 import healthcheck from "./healthcheck/routes";
 import { RegisterRoutes } from "../build/routes";
-import { connect } from "./utils/db";
 import { errorHandler } from "./utils/Error";
 import { handleNotFound } from "./utils/404";
 import * as Sentry from "@sentry/node";
 import { initializeSentry } from "./utils/sentry";
 import cors from "cors";
+import database from "./utils/db";
+import { Server } from "http";
 
-connect();
+export default class BeepAPIServer {
+    private app: Application;
+    private server: Server | null;
 
-export const app = express();
+    constructor() {
+        this.app = express();
+        this.server = null;
+        this.setup();
+    }
 
-app.use(cors());
-app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
-app.use("/healthcheck", healthcheck);
+    public getApp(): Application {
+        return this.app;
+    }
 
-initializeSentry(app);
+    public async start(): Promise<void> {
+        const port = process.env.PORT || 3001;
 
-app.use(Sentry.Handlers.requestHandler({
-    user: ["id"]
-}));
+        await database.connect();
 
-app.use(Sentry.Handlers.tracingHandler());
+        this.server = this.app.listen(port, () => {
+            console.log(`Beep API listening at http://0.0.0.0:${port}`);
+        });
+    }
 
-RegisterRoutes(app);
+    public async close(): Promise<void> {
+        await database.close();
+        this.server?.close();
+    }
 
-app.use(Sentry.Handlers.errorHandler());
+    private setup(): void {
+        this.app.use(cors());
+        this.app.use(express.urlencoded({ extended: true }));
+        this.app.use(express.json());
+        this.app.use("/healthcheck", healthcheck);
 
-app.use(handleNotFound);
+        initializeSentry(this.app);
 
-app.use(errorHandler);
+        this.app.use(Sentry.Handlers.requestHandler({
+            user: ["id"]
+        }));
+
+        this.app.use(Sentry.Handlers.tracingHandler());
+
+        RegisterRoutes(this.app as Express);
+
+        this.app.use(Sentry.Handlers.errorHandler());
+
+        this.app.use(handleNotFound);
+
+        this.app.use(errorHandler);
+    }
+}

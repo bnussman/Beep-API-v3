@@ -3,7 +3,7 @@ import { WriteResult } from "rethinkdb";
 import * as r from 'rethinkdb';
 import { sha256 } from 'js-sha256';
 import { createVerifyEmailEntryAndSendEmail, getUserFromId } from "../auth/helpers";
-import { conn, connHistory } from '../utils/db';
+import database from '../utils/db';
 import { isEduEmail, getEmail, deleteUser } from './helpers';
 import { Validator } from "node-input-validator";
 import { BeepTableResult, UserPluckResult } from '../types/beep';
@@ -57,7 +57,7 @@ export class AccountController extends Controller {
         }
 
         try {
-            const result: WriteResult = await r.table("users").get(request.user.id).update({first: requestBody.first, last: requestBody.last, email: requestBody.email, phone: requestBody.phone, venmo: requestBody.venmo}, {returnChanges: true}).run(conn);
+            const result: WriteResult = await r.table("users").get(request.user.id).update({first: requestBody.first, last: requestBody.last, email: requestBody.email, phone: requestBody.phone, venmo: requestBody.venmo}, {returnChanges: true}).run(database.getConn());
             if (result.unchanged > 0) {
                 //if RethinkDB reports no changes made, send user a warning
                 return new APIResponse(APIStatus.Warning, "Nothing was changed about your profile.");
@@ -66,7 +66,7 @@ export class AccountController extends Controller {
             if (result.changes[0].old_val.email !== result.changes[0].new_val.email) {
                 try {
                     //delete user's existing email varification entries
-                    await r.table("verifyEmail").filter({ userid: request.user.id }).delete().run(conn);
+                    await r.table("verifyEmail").filter({ userid: request.user.id }).delete().run(database.getConn());
                 }
                 catch (error) {
                     Sentry.captureException(error);
@@ -76,7 +76,7 @@ export class AccountController extends Controller {
 
                 //if user made a change to their email, we need set their status to not verified and make them re-verify
                 try {
-                    r.table("users").get(request.user.id).update({isEmailVerified: false, isStudent: false}).run(conn);
+                    r.table("users").get(request.user.id).update({isEmailVerified: false, isStudent: false}).run(database.getConn());
                 }
                 catch (error) {
                     Sentry.captureException(error);
@@ -137,7 +137,7 @@ export class AccountController extends Controller {
         const encryptedPassword = sha256(requestBody.password);
 
         try {
-            const result: WriteResult = await r.table("users").get(request.user.id).update({password: encryptedPassword}).run(conn);
+            const result: WriteResult = await r.table("users").get(request.user.id).update({password: encryptedPassword}).run(database.getConn());
             //TODO check if something was written by checking result
             this.setStatus(200);
             return new APIResponse(APIStatus.Success, "Successfully changed password.");
@@ -166,7 +166,7 @@ export class AccountController extends Controller {
     @Post("pushtoken")
     public async updatePushToken (@Request() request: express.Request, @Body() requestBody: UpdatePushTokenParams): Promise<APIResponse> {
         try {
-            const result: WriteResult = await r.table("users").get(request.user.id).update({ pushToken: requestBody.expoPushToken }).run(conn);
+            const result: WriteResult = await r.table("users").get(request.user.id).update({ pushToken: requestBody.expoPushToken }).run(database.getConn());
             //TODO check if something was written by checking result
             this.setStatus(200);
             return new APIResponse(APIStatus.Success, "Successfully updated push token.");
@@ -211,7 +211,7 @@ export class AccountController extends Controller {
     public async verifyAccount (@Body() requestBody: VerifyAccountParams): Promise<VerifyAccountResult | APIResponse> {
         try {
             //this seems weird, but verifying the account by deleteing the entry in the db, but tell RethinkDB to retun changes
-            const result: WriteResult = await r.table("verifyEmail").get(requestBody.id).delete({returnChanges: true}).run(conn);
+            const result: WriteResult = await r.table("verifyEmail").get(requestBody.id).delete({returnChanges: true}).run(database.getConn());
 
             //get the changes reported by RethinkDB
             const entry = result.changes[0].old_val;
@@ -251,7 +251,7 @@ export class AccountController extends Controller {
 
             try {
                 //update the user's tabe with the new values
-                await r.table("users").get(entry.userid).update(update).run(conn);
+                await r.table("users").get(entry.userid).update(update).run(database.getConn());
 
                 return ({
                     "status": APIStatus.Success,
@@ -293,7 +293,7 @@ export class AccountController extends Controller {
     public async resendEmailVarification(@Request() request: express.Request): Promise<APIResponse> {
         try {
             //delete user's existing email varification entries
-            await r.table("verifyEmail").filter({ userid: request.user.id }).delete().run(conn);
+            await r.table("verifyEmail").filter({ userid: request.user.id }).delete().run(database.getConn());
         }
         catch (error) {
             Sentry.captureException(error);
@@ -366,7 +366,7 @@ export class AccountController extends Controller {
     @Post("history/rider")
     public async getRideHistory(@Request() request: express.Request): Promise<APIResponse | BeepTableResult[]> {
         try {
-            const cursor: r.Cursor = await r.table("beeps").filter({ riderid: request.user.id }).orderBy(r.desc("timeEnteredQueue")).run(connHistory);
+            const cursor: r.Cursor = await r.table("beeps").filter({ riderid: request.user.id }).orderBy(r.desc("timeEnteredQueue")).run(database.getConnHistory());
 
             const result: BeepTableResult[] = await cursor.toArray();
 
@@ -424,7 +424,7 @@ export class AccountController extends Controller {
     @Post("history/beeper")
     public async getBeepHistory(@Request() request: express.Request): Promise<APIResponse | BeepTableResult[]> {
         try {
-            const cursor: r.Cursor = await r.table("beeps").filter({ beepersid: request.user.id }).orderBy(r.desc("timeEnteredQueue")).run(connHistory);
+            const cursor: r.Cursor = await r.table("beeps").filter({ beepersid: request.user.id }).orderBy(r.desc("timeEnteredQueue")).run(database.getConnHistory());
 
             const result = await cursor.toArray();
 

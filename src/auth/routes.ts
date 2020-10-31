@@ -2,7 +2,7 @@ import { Response, Request, Controller, Route, Example, Post, Security, Body, Ta
 import * as r from 'rethinkdb';
 import express from 'express';
 import { Cursor, WriteResult } from 'rethinkdb';
-import { conn, connQueues } from '../utils/db';
+import database from '../utils/db';
 import { User } from '../types/beep';
 import { sha256 } from 'js-sha256';
 import { getToken, setPushToken, getUserFromEmail, sendResetEmail, deactivateTokens, createVerifyEmailEntryAndSendEmail, doesUserExist } from './helpers';
@@ -73,7 +73,7 @@ export class AuthController extends Controller {
         }
 
         try {
-            const cursor: Cursor = await r.table("users").filter({ "username": requestBody.username }).run(conn);
+            const cursor: Cursor = await r.table("users").filter({ "username": requestBody.username }).run(database.getConn());
 
             try {
                 const result: User = await cursor.next();
@@ -225,7 +225,7 @@ export class AuthController extends Controller {
         };
     
         try {
-            const result: WriteResult = await r.table("users").insert(document).run(conn);
+            const result: WriteResult = await r.table("users").insert(document).run(database.getConn());
 
             //if we successfully inserted our new user...
             if (result.inserted == 1) {
@@ -235,7 +235,7 @@ export class AuthController extends Controller {
                 const tokenData = await getToken(userid);
 
                 //because signup was successful we must make their queue table
-                r.db("beepQueues").tableCreate(userid).run(connQueues);
+                r.db("beepQueues").tableCreate(userid).run(database.getConnQueues());
 
                 //because user signed up, create a verify email entry in the db, this function will send the email
                 createVerifyEmailEntryAndSendEmail(userid, requestBody.email, requestBody.first);
@@ -293,7 +293,7 @@ export class AuthController extends Controller {
     public async logout (@Request() request: express.Request, @Body() requestBody: LogoutParams): Promise<APIResponse> {
         //RethinkDB query to delete entry in tokens table.
         try {
-            const result: WriteResult = await r.table("tokens").get(request.user.token).delete().run(conn);
+            const result: WriteResult = await r.table("tokens").get(request.user.token).delete().run(database.getConn());
 
             //if RethinkDB tells us something was deleted, logout was successful
             if (result.deleted == 1) {
@@ -337,7 +337,7 @@ export class AuthController extends Controller {
     public async removeToken (@Body() requestBody: RemoveTokenParams): Promise<APIResponse> {
         //RethinkDB query to delete entry in tokens table.
         try {
-            const result: WriteResult = await r.table("tokens").filter({'tokenid': requestBody.tokenid}).delete().run(conn);
+            const result: WriteResult = await r.table("tokens").filter({'tokenid': requestBody.tokenid}).delete().run(database.getConn());
 
             //if RethinkDB tells us something was deleted, logout was successful
             if (result.deleted == 1) {
@@ -409,7 +409,7 @@ export class AuthController extends Controller {
             //everything in this try-catch is to handle if a request has already been made for forgot password
             try {
                 //query the db for any password reset entries with the same userid
-                const cursor: Cursor = await r.table("passwordReset").filter({ userid: user.id }).run(conn);
+                const cursor: Cursor = await r.table("passwordReset").filter({ userid: user.id }).run(database.getConn());
 
                 try { 
                     //we try to take the cursor and get the next item
@@ -444,7 +444,7 @@ export class AuthController extends Controller {
 
             try {
                 //insert the new entry
-                const result: WriteResult = await r.table("passwordReset").insert(doccument).run(conn);
+                const result: WriteResult = await r.table("passwordReset").insert(doccument).run(database.getConn());
 
                 //use the RethinkDB write result as the forgot password token
                 const id: string = result.generated_keys[0];
@@ -515,7 +515,7 @@ export class AuthController extends Controller {
         try {
             //this seems odd, but we delete the forgot password entry but use RethinkDB returnChanges to invalidate the entry and complete this 
             //new password request
-            const result: WriteResult = await r.table("passwordReset").get(requestBody.id).delete({ returnChanges: true }).run(conn);
+            const result: WriteResult = await r.table("passwordReset").get(requestBody.id).delete({ returnChanges: true }).run(database.getConn());
 
             //get the db entry from the RethinkDB changes
             const entry = result.changes[0].old_val;
@@ -528,7 +528,7 @@ export class AuthController extends Controller {
 
             try {
                 //update user's password in their db entry
-                await r.table("users").get(entry.userid).update({ password: sha256(requestBody.password) }).run(conn);
+                await r.table("users").get(entry.userid).update({ password: sha256(requestBody.password) }).run(database.getConn());
 
                 //incase user's password was in the hands of bad person, invalidate user's tokens after they successfully reset their password
                 deactivateTokens(entry.userid);

@@ -1,9 +1,10 @@
 /*
-import BeepAPIServer from "../index";
-import * as request from "supertest";
+import BeepAPIServer from "../app";
+import request from "supertest";
 import MockUser from "./MockUser";
 
 let b: BeepAPIServer;
+
 const rider: MockUser = new MockUser("rider");
 const beeper: MockUser = new MockUser("beeper");
 
@@ -13,9 +14,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-    setTimeout(() => {
-        b.close();
-    }, 200);
+    await b.close();
 });
 
 describe('Authentication', () => {

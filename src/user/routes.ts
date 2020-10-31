@@ -1,6 +1,6 @@
 import * as r from 'rethinkdb';
 import * as express from 'express';
-import { conn } from '../utils/db';
+import database from'../utils/db';
 import { Validator } from "node-input-validator";
 import * as Sentry from "@sentry/node";
 import { Response, Request, Controller, Route, Get, Path, Example, Post, Security, Body, Tags } from 'tsoa';
@@ -44,7 +44,7 @@ export class UserController extends Controller {
         const userItems = ['first', 'last', 'capacity', 'isStudent', 'masksRequired', 'queueSize', 'singlesRate', 'groupRate', 'venmo', 'isBeeping'];
         
         try {
-            const result = await r.table("users").get(id).pluck(...userItems).run(conn);
+            const result = await r.table("users").get(id).pluck(...userItems).run(database.getConn());
 
             this.setStatus(200);
             return {
@@ -86,7 +86,7 @@ export class UserController extends Controller {
         };
         
         try {
-            const result = await r.table("userReports").insert(document).run(conn);
+            const result = await r.table("userReports").insert(document).run(database.getConn());
 
             if (result.inserted == 1) {
                 this.setStatus(200);

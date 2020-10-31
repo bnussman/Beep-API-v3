@@ -1,7 +1,7 @@
 import * as express from 'express';
 import * as r from 'rethinkdb';
 import { WriteResult } from 'rethinkdb';
-import { conn, connQueues } from '../utils/db';
+import database from '../utils/db';
 import { sendNotification } from '../utils/notifications';
 import { getQueueSize, getPersonalInfo, storeBeepEvent } from './helpers';
 import { Validator } from 'node-input-validator';
@@ -71,7 +71,7 @@ export class BeeperController extends Controller {
         }
 
         try {
-            const result: WriteResult = await r.table('users').get(request.user.id).update({ isBeeping: requestBody.isBeeping, singlesRate: requestBody.singlesRate, groupRate: requestBody.groupRate, capacity: requestBody.capacity, masksRequired: requestBody.masksRequired }).run(conn);
+            const result: WriteResult = await r.table('users').get(request.user.id).update({ isBeeping: requestBody.isBeeping, singlesRate: requestBody.singlesRate, groupRate: requestBody.groupRate, capacity: requestBody.capacity, masksRequired: requestBody.masksRequired }).run(database.getConn());
             //TODO check result 
             //If there was no DB error, our update query was successful. return success with REST API
             this.setStatus(200);
@@ -123,7 +123,7 @@ export class BeeperController extends Controller {
         try {
             //TODO whattt
             //@ts-ignore
-            const result: BeepQueueTableEntry[] = await r.table(request.user.id).orderBy('timeEnteredQueue').run(connQueues);
+            const result: BeepQueueTableEntry[] = await r.table(request.user.id).orderBy('timeEnteredQueue').run(database.getConnQueues());
 
             //for every entry in a beeper's queue, add personal info
             for (const doc of result) {
@@ -171,13 +171,13 @@ export class BeeperController extends Controller {
             try {
                 //in beeper's queue table, get the time the rider entered the queue
                 //we need this to count the number of people before this rider in the queue
-                const cursor = await r.table(request.user.id).filter({'riderid': requestBody.riderID}).pluck('timeEnteredQueue').run(connQueues);
+                const cursor = await r.table(request.user.id).filter({'riderid': requestBody.riderID}).pluck('timeEnteredQueue').run(database.getConnQueues());
 
                 //resolve the query and get the time this rider entered the queue as a const
                 const timeEnteredQueue = (await cursor.next()).timeEnteredQueue;
 
                 //query to get rider's actual position in the queue
-                const ridersQueuePosition = await r.table(request.user.id).filter(r.row('timeEnteredQueue').lt(timeEnteredQueue).and(r.row('isAccepted').eq(false))).count().run(connQueues);
+                const ridersQueuePosition = await r.table(request.user.id).filter(r.row('timeEnteredQueue').lt(timeEnteredQueue).and(r.row('isAccepted').eq(false))).count().run(database.getConnQueues());
 
                 //if there are riders before this rider that have not been accepted,
                 //tell the beeper they must respond to them first.
@@ -196,13 +196,13 @@ export class BeeperController extends Controller {
             try {
                 //in beeper's queue table, get the time the rider entered the queue
                 //we need this to count the number of people before this rider in the queue
-                const cursor = await r.table(request.user.id).filter({'riderid': requestBody.riderID}).pluck('timeEnteredQueue').run(connQueues);
+                const cursor = await r.table(request.user.id).filter({'riderid': requestBody.riderID}).pluck('timeEnteredQueue').run(database.getConnQueues());
 
                 //resolve the query and get the time this rider entered the queue as a const
                 const timeEnteredQueue = (await cursor.next()).timeEnteredQueue;
 
                 //query to get rider's actual position in the queue
-                const ridersQueuePosition = await r.table(request.user.id).filter(r.row('timeEnteredQueue').lt(timeEnteredQueue).and(r.row('isAccepted').eq(true))).count().run(connQueues);
+                const ridersQueuePosition = await r.table(request.user.id).filter(r.row('timeEnteredQueue').lt(timeEnteredQueue).and(r.row('isAccepted').eq(true))).count().run(database.getConnQueues());
 
                 //if there are riders before this rider that have been accepted,
                 //tell the beeper they must respond to them first.
@@ -219,7 +219,7 @@ export class BeeperController extends Controller {
 
         if (requestBody.value == 'accept') {
             try {
-                const result: WriteResult = await r.table(request.user.id).get(requestBody.queueID).update({'isAccepted': true}).run(connQueues);
+                const result: WriteResult = await r.table(request.user.id).get(requestBody.queueID).update({'isAccepted': true}).run(database.getConnQueues());
 
                 //TODO check write result
                 
@@ -236,7 +236,7 @@ export class BeeperController extends Controller {
         else if (requestBody.value == 'deny' || requestBody.value == 'complete') {
             try {
                 //delete entry in beeper's queues table
-                const result: WriteResult = await r.table(request.user.id).get(requestBody.queueID).delete({ returnChanges: true }).run(connQueues);
+                const result: WriteResult = await r.table(request.user.id).get(requestBody.queueID).delete({ returnChanges: true }).run(database.getConnQueues());
 
                 //ensure we actually deleted something
                 if (result.deleted != 1) {
@@ -257,7 +257,7 @@ export class BeeperController extends Controller {
             
             try {
                 //decrease beeper's queue size
-                const result: WriteResult = await r.table('users').get(request.user.id).update({'queueSize': r.row('queueSize').sub(1)}).run(conn);
+                const result: WriteResult = await r.table('users').get(request.user.id).update({'queueSize': r.row('queueSize').sub(1)}).run(database.getConn());
                 //handle any RethinkDB error
                 //ensure we actually updated something
                 if (result.replaced != 1) {
@@ -273,7 +273,7 @@ export class BeeperController extends Controller {
 
             try {
                 //set rider's inQueueOfUserID value to null because they are no longer in a queue
-                const result: WriteResult = await r.table('users').get(requestBody.riderID).update({'inQueueOfUserID': null}).run(conn);
+                const result: WriteResult = await r.table('users').get(requestBody.riderID).update({'inQueueOfUserID': null}).run(database.getConn());
                 //ensure we actually updated something
                 if (result.replaced != 1) {
                     this.setStatus(500);
@@ -298,7 +298,7 @@ export class BeeperController extends Controller {
         else {
             try {
                 //we can just increment the state number in the queue doccument
-                const result: WriteResult = await r.table(request.user.id).get(requestBody.queueID).update({'state': r.row('state').add(1)}, {returnChanges: true}).run(connQueues);
+                const result: WriteResult = await r.table(request.user.id).get(requestBody.queueID).update({'state': r.row('state').add(1)}, {returnChanges: true}).run(database.getConnQueues());
 
                 const newState = result.changes[0].new_val.state;
 

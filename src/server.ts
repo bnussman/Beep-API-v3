@@ -1,7 +1,12 @@
-import { app } from "./app";
+import BeepAPIServer from "./app";
+import database from "./utils/db";
 
+const server = new BeepAPIServer();
+const app = server.getApp();
 const port = process.env.PORT || 3001;
 
-app.listen(port, () =>
-  console.log(`Example app listening at http://localhost:${port}`)
-);
+database.connect(function() {
+    app.listen(port, () => {
+        console.log(`Beep API listening at http://0.0.0.0:${port}`);
+    });
+});
