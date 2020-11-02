@@ -112,17 +112,13 @@ export class AuthController extends Controller {
                     });
                 }
                 else {
-                    //close the RethinkDB cursor to prevent leak
                     cursor.close();
-                    //send message to client
                     this.setStatus(401);
                     return new APIResponse(APIStatus.Error, "Password is incorrect");
                 }
             }
             catch (error) {
-                //close the RethinkDB cursor
                 cursor.close();
-                //tell the client no user exists
                 this.setStatus(401);
                 return new APIResponse(APIStatus.Error, "User not found");
             }
