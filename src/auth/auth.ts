@@ -12,7 +12,7 @@ import { APIStatus } from "../utils/Error";
 export interface LoginParams {
     username: string;
     password: string;
-    expoPushToken?: string;
+    expoPushToken?: string | null;
 }
 
 /**
@@ -37,7 +37,7 @@ export interface SignUpParams {
     venmo: string;
     username: string;
     password: string;
-    expoPushToken?: string;
+    expoPushToken?: string | null;
 }
 
 /**
