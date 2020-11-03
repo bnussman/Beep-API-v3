@@ -9,7 +9,7 @@ import { Validator } from "node-input-validator";
 import { BeepTableResult, UserPluckResult } from '../types/beep';
 import * as Sentry from "@sentry/node";
 import { APIStatus, APIResponse } from "../utils/Error";
-import { Response, Body, Controller, Post, Route, Security, Tags, Request, Delete, Example } from 'tsoa';
+import { Response, Body, Controller, Post, Route, Security, Tags, Request, Delete, Example, Get, Put } from 'tsoa';
 import { ChangePasswordParams, EditAccountParams, UpdatePushTokenParams, VerifyAccountParams, VerifyAccountResult } from "./account";
 
 @Tags("Account")
@@ -163,7 +163,7 @@ export class AccountController extends Controller {
         message: "Unable to update push token"
     })
     @Security("token")
-    @Post("pushtoken")
+    @Put("pushtoken")
     public async updatePushToken (@Request() request: express.Request, @Body() requestBody: UpdatePushTokenParams): Promise<APIResponse> {
         try {
             const result: WriteResult = await r.table("users").get(request.user.id).update({ pushToken: requestBody.expoPushToken }).run(database.getConn());
@@ -363,7 +363,7 @@ export class AccountController extends Controller {
         message: "Unable to get rider history"
     })
     @Security("token")
-    @Post("history/rider")
+    @Get("history/rider")
     public async getRideHistory(@Request() request: express.Request): Promise<APIResponse | BeepTableResult[]> {
         try {
             const cursor: r.Cursor = await r.table("beeps").filter({ riderid: request.user.id }).orderBy(r.desc("timeEnteredQueue")).run(database.getConnHistory());
@@ -421,7 +421,7 @@ export class AccountController extends Controller {
         message: "Unable to get beeper history"
     })
     @Security("token")
-    @Post("history/beeper")
+    @Get("history/beeper")
     public async getBeepHistory(@Request() request: express.Request): Promise<APIResponse | BeepTableResult[]> {
         try {
             const cursor: r.Cursor = await r.table("beeps").filter({ beepersid: request.user.id }).orderBy(r.desc("timeEnteredQueue")).run(database.getConnHistory());
