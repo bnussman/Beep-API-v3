@@ -111,22 +111,23 @@ export interface ResetPasswordParams {
  * }
  */
 export interface LoginResponse {
-    status: APIStatus,
-    id: string,
-    username: string,
-    first: string,
-    last: string,
-    email: string,
-    phone: string,
-    venmo: string,
-    token: string,
-    tokenid: string,
-    singlesRate: string | number,
-    groupRate: string | number,
-    capacity: string | number,
-    isBeeping: boolean,
-    userLevel: number,
-    isEmailVerified: boolean,
-    isStudent: boolean,
-    masksRequired: boolean
+    status: APIStatus;
+    id: string;
+    username: string;
+    first: string;
+    last: string;
+    email: string;
+    phone: string;
+    venmo: string;
+    token: string;
+    tokenid: string;
+    singlesRate: string | number;
+    groupRate: string | number;
+    capacity: string | number;
+    isBeeping: boolean;
+    userLevel: number;
+    isEmailVerified: boolean;
+    isStudent: boolean;
+    masksRequired: boolean;
+    photoUrl: string | null;
 }

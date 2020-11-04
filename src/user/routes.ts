@@ -27,7 +27,8 @@ export class UserController extends Controller {
             singlesRate: 2.99,
             groupRate: 1.99,
             venmo: "banksnussman",
-            isBeeping: false
+            isBeeping: false,
+            photoUrl: "https://ridebeepapp.s3.amazonaws.com/images/22192b90-54f8-49b5-9dcf-26049454716b.JPG"
         }
     })
     @Response<APIResponse>(404, "User not found", {
@@ -41,7 +42,7 @@ export class UserController extends Controller {
     
     @Get("{id}")
     public async getUser(@Path() id: string): Promise<UserResult | APIResponse> {
-        const userItems = ['first', 'last', 'capacity', 'isStudent', 'masksRequired', 'queueSize', 'singlesRate', 'groupRate', 'venmo', 'isBeeping'];
+        const userItems = ['first', 'last', 'capacity', 'isStudent', 'masksRequired', 'queueSize', 'singlesRate', 'groupRate', 'venmo', 'isBeeping', 'photoUrl'];
         
         try {
             const result = await r.table("users").get(id).pluck(...userItems).run(database.getConn());

@@ -31,6 +31,7 @@ export interface User {
     token: string;
     tokenid: string;
     masksRequired: boolean;
+    photoUrl: string | null;
 }
 
 export interface UserPluckResult {

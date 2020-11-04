@@ -40,7 +40,8 @@ export class AuthController extends Controller {
         tokenid: "7ab19f41-f0cf-4a86-ba56-def56a0576f6",
         userLevel: 0,
         username: "banks",
-        venmo: "banksnussman"
+        venmo: "banksnussman",
+        photoUrl: "https://ridebeepapp.s3.amazonaws.com/images/22192b90-54f8-49b5-9dcf-26049454716b.JPG"
     })
     @Response<APIResponse>(422, "Invalid Input", {
         status: APIStatus.Error, 
@@ -108,7 +109,8 @@ export class AuthController extends Controller {
                         'userLevel': result.userLevel,
                         'isEmailVerified': result.isEmailVerified,
                         'isStudent': result.isStudent,
-                        'masksRequired': result.masksRequired
+                        'masksRequired': result.masksRequired,
+                        'photoUrl': result.photoUrl
                     });
                 }
                 else {
@@ -155,7 +157,8 @@ export class AuthController extends Controller {
         tokenid: "7ab19f41-f0cf-4a86-ba56-def56a0576f6",
         userLevel: 0,
         username: "banks",
-        venmo: "banksnussman"
+        venmo: "banksnussman",
+        photoUrl: null
     })
     @Response<APIResponse>(422, "Invalid Input", {
         status: APIStatus.Error, 
@@ -255,7 +258,8 @@ export class AuthController extends Controller {
                     'userLevel': 0,
                     'isEmailVerified': false,
                     'isStudent': false,
-                    'masksRequired': false
+                    'masksRequired': false,
+                    'photoUrl': null
                 });
             }
             else {

@@ -12,6 +12,23 @@
                 "in": "header"
             }
         },
+        "paths": {
+            "/files/upload": {
+                "post": {
+                    "consumes": [
+                        "multipart/form-data"
+                    ],
+                    "parameters": [
+                        {
+                            "in": "formData",
+                            "name": "randomFileIsHere",
+                            "required": true,
+                            "type": "file"
+                        }
+                    ]
+                }
+            }
+        },
         "host": "ridebeep.app",
         "basePath": "/api"
     },

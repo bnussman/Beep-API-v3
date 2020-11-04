@@ -27,6 +27,7 @@ export interface PublicUser {
     groupRate: number | string;
     venmo: string;
     isBeeping: boolean;
+    photoUrl: string | null;
 }
 
 /**
