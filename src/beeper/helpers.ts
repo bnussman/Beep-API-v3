@@ -28,7 +28,7 @@ export async function getQueueSize(userid: string): Promise<number> {
 export async function getPersonalInfo (userid: string): Promise<UserPluckResult> {
     try {
         //RethinkDB query gets data from users db at userid
-        const result: UserPluckResult = await r.table('users').get(userid).pluck('first', 'last', 'phone', 'venmo', 'isStudent').run(database.getConn());
+        const result: UserPluckResult = await r.table('users').get(userid).pluck('first', 'last', 'phone', 'venmo', 'isStudent', 'photoUrl').run(database.getConn());
 
         return result;
     }

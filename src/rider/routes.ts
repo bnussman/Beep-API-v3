@@ -31,7 +31,8 @@ export class RiderController extends Controller {
             masksRequired: true,
             queueSize: 1,
             singlesRate: "3",
-            userLevel: 0
+            userLevel: 0,
+            photoUrl: "https://ridebeepapp.s3.amazonaws.com/images/22192b90-54f8-49b5-9dcf-26049454716b-1604517623067.jpg"
         }
     })
     @Response<APIResponse>(422, "Invalid Input", {
@@ -64,7 +65,7 @@ export class RiderController extends Controller {
         }
        
         //get beeper's information
-        const result = await r.table('users').get(requestBody.beepersID).pluck('first', 'last', 'queueSize', 'singlesRate', 'groupRate', 'isBeeping', 'capacity', 'isStudent', 'userLevel', 'masksRequired').run(database.getConn());
+        const result = await r.table('users').get(requestBody.beepersID).pluck('first', 'last', 'queueSize', 'singlesRate', 'groupRate', 'isBeeping', 'capacity', 'isStudent', 'userLevel', 'masksRequired', 'photoUrl').run(database.getConn());
 
         //make sure beeper is still beeping. This case WILL happen because a beeper may turn off isBeeping and rider's client may have not updated
         if (!result.isBeeping) {
@@ -135,7 +136,8 @@ export class RiderController extends Controller {
                 'userLevel': result.userLevel,
                 'isStudent': result.isStudent,
                 'capacity': result.capacity,
-                'masksRequired': result.masksRequired
+                'masksRequired': result.masksRequired,
+                'photoUrl': result.photoUrl
             }
         };
     }
@@ -157,7 +159,8 @@ export class RiderController extends Controller {
             masksRequired: true,
             queueSize: 1,
             singlesRate: "3",
-            userLevel: 0
+            userLevel: 0,
+            photoUrl: "https://ridebeepapp.s3.amazonaws.com/images/22192b90-54f8-49b5-9dcf-26049454716b-1604517623067.jpg"
         }
     })
     @Response<APIResponse>(200, "No body is beeping", {
@@ -189,7 +192,8 @@ export class RiderController extends Controller {
                         'capacity': result.capacity,
                         'userLevel': result.userLevel,
                         'isStudent': result.isStudent,
-                        'masksRequired': result.masksRequired
+                        'masksRequired': result.masksRequired,
+                        'photoUrl': result.photoUrl
                     }
                 };
             }
@@ -236,6 +240,7 @@ export class RiderController extends Controller {
             singlesRate: "3",
             userLevel: 0,
             venmo: "banksnussman",
+            photoUrl: "https://ridebeepapp.s3.amazonaws.com/images/22192b90-54f8-49b5-9dcf-26049454716b-1604517623067.jpg"
         },
         groupSize: 1,
         isAccepted: true,
@@ -281,7 +286,7 @@ export class RiderController extends Controller {
                 const ridersQueuePosition = await r.table(beepersID).filter(r.row('timeEnteredQueue').lt(queueEntry.timeEnteredQueue).and(r.row('isAccepted').eq(true))).count().run(database.getConnQueues());
 
                 //get beeper's information
-                const beepersInfo = await r.table('users').get(beepersID).pluck('first', 'last', 'phone', 'venmo', 'singlesRate', 'groupRate', 'queueSize', 'userLevel', 'isStudent', 'capacity', 'masksRequired').run(database.getConn());
+                const beepersInfo = await r.table('users').get(beepersID).pluck('first', 'last', 'phone', 'venmo', 'singlesRate', 'groupRate', 'queueSize', 'userLevel', 'isStudent', 'capacity', 'masksRequired', 'photoUrl').run(database.getConn());
 
                 let output: RiderStatusResult;
 
@@ -305,7 +310,8 @@ export class RiderController extends Controller {
                             'capacity': beepersInfo.capacity,
                             'userLevel': beepersInfo.userLevel,
                             'isStudent': beepersInfo.isStudent,
-                            'masksRequired': beepersInfo.masksRequired
+                            'masksRequired': beepersInfo.masksRequired,
+                            'photoUrl': beepersInfo.photoUrl
                         }
                     };
                 }
@@ -325,7 +331,8 @@ export class RiderController extends Controller {
                             'capacity': beepersInfo.capacity,
                             'userLevel': beepersInfo.userLevel,
                             'isStudent': beepersInfo.isStudent,
-                            'masksRequired': beepersInfo.masksRequired
+                            'masksRequired': beepersInfo.masksRequired,
+                            'photoUrl': beepersInfo.photoUrl
                         }
                     };
                 }
@@ -410,12 +417,13 @@ export class RiderController extends Controller {
             queueSize: 0,
             singlesRate: "3",
             userLevel: 0,
+            photoUrl: "https://ridebeepapp.s3.amazonaws.com/images/22192b90-54f8-49b5-9dcf-26049454716b-1604517623067.jpg"
         }]
     })
     @Get("list")
     public async getBeeperList(): Promise<APIResponse | BeeperListResult> {
         try {
-            const cursor: Cursor = await r.table("users").filter({ isBeeping: true }).pluck('first', 'last', 'queueSize', 'id', 'singlesRate', 'groupRate', 'capacity', 'userLevel', 'isStudent', 'masksRequired').run(database.getConn());
+            const cursor: Cursor = await r.table("users").filter({ isBeeping: true }).pluck('first', 'last', 'queueSize', 'id', 'singlesRate', 'groupRate', 'capacity', 'userLevel', 'isStudent', 'masksRequired', 'photoUrl').run(database.getConn());
 
             const list: BeeperListItem[] = await cursor.toArray();
 

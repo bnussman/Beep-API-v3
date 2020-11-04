@@ -54,7 +54,8 @@ export interface ChooseBeepResponse {
  *    "userLevel": 0,
  *    "isStudent": true,
  *    "capacity": 4,
- *    "masksRequired": true
+ *    "masksRequired": true,
+ *    "photoUrl": "https://ridebeepapp.s3.amazonaws.com/images/22192b90-54f8-49b5-9dcf-26049454716b-1604517623067.jpg"
  * } 
  */
 export interface BeeperData {
@@ -70,6 +71,7 @@ export interface BeeperData {
     masksRequired: boolean;
     phone?: string;
     venmo?: string;
+    photoUrl: string | null;
 }
 
 /**
@@ -157,6 +159,7 @@ export interface BeeperListResult {
  *   "queueSize": 0,
  *   "singlesRate": "3",
  *   "userLevel": 0
+ *   "photoUrl": "https://ridebeepapp.s3.amazonaws.com/images/22192b90-54f8-49b5-9dcf-26049454716b-1604517623067.jpg"
  * }
  */
 export interface BeeperListItem {
@@ -170,4 +173,5 @@ export interface BeeperListItem {
     userLevel: number;
     isStudent: boolean;
     masksRequired: boolean;
+    photoUrl: string | null;
 }
