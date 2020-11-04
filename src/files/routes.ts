@@ -20,18 +20,19 @@ export class FilesController {
             secretAccessKey: process.env.AWS_ACCESS_KEY_SECRET
         });
 
-        console.log(request);
+        //console.log(request);
 
         await this.handleFile(request);
 
 
         let fileName = request.file.originalname;
+        console.log(fileName);
 
         const extention = fileName.substr(fileName.lastIndexOf("."), fileName.length);
 
-        fileName = request.user.id + extention;
+        fileName = request.user.id + "-" + Date.now() + extention;
 
-        //console.log(fileName);
+        console.log(fileName);
 
         const uploadParams = {
             Body: request.file.buffer,
@@ -48,6 +49,7 @@ export class FilesController {
             if (result) {
                 try {
                     const dbResult: WriteResult = await r.table("users").get(request.user.id).update({ photoUrl: result.Location }).run(database.getConn());
+                    console.log(dbResult);
 
                     return {
                         status: APIStatus.Success,
