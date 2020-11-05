@@ -17,6 +17,12 @@ export class APIResponse {
     }
 }
 
+export class APIAuthResponse extends APIResponse {
+    constructor(status: APIStatus, message: unknown) {
+        super(status, message);
+    }
+} 
+
 export function errorHandler(error: unknown, request: Request, response: Response, next: NextFunction): Response | void {
     if (error instanceof ValidateError) {
         return response.status(422).json({
@@ -30,6 +36,9 @@ export function errorHandler(error: unknown, request: Request, response: Respons
             details: error?.fields,
         });
         */
+    }
+    if (error instanceof APIAuthResponse) {
+        return response.status(401).json(error);
     }
     if (error instanceof Error) {
         return response.status(500).json(new APIResponse(APIStatus.Error, error.message));
