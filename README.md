@@ -1,18 +1,22 @@
+<center>
 <p align="center">
   <img src="https://ridebeep.app/favicon.png" alt="Logo" width="50" height="50">
 
-  <h1 align="center">Beep API v3</h1>
+  <h2 align="center">Beep API v3</h2>
+  <p align="center">
+    <img align="center" src="https://gitlab.nussman.us/beep-app/Beep-API-v3/badges/master/pipeline.svg?ignore_skipped=true" alt="bdage" height="20"/>
+  </p>
 
   <p align="center">
+    <br/>
     REST API for the Beep App
   </p>
-  ![cibadge](https://gitlab.nussman.us/beep-app/Beep-API-v3/badges/master/pipeline.svg?ignore_skipped=true)
 </p>
 
 <p align="center">
     <img src="https://ridebeep.app/white.png" alt="Screenshot" height="400">
 </p>
-
+</center>
 
 ## Related Beep App Repos
 * [Beep](https://github.com/bnussman/Beep)
