@@ -1,4 +1,5 @@
 <center>
+<div align="center">
 <p align="center">
   <img src="https://ridebeep.app/favicon.png" alt="Logo" width="50" height="50">
 
@@ -16,6 +17,7 @@
 <p align="center">
     <img src="https://ridebeep.app/white.png" alt="Screenshot" height="400">
 </p>
+</div>
 </center>
 
 ## Related Beep App Repos
