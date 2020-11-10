@@ -5,6 +5,8 @@
 
   <p align="center">
     REST API for the Beep App
+  </p>
+  ![cibadge](https://gitlab.nussman.us/beep-app/Beep-API-v3/badges/master/pipeline.svg?ignore_skipped=true)
 </p>
 
 <p align="center">
