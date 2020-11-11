@@ -56,6 +56,11 @@ export class AccountController extends Controller {
             return new APIResponse(APIStatus.Error, v.errors);
         }
 
+        //if user puts an @ at the beginning of their venmo username, rewrite it without the @ symbol
+        if (requestBody.venmo.charAt(0) == '@') {
+            requestBody.venmo = requestBody.venmo.substr(1, requestBody.venmo.length);
+        }
+
         try {
             const result: WriteResult = await r.table("users").get(request.user.id).update({first: requestBody.first, last: requestBody.last, email: requestBody.email, phone: requestBody.phone, venmo: requestBody.venmo}, {returnChanges: true}).run(database.getConn());
             if (result.unchanged > 0) {

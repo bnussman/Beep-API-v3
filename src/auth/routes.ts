@@ -196,6 +196,11 @@ export class AuthController extends Controller {
             return new APIResponse(APIStatus.Error, v.errors);
         }
 
+        //if user puts an @ at the beginning of their venmo username, rewrite it without the @ symbol
+        if (requestBody.venmo.charAt(0) == '@') {
+            requestBody.venmo = requestBody.venmo.substr(1, requestBody.venmo.length);
+        }
+
         if ((await doesUserExist(requestBody.username))) {
             this.setStatus(409);
             return new APIResponse(APIStatus.Error, "That username is already in use");

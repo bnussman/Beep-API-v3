@@ -34,7 +34,6 @@
         "node-input-validator": "^4.2.1",
         "nodemailer": "^6.4.11",
         "rethinkdb": "^2.4.2",
-        "supertest": "^6.0.0",
         "tsoa": "^3.3.0",
         "uuid": "^8.3.0"
     },
