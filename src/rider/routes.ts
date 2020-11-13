@@ -273,13 +273,25 @@ export class RiderController extends Controller {
         const beepersID = result.inQueueOfUserID;
 
         //if user is in a queue...
-        if (beepersID) {
+        if (beepersID != null) {
             try {
                 //since we are in a queue, we need to find the db entry where the rider has you id
-                const result = await r.table(beepersID).filter({ riderid: request.user.id }).run(database.getConnQueues());
-
-                //resolve the next element so we have a const of the db entry
-                const queueEntry = await result.next();
+                const cursor = await r.table(beepersID).filter({ riderid: request.user.id }).run(database.getConnQueues());
+                
+                let queueEntry = null;
+                
+                try {
+                    //resolve the next element so we have a const of the db entry
+                    queueEntry = await cursor.next();
+                }
+                catch (error) {
+                    //if is no "next" entry exists in beeper's queue table, no way rider is in their queue or getting or a beep
+                    //if we hit this error, this means that the db says that the rider still has beeper's id in their user's table row.
+                    //Because rider is expected to be in a queue, when we try to get the entry from the beeper's queue table, it is not there because
+                    //it has since then been deleted. We can conclude that the rider is not getting a beep
+                    this.setStatus(200);
+                    return new APIResponse(APIStatus.Error, "Currently, user is not getting a beep.");
+                }
 
                 //get rider's position in the queue by using a count query where we count entries where they entered the queue earlier
                 //(they have an earlier timestamp)
