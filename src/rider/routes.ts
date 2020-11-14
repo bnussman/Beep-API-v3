@@ -65,7 +65,7 @@ export class RiderController extends Controller {
         }
        
         //get beeper's information
-        const result = await r.table('users').get(requestBody.beepersID).pluck('first', 'last', 'queueSize', 'singlesRate', 'groupRate', 'isBeeping', 'capacity', 'isStudent', 'userLevel', 'masksRequired', 'photoUrl').run(database.getConn());
+        const result = await r.table('users').get(requestBody.beepersID).pluck('first', 'last', 'queueSize', 'singlesRate', 'groupRate', 'isBeeping', 'capacity', 'isStudent', 'userLevel', 'masksRequired', 'photoUrl').run((await database.getConn()));
 
         //make sure beeper is still beeping. This case WILL happen because a beeper may turn off isBeeping and rider's client may have not updated
         if (!result.isBeeping) {
@@ -86,7 +86,7 @@ export class RiderController extends Controller {
 
         try {
             //insert newEntry into beeper's queue table
-            r.table(requestBody.beepersID).insert(newEntry).run(database.getConnQueues());
+            r.table(requestBody.beepersID).insert(newEntry).run((await database.getConnQueues()));
         }
         catch (error) {
             //RethinkDB error while inserting beep entery into beeper's queue table
@@ -97,7 +97,7 @@ export class RiderController extends Controller {
 
         try {
             //update beeper's queue size in the users table
-            r.table('users').get(requestBody.beepersID).update({'queueSize': r.row('queueSize').add(1)}).run(database.getConn());
+            r.table('users').get(requestBody.beepersID).update({'queueSize': r.row('queueSize').add(1)}).run((await database.getConn()));
         }
         catch (error) {
             //RethinkDB error while trying to increment beeper's queue size in the users table
@@ -108,7 +108,7 @@ export class RiderController extends Controller {
 
         try {
             //update rider's inQueueOfUserID
-            r.table('users').get(request.user.id).update({'inQueueOfUserID': requestBody.beepersID}).run(database.getConn());
+            r.table('users').get(request.user.id).update({'inQueueOfUserID': requestBody.beepersID}).run((await database.getConn()));
         }
         catch (error) {
             //unable to set inQueueOfUserID for rider in users table
@@ -173,7 +173,7 @@ export class RiderController extends Controller {
         //rethinkdb query to search users table (in acending order by queueSize) for users where isBeeping is true
         //and id is not equal to requester's, and limit by 1 to decide a riders beeper
         try {
-            const cursor: Cursor = await r.table('users').orderBy({'index': 'queueSize'}).filter(r.row('isBeeping').eq(true).and(r.row('id').ne(request.user.id))).limit(1).run(database.getConn());
+            const cursor: Cursor = await r.table('users').orderBy({'index': 'queueSize'}).filter(r.row('isBeeping').eq(true).and(r.row('id').ne(request.user.id))).limit(1).run((await database.getConn()));
 
             try {
                 const result = await cursor.next();
@@ -259,7 +259,7 @@ export class RiderController extends Controller {
 
         //get rider's inQueueOfUserID in our user's db so we know what queue to look into
         try {
-            result = await r.table('users').get(request.user.id).pluck('inQueueOfUserID').run(database.getConn());
+            result = await r.table('users').get(request.user.id).pluck('inQueueOfUserID').run((await database.getConn()));
         } 
         catch (error) {
             //TODO: user's account was deleted, we need to somehow get the client to logout
@@ -276,7 +276,7 @@ export class RiderController extends Controller {
         if (beepersID != null) {
             try {
                 //since we are in a queue, we need to find the db entry where the rider has you id
-                const cursor = await r.table(beepersID).filter({ riderid: request.user.id }).run(database.getConnQueues());
+                const cursor = await r.table(beepersID).filter({ riderid: request.user.id }).run((await database.getConnQueues()));
                 
                 let queueEntry = null;
                 
@@ -295,10 +295,10 @@ export class RiderController extends Controller {
 
                 //get rider's position in the queue by using a count query where we count entries where they entered the queue earlier
                 //(they have an earlier timestamp)
-                const ridersQueuePosition = await r.table(beepersID).filter(r.row('timeEnteredQueue').lt(queueEntry.timeEnteredQueue).and(r.row('isAccepted').eq(true))).count().run(database.getConnQueues());
+                const ridersQueuePosition = await r.table(beepersID).filter(r.row('timeEnteredQueue').lt(queueEntry.timeEnteredQueue).and(r.row('isAccepted').eq(true))).count().run((await database.getConnQueues()));
 
                 //get beeper's information
-                const beepersInfo = await r.table('users').get(beepersID).pluck('first', 'last', 'phone', 'venmo', 'singlesRate', 'groupRate', 'queueSize', 'userLevel', 'isStudent', 'capacity', 'masksRequired', 'photoUrl').run(database.getConn());
+                const beepersInfo = await r.table('users').get(beepersID).pluck('first', 'last', 'phone', 'venmo', 'singlesRate', 'groupRate', 'queueSize', 'userLevel', 'isStudent', 'capacity', 'masksRequired', 'photoUrl').run((await database.getConn()));
 
                 let output: RiderStatusResult;
 
@@ -379,7 +379,7 @@ export class RiderController extends Controller {
     public async riderLeaveQueue (@Request() request: express.Request, @Body() requestBody: LeaveQueueParams): Promise<APIResponse> {
         try {
             //delete entry in beeper's queue table
-            r.table(requestBody.beepersID).filter({'riderid': request.user.id}).delete().run(database.getConnQueues());
+            r.table(requestBody.beepersID).filter({'riderid': request.user.id}).delete().run((await database.getConnQueues()));
         }
         catch (error) {
             Sentry.captureException(error);
@@ -389,7 +389,7 @@ export class RiderController extends Controller {
         
         try {
             //decreace beeper's queue size
-            r.table('users').get(requestBody.beepersID).update({'queueSize': r.row('queueSize').sub(1)}).run(database.getConn());
+            r.table('users').get(requestBody.beepersID).update({'queueSize': r.row('queueSize').sub(1)}).run((await database.getConn()));
         }
         catch (error) {
             Sentry.captureException(error);
@@ -399,7 +399,7 @@ export class RiderController extends Controller {
 
         try {
             //set rider's inQueueOfUserID value to null because they are no longer in a queue
-            r.table('users').get(request.user.id).update({'inQueueOfUserID': null}).run(database.getConn());
+            r.table('users').get(request.user.id).update({'inQueueOfUserID': null}).run((await database.getConn()));
         }
         catch (error) {
             Sentry.captureException(error);
@@ -435,7 +435,7 @@ export class RiderController extends Controller {
     @Get("list")
     public async getBeeperList(): Promise<APIResponse | BeeperListResult> {
         try {
-            const cursor: Cursor = await r.table("users").filter({ isBeeping: true }).pluck('first', 'last', 'queueSize', 'id', 'singlesRate', 'groupRate', 'capacity', 'userLevel', 'isStudent', 'masksRequired', 'photoUrl').run(database.getConn());
+            const cursor: Cursor = await r.table("users").filter({ isBeeping: true }).pluck('first', 'last', 'queueSize', 'id', 'singlesRate', 'groupRate', 'capacity', 'userLevel', 'isStudent', 'masksRequired', 'photoUrl').run((await database.getConn()));
 
             const list: BeeperListItem[] = await cursor.toArray();
 

@@ -15,7 +15,7 @@ export async function expressAuthentication(request: express.Request, securityNa
         }
 
         try {
-            const result: TokenEntry | null = await r.table("tokens").get(token).run(database.getConn()) as TokenEntry;
+            const result: TokenEntry | null = await r.table("tokens").get(token).run((await database.getConn())) as TokenEntry;
 
             if (result) {
                 return Promise.resolve({ token: token, id: result.userid });

@@ -40,7 +40,7 @@ export async function sendNotification(userid: string, title: string, message: s
  */
 async function getPushToken(userid: string): Promise<string | null> {
     try {
-        const output = await r.table("users").get(userid).pluck('pushToken').run(database.getConn());
+        const output = await r.table("users").get(userid).pluck('pushToken').run((await database.getConn()));
 
         return output.pushToken;
     }

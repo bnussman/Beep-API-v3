@@ -24,28 +24,16 @@ class Database {
             this.conn = await r.connect(this.getConnectionOptions("beep"));
             this.connQueues = await r.connect(this.getConnectionOptions("beepQueues"));
             this.connHisory = await r.connect(this.getConnectionOptions("beepHistory"));
-            this.conn.on("close", () => this.reconnect());
             if (run) run();
         } 
         catch (error) {
             Sentry.captureException(error);
             console.error(error);
-            this.reconnect();
         }
     
     }
 
-    private reconnect(): void {
-        Sentry.captureException(new Error("Lost connection to RethinkDB"));
-        setTimeout(() => {
-            console.log("Attempting Reconnection...");
-            this.connect();
-        }, 5000);
-    }
-
     public async close(): Promise<void> {
-        //@ts-ignore
-        this.conn?.removeAllListeners();
         await this.conn?.close({noreplyWait: false});
         await this.connQueues?.close({noreplyWait: false});
         await this.connHisory?.close({noreplyWait: false});
@@ -59,18 +47,45 @@ class Database {
         };
     }
 
-    public getConn(): Connection {
-        if (this.conn == null) throw new Error("Connection should not be null");
+    public async getConn(): Promise<Connection> {
+        if (this.conn == null)  {
+            this.conn = await r.connect(this.getConnectionOptions("beep"));
+        }
+        if (!this.conn.open) {
+            this.conn = await r.connect(this.getConnectionOptions("beep"));
+        }
+        if (this.conn == null || !this.conn.open) {
+            Sentry.captureException("Unable to establish connection to RethinkDB");
+            throw new Error("Unable to establish connection to RethinkDB");
+        }
         return this.conn;
     }
 
-    public getConnQueues(): Connection {
-        if (this.connQueues == null) throw new Error("ConnectionQueues should not be null");
+    public async getConnQueues(): Promise<Connection> {
+        if (this.connQueues == null)  {
+            this.connQueues = await r.connect(this.getConnectionOptions("beepQueues"));
+        }
+        if (!this.connQueues.open) {
+            this.connQueues = await r.connect(this.getConnectionOptions("beepQueues"));
+        }
+        if (this.connQueues == null || !this.connQueues.open) {
+            Sentry.captureException("Unable to establish connection to RethinkDB");
+            throw new Error("Unable to establish connection to RethinkDB");
+        }
         return this.connQueues;
     }
 
-    public getConnHistory(): Connection {
-        if (this.connHisory == null) throw new Error("ConnectionHistory should not be null");
+    public async getConnHistory(): Promise<Connection> {
+        if (this.connHisory == null)  {
+            this.connHisory = await r.connect(this.getConnectionOptions("beepHistory"));
+        }
+        if (!this.connHisory.open) {
+            this.connHisory = await r.connect(this.getConnectionOptions("beepHistory"));
+        }
+        if (this.connHisory == null || !this.connHisory.open) {
+            Sentry.captureException("Unable to establish connection to RethinkDB");
+            throw new Error("Unable to establish connection to RethinkDB");
+        }
         return this.connHisory;
     }
 }

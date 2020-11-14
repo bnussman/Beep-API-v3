@@ -45,7 +45,7 @@ export class UserController extends Controller {
         const userItems = ['first', 'last', 'capacity', 'isStudent', 'masksRequired', 'queueSize', 'singlesRate', 'groupRate', 'venmo', 'isBeeping', 'photoUrl'];
         
         try {
-            const result = await r.table("users").get(id).pluck(...userItems).run(database.getConn());
+            const result = await r.table("users").get(id).pluck(...userItems).run((await database.getConn()));
 
             this.setStatus(200);
             return {
@@ -87,7 +87,7 @@ export class UserController extends Controller {
         };
         
         try {
-            const result = await r.table("userReports").insert(document).run(database.getConn());
+            const result = await r.table("userReports").insert(document).run((await database.getConn()));
 
             if (result.inserted == 1) {
                 this.setStatus(200);

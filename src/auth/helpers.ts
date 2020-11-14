@@ -23,7 +23,7 @@ export async function getToken(userid: string): Promise<TokenData> {
 
     //insert our new auth token into our tokens table
     try {
-        const result: WriteResult = await r.table("tokens").insert(document).run(database.getConn());
+        const result: WriteResult = await r.table("tokens").insert(document).run((await database.getConn()));
 
         //if nothing was inserted into the tokens table, we know something is wrong
         if (result.inserted == 0) {
@@ -63,7 +63,7 @@ export async function setPushToken(id: string | null, token: string | null): Pro
     if (!id) return;
     //run query to get user and update their pushToken
     try {
-        await r.table("users").get(id).update({pushToken: token}).run(database.getConn());
+        await r.table("users").get(id).update({pushToken: token}).run((await database.getConn()));
     }
     catch(error) {
         Sentry.captureException(error);
@@ -80,7 +80,7 @@ export async function isTokenValid(token: string): Promise<string | null> {
     //get (only) user's id from tokens db where the token is the token passed to this function
     //NOTE: filter must be used over get here because token is not a primary (or secondary) key
     try {
-        const result: any = await r.table("tokens").get(token).run(database.getConn());
+        const result: any = await r.table("tokens").get(token).run((await database.getConn()));
 
         if (result) {
             return result.userid;
@@ -105,7 +105,7 @@ export async function isTokenValid(token: string): Promise<string | null> {
  */
 export async function hasUserLevel(userid: string, level: number): Promise<boolean> {
     try {
-        const userLevel: number = await r.table("users").get(userid).pluck('userLevel').run(database.getConn());
+        const userLevel: number = await r.table("users").get(userid).pluck('userLevel').run((await database.getConn()));
 
         //return a boolean, true if user has desired level, false otherwise
         return level == userLevel;
@@ -149,11 +149,11 @@ export async function getUserFromEmail(email: string, ...pluckItems: string[]): 
 
         //if no pluck items were passed in, don't pluck anything
         if (pluckItems.length == 0) {
-            cursor = await r.table("users").filter({ 'email': email }).limit(1).run(database.getConn());
+            cursor = await r.table("users").filter({ 'email': email }).limit(1).run((await database.getConn()));
         }
         else {
             //expand all the pluck paramaters and rethinkdb query to get them
-            cursor = await r.table("users").filter({ 'email': email }).pluck(...pluckItems).limit(1).run(database.getConn());
+            cursor = await r.table("users").filter({ 'email': email }).pluck(...pluckItems).limit(1).run((await database.getConn()));
         }
         
         try {
@@ -186,11 +186,11 @@ export async function getUserFromId(id: string, ...pluckItems: string[]): Promis
     try {
         //if no pluck items were passed in, don't pluck anything
         if (pluckItems.length == 0) {
-            result = await r.table("users").get(id).run(database.getConn());
+            result = await r.table("users").get(id).run((await database.getConn()));
         }
         else {
             //expand all the pluck paramaters and rethinkdb query to get them
-            result = await r.table("users").get(id).pluck(...pluckItems).run(database.getConn());
+            result = await r.table("users").get(id).pluck(...pluckItems).run((await database.getConn()));
         }
         
     }
@@ -236,10 +236,10 @@ export function sendResetEmail(email: string, id: string, first: string | undefi
  * @param userid string of their user id
  * @returns void
  */
-export function deactivateTokens(userid: string): void {
+export async function deactivateTokens(userid: string): Promise<void> {
     try {
         //delete all entries in the tokens db where userid matches
-        r.table("tokens").filter({ userid: userid }).delete().run(database.getConn());
+        r.table("tokens").filter({ userid: userid }).delete().run((await database.getConn()));
     }
     catch (error) {
         //RethinkDB error when deleteing push tokens for userid
@@ -300,7 +300,7 @@ export async function createVerifyEmailEntryAndSendEmail(id: string, email: stri
     };
 
     try {
-        const result: WriteResult = await r.table("verifyEmail").insert(document).run(database.getConn());
+        const result: WriteResult = await r.table("verifyEmail").insert(document).run((await database.getConn()));
 
         //get the generated id from RethinkDB write result because that id is the token the user uses for varification
         const verifyId: string = result.generated_keys[0];
@@ -322,7 +322,7 @@ export async function createVerifyEmailEntryAndSendEmail(id: string, email: stri
  */
 export async function doesUserExist(username: string): Promise<boolean> {
     try {
-        const count: number = await r.table("users").filter({ username: username }).count().run(database.getConn());
+        const count: number = await r.table("users").filter({ username: username }).count().run((await database.getConn()));
         
         if (count >= 1) {
             return true;        

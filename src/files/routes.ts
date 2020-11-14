@@ -48,7 +48,7 @@ export class FilesController {
 
             if (result) {
                 try {
-                    const dbResult: WriteResult = await r.table("users").get(request.user.id).update({ photoUrl: result.Location }).run(database.getConn());
+                    const dbResult: WriteResult = await r.table("users").get(request.user.id).update({ photoUrl: result.Location }).run((await database.getConn()));
                     console.log(dbResult);
 
                     return {

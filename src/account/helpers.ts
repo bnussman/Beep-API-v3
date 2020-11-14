@@ -20,7 +20,7 @@ export function isEduEmail(email: string): boolean {
  */
 export async function getEmail(id: string): Promise<string | undefined> {
     try {
-        const result: UserPluckResult = await r.table("users").get(id).pluck("email").run(database.getConn());
+        const result: UserPluckResult = await r.table("users").get(id).pluck("email").run((await database.getConn()));
         return result.email;
     }
     catch (error) {
@@ -38,7 +38,7 @@ export async function getEmail(id: string): Promise<string | undefined> {
 export async function deleteUser(id: string): Promise<boolean> {
     //delete user document in user table
     try {
-        r.table("users").get(id).delete().run(database.getConn());
+        r.table("users").get(id).delete().run((await database.getConn()));
     }
     catch (error) {
         Sentry.captureException(error);
@@ -47,7 +47,7 @@ export async function deleteUser(id: string): Promise<boolean> {
 
     //delete user's queue table from beepQueues 
     try {
-        r.db("beepQueues").tableDrop(id).run(database.getConnQueues());
+        r.db("beepQueues").tableDrop(id).run((await database.getConnQueues()));
     }
     catch (error) {
         Sentry.captureException(error);
