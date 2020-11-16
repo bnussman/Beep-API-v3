@@ -26,13 +26,13 @@ export class FilesController {
 
 
         let fileName = request.file.originalname;
-        console.log(fileName);
+        //console.log(fileName);
 
         const extention = fileName.substr(fileName.lastIndexOf("."), fileName.length);
 
         fileName = request.user.id + "-" + Date.now() + extention;
 
-        console.log(fileName);
+        //console.log(fileName);
 
         const uploadParams = {
             Body: request.file.buffer,
@@ -44,12 +44,12 @@ export class FilesController {
         try {
             const result = await s3.upload(uploadParams).promise();
             
-            console.log("Upload Success", result.Location);
+            //console.log("Upload Success", result.Location);
 
             if (result) {
                 try {
                     const dbResult: WriteResult = await r.table("users").get(request.user.id).update({ photoUrl: result.Location }).run((await database.getConn()));
-                    console.log(dbResult);
+                    //console.log(dbResult);
 
                     return {
                         status: APIStatus.Success,
@@ -74,7 +74,7 @@ export class FilesController {
     }
 
     private handleFile(request: express.Request): Promise<any> {
-        console.log(request);
+        //console.log(request);
         const multerSingle = multer({limits: { fieldSize: 25 * 1024 * 1024 }}).single("photo") as any;
         return new Promise((resolve, reject) => {
             multerSingle(request, undefined, async (error: Error) => {

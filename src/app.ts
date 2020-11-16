@@ -43,6 +43,7 @@ export default class BeepAPIServer {
         this.app.use(cors());
         this.app.use(express.json());
         this.app.use(express.urlencoded({ extended: true, limit: "50mb" }));
+        this.app.disable('x-powered-by')
         this.app.use("/healthcheck", healthcheck);
 
         initializeSentry(this.app);
