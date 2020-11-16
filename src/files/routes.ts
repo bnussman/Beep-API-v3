@@ -48,8 +48,23 @@ export class FilesController {
 
             if (result) {
                 try {
-                    const dbResult: WriteResult = await r.table("users").get(request.user.id).update({ photoUrl: result.Location }).run((await database.getConn()));
-                    //console.log(dbResult);
+                    const dbResult: WriteResult = await r.table("users").get(request.user.id).update({ photoUrl: result.Location }, { returnChanges: true }).run((await database.getConn()));
+
+                    //if user had an existing profile picture, use S3 to delete the old photo
+                    if (dbResult.changes[0].old_val.photoUrl != null) {
+                        const key: string = dbResult.changes[0].old_val.photoUrl.split("https://ridebeepapp.s3.amazonaws.com/")[1];
+
+                        const params = {
+                            Bucket: "ridebeepapp",
+                            Key: key
+                        };
+
+                        s3.deleteObject(params,  (error: Error, data: unknown) => {
+                            if (error) {
+                                Sentry.captureException(error);
+                            }
+                        });
+                    }
 
                     return {
                         status: APIStatus.Success,
