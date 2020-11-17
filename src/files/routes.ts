@@ -7,7 +7,7 @@ import AWS from 'aws-sdk';
 import express from "express";
 import multer from "multer";
 import { APIResponse, APIStatus } from "../utils/Error";
-import {ProfilePhotoResponse} from "./files";
+import { ProfilePhotoResponse } from "./files";
 
 @Route("files")
 export class FilesController {

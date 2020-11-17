@@ -1,3 +1,4 @@
+import { BeepTableResult } from "../types/beep";
 import { APIStatus } from "../utils/Error";
 
 /**
@@ -82,4 +83,14 @@ interface EmailData {
     isEmailVerified: boolean;
     isStudent?: boolean;
     email: string;
+}
+
+export interface RiderHistoryResult {
+    status: APIStatus;
+    data: BeepTableResult[];
+}
+
+export interface BeeperHistoryResult {
+    status: APIStatus;
+    data: BeepTableResult[];
 }

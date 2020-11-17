@@ -10,7 +10,7 @@ import { BeepTableResult, UserPluckResult } from '../types/beep';
 import * as Sentry from "@sentry/node";
 import { APIStatus, APIResponse } from "../utils/Error";
 import { Response, Body, Controller, Post, Route, Security, Tags, Request, Delete, Example, Get, Put } from 'tsoa';
-import { ChangePasswordParams, EditAccountParams, UpdatePushTokenParams, VerifyAccountParams, VerifyAccountResult } from "./account";
+import { BeeperHistoryResult, ChangePasswordParams, EditAccountParams, RiderHistoryResult, UpdatePushTokenParams, VerifyAccountParams, VerifyAccountResult } from "./account";
 
 @Tags("Account")
 @Route("account")
@@ -347,29 +347,30 @@ export class AccountController extends Controller {
 
     /**
      * Get all of the rides of this user in the history table
-     * @returns {BeepTableResult[] | APIResponse}
+     * @returns {RiderHistoryResult | APIResponse}
      */
-    @Example<BeepTableResult[]>([{
-                "beepersid": "ad072e2d-73af-4292-8e70-41c5a47bada5",
-                "destination": "Tasty",
-                "groupSize": 1,
-                "id": "b500bb45-094e-437c-887b-e6b6d815ba12",
-                "isAccepted": true,
-                "origin": "241 Marich Ln Marich Ln Boone, NC 28607",
-                "riderid": "22192b90-54f8-49b5-9dcf-26049454716b",
-                "state": 3,
-                "timeEnteredQueue": 1603318791872,
-                "riderName": "Banks Nussman"
-            }
-        ]
-    )
+    @Example<RiderHistoryResult>({
+        status: APIStatus.Success, 
+        data: [{
+            beepersid: "ad072e2d-73af-4292-8e70-41c5a47bada5",
+            destination: "Tasty",
+            groupSize: 1,
+            id: "b500bb45-094e-437c-887b-e6b6d815ba12",
+            isAccepted: true,
+            origin: "241 Marich Ln Marich Ln Boone, NC 28607",
+            riderid: "22192b90-54f8-49b5-9dcf-26049454716b",
+            state: 3,
+            timeEnteredQueue: 1603318791872,
+            riderName: "Banks Nussman"
+        }]
+    })
     @Response<APIResponse>(500, "Server Error", {
         status: APIStatus.Error,
         message: "Unable to get rider history"
     })
     @Security("token")
     @Get("history/rider")
-    public async getRideHistory(@Request() request: express.Request): Promise<APIResponse | BeepTableResult[]> {
+    public async getRideHistory(@Request() request: express.Request): Promise<APIResponse | RiderHistoryResult> {
         try {
             const cursor: r.Cursor = await r.table("beeps").filter({ riderid: request.user.id }).orderBy(r.desc("timeEnteredQueue")).run((await database.getConnHistory()));
 
@@ -394,7 +395,10 @@ export class AccountController extends Controller {
             }
             
             this.setStatus(200);
-            return result;
+            return {
+                status: APIStatus.Success, 
+                data: result
+            };
         }
         catch (error) {
             Sentry.captureException(error);
@@ -405,29 +409,30 @@ export class AccountController extends Controller {
 
     /**
      * Get all of the beeps of this user in the history table
-     * @returns {BeepTableResult[] | APIResponse}
+     * @returns {BeeperHistoryResult | APIResponse}
      */
-    @Example<BeepTableResult[]>([{
-                "beepersid": "ad072e2d-73af-4292-8e70-41c5a47bada5",
-                "destination": "Tasty",
-                "groupSize": 1,
-                "id": "b500bb45-094e-437c-887b-e6b6d815ba12",
-                "isAccepted": true,
-                "origin": "241 Marich Ln Marich Ln Boone, NC 28607",
-                "riderid": "22192b90-54f8-49b5-9dcf-26049454716b",
-                "state": 3,
-                "timeEnteredQueue": 1603318791872,
-                "riderName": "Banks Nussman"
-            }
-        ]
-    )
+    @Example<BeeperHistoryResult>({
+        status: APIStatus.Success,
+        data: [{
+            beepersid: "ad072e2d-73af-4292-8e70-41c5a47bada5",
+            destination: "Hoey Hall",
+            groupSize: 1,
+            id: "b500bb45-094e-437c-887b-e6b6d815ba12",
+            isAccepted: true,
+            origin: "241 Marich Ln Marich Ln Boone, NC 28607",
+            riderid: "22192b90-54f8-49b5-9dcf-26049454716b",
+            state: 3,
+            timeEnteredQueue: 1603318791872,
+            riderName: "Banks Nussman"
+        }]
+    })
     @Response<APIResponse>(500, "Server Error", {
         status: APIStatus.Error,
         message: "Unable to get beeper history"
     })
     @Security("token")
     @Get("history/beeper")
-    public async getBeepHistory(@Request() request: express.Request): Promise<APIResponse | BeepTableResult[]> {
+    public async getBeepHistory(@Request() request: express.Request): Promise<APIResponse | BeeperHistoryResult> {
         try {
             const cursor: r.Cursor = await r.table("beeps").filter({ beepersid: request.user.id }).orderBy(r.desc("timeEnteredQueue")).run((await database.getConnHistory()));
 
@@ -450,8 +455,12 @@ export class AccountController extends Controller {
 
                 result[i].riderName = user.first + " " + user.last;
             }
-
-            return result;
+            
+            this.setStatus(200);
+            return {
+                status: APIStatus.Success, 
+                data: result
+            };
         }
         catch (error) {
             Sentry.captureException(error);
