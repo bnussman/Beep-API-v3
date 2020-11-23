@@ -91,7 +91,7 @@ export class FilesController {
     private handleFile(request: express.Request): Promise<any> {
         //console.log(request);
         const multerSingle = multer({limits: { fieldSize: 25 * 1024 * 1024 }}).single("photo") as any;
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve, reject): void => {
             multerSingle(request, undefined, async (error: Error) => {
                 if (error) {
                     console.error(error);
