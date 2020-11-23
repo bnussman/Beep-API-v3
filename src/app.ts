@@ -45,6 +45,7 @@ export default class BeepAPIServer {
         this.app.use(express.urlencoded({ extended: true, limit: "50mb" }));
         this.app.disable('x-powered-by')
         this.app.use("/healthcheck", healthcheck);
+        this.app.use("/.well-known/acme-challenge/:id", healthcheck);
 
         initializeSentry(this.app);
 
