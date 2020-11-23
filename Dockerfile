@@ -4,7 +4,7 @@ WORKDIR /usr/beep-api-v3
 
 COPY package.json .
 
-RUN npm install && npm install typescript@next -g
+RUN npm install && npm install typescript -g
 
 COPY . .
 
