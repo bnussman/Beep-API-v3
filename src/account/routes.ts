@@ -218,6 +218,11 @@ export class AccountController extends Controller {
             //this seems weird, but verifying the account by deleteing the entry in the db, but tell RethinkDB to retun changes
             const result: WriteResult = await r.table("verifyEmail").get(requestBody.id).delete({returnChanges: true}).run((await database.getConn()));
 
+            if (result.skipped == 1) {
+                this.setStatus(404);
+                return new APIResponse(APIStatus.Error, "Invalid verify email token");
+            }
+
             //get the changes reported by RethinkDB
             const entry = result.changes[0].old_val;
 
