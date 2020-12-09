@@ -6,7 +6,7 @@ import { sendNotification } from '../utils/notifications';
 import { getQueueSize, getPersonalInfo, storeBeepEvent } from './helpers';
 import { Validator } from 'node-input-validator';
 import * as Sentry from "@sentry/node";
-import { Response, Controller, Request, Body, Tags, Security, Post, Route, Example } from 'tsoa';
+import { Response, Controller, Request, Body, Tags, Security, Post, Route, Example, Get, Patch } from 'tsoa';
 import { APIResponse, APIStatus } from '../utils/Error';
 import { BeepQueueTableEntry, GetBeeperQueueResult, SetBeeperQueueParams, SetBeeperStatusParams } from './beeper';
 
@@ -42,7 +42,7 @@ export class BeeperController extends Controller {
         message: "Unable to set beeper status"
     })
     @Security("token")
-    @Post("status")
+    @Patch("status")
     public async setBeeperStatus (@Request() request: express.Request, @Body() requestBody: SetBeeperStatusParams): Promise<APIResponse> {
         const v = new Validator(requestBody, {
             singlesRate: "required|numeric",
@@ -118,7 +118,7 @@ export class BeeperController extends Controller {
         message: "Unable to get beeper queue"
     })
     @Security("token")
-    @Post("queue")
+    @Get("queue")
     public async getBeeperQueue(@Request() request: express.Request): Promise<APIResponse | GetBeeperQueueResult> {
         try {
             //TODO whattt
@@ -163,7 +163,7 @@ export class BeeperController extends Controller {
         message: "Unable to set beeper status"
     })
     @Security("token")
-    @Post("queue/status")
+    @Patch("queue/status")
     public async setBeeperQueue (@Request() request: express.Request, @Body() requestBody: SetBeeperQueueParams): Promise<APIResponse> {
         //if the beeper is accepting or denying a rider, run this code to ensure that beeper is
         //acceping or denying the rider that was first to request a ride (amung the isAccepted == false) beeps

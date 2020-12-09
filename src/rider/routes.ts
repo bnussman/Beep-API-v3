@@ -5,7 +5,7 @@ import database from '../utils/db';
 import { sendNotification } from '../utils/notifications';
 import { Validator } from "node-input-validator";
 import * as Sentry from "@sentry/node";
-import { Response, Controller, Post, Route, Security, Tags, Request, Body, Get, Example } from 'tsoa';
+import { Response, Controller, Post, Route, Security, Tags, Request, Body, Get, Example, Patch, Delete } from 'tsoa';
 import { BeeperListItem, BeeperListResult, ChooseBeepParams, ChooseBeepResponse, LeaveQueueParams, RiderStatusResult } from "./rider";
 import { APIResponse, APIStatus } from '../utils/Error';
     
@@ -49,7 +49,7 @@ export class RiderController extends Controller {
         message: "The user you have chosen is no longer beeping at this time."
     })
     @Security("token")
-    @Post("choose")
+    @Patch("choose")
     public async chooseBeep (@Request() request: express.Request, @Body() requestBody: ChooseBeepParams): Promise<ChooseBeepResponse | APIResponse> {
         const v = new Validator(requestBody, {
             groupSize: "required|numeric",
@@ -168,7 +168,7 @@ export class RiderController extends Controller {
         message: "Nobody is beeping at the moment! Try to find a ride later."
     })
     @Security("token")
-    @Post("find")
+    @Get("find")
     public async findBeep (@Request() request: express.Request): Promise<APIResponse | ChooseBeepResponse> {
         //rethinkdb query to search users table (in acending order by queueSize) for users where isBeeping is true
         //and id is not equal to requester's, and limit by 1 to decide a riders beeper
@@ -253,7 +253,7 @@ export class RiderController extends Controller {
         message: "You are trying to get your rider status of an account that no longer exists"
     })
     @Security("token")
-    @Post("status")
+    @Get("status")
     public async getRiderStatus (@Request() request: express.Request): Promise<APIResponse | RiderStatusResult> {
         let result;
 
@@ -375,7 +375,7 @@ export class RiderController extends Controller {
         message: "Successfully removed user from queue"
     })
     @Security("token")
-    @Post("leave")
+    @Delete("leave")
     public async riderLeaveQueue (@Request() request: express.Request, @Body() requestBody: LeaveQueueParams): Promise<APIResponse> {
         try {
             //delete entry in beeper's queue table
