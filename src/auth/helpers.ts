@@ -105,10 +105,10 @@ export async function isTokenValid(token: string): Promise<string | null> {
  */
 export async function hasUserLevel(userid: string, level: number): Promise<boolean> {
     try {
-        const userLevel: number = await r.table("users").get(userid).pluck('userLevel').run((await database.getConn()));
+        const userLevel: any = await r.table("users").get(userid).pluck('userLevel').run((await database.getConn()));
 
         //return a boolean, true if user has desired level, false otherwise
-        return level == userLevel;
+        return level == userLevel.userLevel;
     }
     catch (error) {
         //in prod, log error with our logger i guess

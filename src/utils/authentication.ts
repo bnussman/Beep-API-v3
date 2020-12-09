@@ -4,6 +4,7 @@ import database from"./db";
 import * as r from "rethinkdb";
 import * as Sentry from "@sentry/node";
 import { APIStatus, APIAuthResponse } from "./Error";
+import { hasUserLevel } from '../auth/helpers';
 
 export async function expressAuthentication(request: express.Request, securityName: string, scopes?: string[]): Promise<any> {
     if (securityName === "token") {
@@ -18,6 +19,13 @@ export async function expressAuthentication(request: express.Request, securityNa
             const result: TokenEntry | null = await r.table("tokens").get(token).run((await database.getConn())) as TokenEntry;
 
             if (result) {
+                if (scopes && (scopes[0] == "admin")) {
+                    const hasPermission: boolean = await hasUserLevel(result.userid, 1);
+                    console.log(hasPermission);
+                    if (!hasPermission) {
+                        return Promise.reject(new APIAuthResponse(APIStatus.Error, "You must be an admin to use this endpoint"));
+                    }
+                }
                 return Promise.resolve({ token: token, id: result.userid });
             }
             else {
