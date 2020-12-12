@@ -3,9 +3,10 @@ import * as express from 'express';
 import database from'../utils/db';
 import { Validator } from "node-input-validator";
 import * as Sentry from "@sentry/node";
-import { Response, Request, Controller, Route, Get, Path, Example, Post, Security, Body, Tags } from 'tsoa';
+import { Response, Request, Controller, Route, Get, Path, Example, Post, Security, Body, Tags, Delete } from 'tsoa';
 import { APIStatus, APIResponse } from "../utils/Error";
 import { ReportUserParams, UserResult } from "../user/user";
+import { deleteUser } from "../account/helpers";
 
 @Tags("User")
 @Route("user")
@@ -104,5 +105,28 @@ export class UserController extends Controller {
             this.setStatus(500);
             return new APIResponse(APIStatus.Error, error);
         }
+    }
+
+    /**
+     * Delete an account by user id
+     * @returns {APIResponse}
+     */
+    @Example<APIResponse>({
+        status: APIStatus.Success,
+        message: "Successfully deleted user"
+    })
+    @Response<APIResponse>(500, "Server Error", {
+        status: APIStatus.Error,
+        message: "Unable to delete user"
+    })
+    @Security("token", ["admin"])
+    @Delete("{id}")
+    public async removeUser(@Path() id: string): Promise<APIResponse> {
+        if (await deleteUser(id)) {
+            this.setStatus(200);
+            return new APIResponse(APIStatus.Success, "Successfully deleted user");
+        }
+        this.setStatus(500);
+        return new APIResponse(APIStatus.Error, "Unable to delete user");
     }
 }
