@@ -58,3 +58,30 @@ export interface ReportUserParams {
     id: string;
     reason: string;
 }
+
+export interface DetailedUser {
+    first: string;
+    last: string;
+    capacity: number;
+    isStudent: boolean;
+    masksRequired: boolean;
+    queueSize: number;
+    singlesRate: number | string;
+    groupRate: number | string;
+    venmo: string;
+    isBeeping: boolean;
+    photoUrl: string | null;
+    id: string;
+    email: string;
+    inQueueOfUserID: string | null;
+    isEmailVerified: boolean;
+    phone: string;
+    pushToken: string;
+    username: string;
+    userLevel: number;
+}
+
+export interface UsersResult {
+    status: APIStatus;
+    users: DetailedUser[];
+}

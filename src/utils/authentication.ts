@@ -21,7 +21,6 @@ export async function expressAuthentication(request: express.Request, securityNa
             if (result) {
                 if (scopes && (scopes[0] == "admin")) {
                     const hasPermission: boolean = await hasUserLevel(result.userid, 1);
-                    console.log(hasPermission);
                     if (!hasPermission) {
                         return Promise.reject(new APIAuthResponse(APIStatus.Error, "You must be an admin to use this endpoint"));
                     }

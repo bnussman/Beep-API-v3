@@ -5,7 +5,7 @@ import { Validator } from "node-input-validator";
 import * as Sentry from "@sentry/node";
 import { Response, Request, Controller, Route, Get, Path, Example, Post, Security, Body, Tags, Delete } from 'tsoa';
 import { APIStatus, APIResponse } from "../utils/Error";
-import { ReportUserParams, UserResult } from "../user/user";
+import { ReportUserParams, UserResult, DetailedUser, UsersResult } from "../user/user";
 import { deleteUser } from "../account/helpers";
 
 @Tags("User")
@@ -40,7 +40,6 @@ export class UserController extends Controller {
         status: APIStatus.Error, 
         message: "Unable to get user profile"
     })
-    
     @Get("{id}")
     public async getUser(@Path() id: string): Promise<UserResult | APIResponse> {
         const userItems = ['first', 'last', 'capacity', 'isStudent', 'masksRequired', 'queueSize', 'singlesRate', 'groupRate', 'venmo', 'isBeeping', 'photoUrl'];
@@ -65,6 +64,18 @@ export class UserController extends Controller {
         }
     }
 
+    /**
+     * Report a user
+     * @returns {APIResponse}
+     */
+    @Example<APIResponse>({
+        status: APIStatus.Success,
+        message: "Successfully reported user"
+    })
+    @Response<APIResponse>(500, "Server Error", {
+        status: APIStatus.Error, 
+        message: "Unable to resport user"
+    })
     @Security("token")
     @Post("report")
     public async reportUser(@Request() request: express.Request, @Body() requestBody: ReportUserParams): Promise<APIResponse> {
@@ -128,5 +139,61 @@ export class UserController extends Controller {
         }
         this.setStatus(500);
         return new APIResponse(APIStatus.Error, "Unable to delete user");
+    }
+
+    /**
+     * Get a list of every Beep App User for admins
+     * @returns {UsersResponse | APIResponse}
+     */
+    @Example<UsersResult>({
+        status: APIStatus.Success,
+        users: [
+            {
+                capacity: 4,
+                email: "Johnsonna4@appstate.edu",
+                first: "Noah",
+                groupRate: 2,
+                id: "084b0675-16d3-44cb-ba45-37bfb1af629f",
+                inQueueOfUserID: null,
+                isBeeping: false,
+                isEmailVerified: false,
+                isStudent: false,
+                last: "Johnson",
+                masksRequired: false,
+                phone: "7047518820",
+                photoUrl: "https://ridebeepapp.s3.amazonaws.com/images/084b0675-16d3-44cb-ba45-37bfb1af629f-1607225573321.jpg",
+                pushToken: "ExponentPushToken[W7I1iPJejTZzuCbW07g7ZL]",
+                queueSize: 0,
+                singlesRate: 3,
+                userLevel: 0,
+                username: "Naj251",
+                venmo: "Noah-Johnson-234"
+            }
+        ]
+    })
+    @Response<APIResponse>(500, "Server Error", {
+        status: APIStatus.Error,
+        message: "Unable to get users"
+    })
+    @Security("token", ["admin"])
+    @Get()
+    public async getUsers(): Promise<UsersResult | APIResponse> {
+        try {
+            const cursor = await r.table("users").without('password').run((await database.getConn()));        
+
+            const data: DetailedUser[] = await cursor.toArray();
+
+            this.setStatus(200);
+
+            return {
+                status: APIStatus.Success,
+                users: data
+            };
+        }
+        catch (error) {
+            Sentry.captureException(error);
+            this.setStatus(500);
+            return new APIResponse(APIStatus.Error, "Unable to get users list");
+        }
     }
 }
