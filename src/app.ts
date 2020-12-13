@@ -6,7 +6,6 @@ import { errorHandler } from "./utils/Error";
 import { handleNotFound } from "./utils/404";
 import * as Sentry from "@sentry/node";
 import { initializeSentry } from "./utils/sentry";
-import cors from "cors";
 import database from "./utils/db";
 import { Server } from "http";
 
