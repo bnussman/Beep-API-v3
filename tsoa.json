@@ -30,7 +30,7 @@
             }
         },
         "host": "ridebeep.app",
-        "basePath": "/api"
+        "basePath": "/v1"
     },
     "routes": {
         "routesDir": "build",
