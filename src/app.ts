@@ -40,7 +40,6 @@ export default class BeepAPIServer {
     }
 
     private setup(): void {
-        this.app.use(cors());
         this.app.use(express.json());
         this.app.use(express.urlencoded({ extended: true, limit: "50mb" }));
         this.app.disable('x-powered-by')
