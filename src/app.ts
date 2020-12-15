@@ -8,6 +8,7 @@ import * as Sentry from "@sentry/node";
 import { initializeSentry } from "./utils/sentry";
 import database from "./utils/db";
 import { Server } from "http";
+import cors from "cors";
 
 export default class BeepAPIServer {
     private app: Application;
@@ -39,6 +40,7 @@ export default class BeepAPIServer {
     }
 
     private setup(): void {
+        this.app.use(cors());
         this.app.use(express.json());
         this.app.use(express.urlencoded({ extended: true, limit: "50mb" }));
         this.app.disable('x-powered-by')
