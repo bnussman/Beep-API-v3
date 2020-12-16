@@ -9,7 +9,7 @@ import { Validator } from "node-input-validator";
 import { BeepTableResult, UserPluckResult } from '../types/beep';
 import * as Sentry from "@sentry/node";
 import { APIStatus, APIResponse } from "../utils/Error";
-import { Response, Body, Controller, Post, Route, Security, Tags, Request, Delete, Example, Get, Put } from 'tsoa';
+import { Response, Body, Controller, Post, Route, Security, Tags, Request, Delete, Example, Get, Put, Patch } from 'tsoa';
 import { BeeperHistoryResult, ChangePasswordParams, EditAccountParams, RiderHistoryResult, UpdatePushTokenParams, VerifyAccountParams, VerifyAccountResult } from "./account";
 
 @Tags("Account")
@@ -39,7 +39,7 @@ export class AccountController extends Controller {
         message: "Unable to edit account"
     })
     @Security("token")
-    @Post("edit")
+    @Patch()
     public async editAccount(@Request() request: express.Request, @Body() requestBody: EditAccountParams): Promise<APIResponse> {
         const v = new Validator(requestBody, {
             first: "required|alpha",
