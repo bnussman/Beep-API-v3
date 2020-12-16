@@ -1,4 +1,4 @@
-import { Route, Security, Post, Request } from "tsoa";
+import { Route, Security, Post, Request, Tags } from "tsoa";
 import database from '../utils/db';
 import * as Sentry from "@sentry/node";
 import * as r from 'rethinkdb';
@@ -9,6 +9,7 @@ import multer from "multer";
 import { APIResponse, APIStatus } from "../utils/Error";
 import { ProfilePhotoResponse } from "./files";
 
+@Tags("files")
 @Route("files")
 export class FilesController {
 
