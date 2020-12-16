@@ -107,18 +107,18 @@ export class ReportsController extends Controller {
 
             if (offset) {
                 if (show) {
-                    cursor = await r.table("userReports").slice(offset, offset + show).run((await database.getConn()));
+                    cursor = await r.table("userReports").orderBy(r.desc('timestamp')).slice(offset, offset + show).run((await database.getConn()));
                 }
                 else {
-                    cursor = await r.table("userReports").slice(offset).run((await database.getConn()));
+                    cursor = await r.table("userReports").orderBy(r.desc('timestamp')).slice(offset).run((await database.getConn()));
                 }
             }
             else {
                 if (show) {
-                    cursor = await r.table("userReports").limit(show).run((await database.getConn()));
+                    cursor = await r.table("userReports").orderBy(r.desc('timestamp')).limit(show).run((await database.getConn()));
                 }
                 else {
-                    cursor = await r.table("userReports").run((await database.getConn()));
+                    cursor = await r.table("userReports").orderBy(r.desc('timestamp')).run((await database.getConn()));
                 }
             }
 
