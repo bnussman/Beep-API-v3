@@ -55,12 +55,6 @@ export interface UserResult {
 }
 
 //TODO: example data
-export interface ReportUserParams {
-    id: string;
-    reason: string;
-}
-
-//TODO: example data
 export interface DetailedUser {
     first: string;
     last: string;
