@@ -54,11 +54,13 @@ export interface UserResult {
     user: PublicUser;
 }
 
+//TODO: example data
 export interface ReportUserParams {
     id: string;
     reason: string;
 }
 
+//TODO: example data
 export interface DetailedUser {
     first: string;
     last: string;
@@ -81,7 +83,38 @@ export interface DetailedUser {
     userLevel: number;
 }
 
+//TODO: example data
 export interface UsersResult {
     status: APIStatus;
     users: DetailedUser[];
+}
+
+/**
+ * Edit User Params
+ *
+ * @example {
+ *     "venmo": "bankstestvenmo",
+ *     "first": "Banks"
+ * }
+*/
+export interface EditUserParams {
+    first?: string;
+    last?: string;
+    capacity?: number;
+    isStudent?: boolean;
+    masksRequired?: boolean;
+    queueSize?: number;
+    singlesRate?: number | string;
+    groupRate?: number | string;
+    venmo?: string;
+    isBeeping?: boolean;
+    photoUrl?: string | null;
+    id?: string;
+    email?: string;
+    inQueueOfUserID?: string | null;
+    isEmailVerified?: boolean;
+    phone?: string;
+    pushToken?: string;
+    username?: string;
+    userLevel?: number;
 }

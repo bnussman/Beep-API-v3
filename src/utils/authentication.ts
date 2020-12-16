@@ -36,4 +36,31 @@ export async function expressAuthentication(request: express.Request, securityNa
             return Promise.reject(error);
         }
     }
+    else if (securityName == "optionalAdmin") {
+        const token: string | undefined = request.get("Authorization")?.split(" ")[1];
+
+        if (!token) {
+            return Promise.resolve();
+        }
+
+        try {
+            const result: TokenEntry | null = await r.table("tokens").get(token).run((await database.getConn())) as TokenEntry;
+
+            if (result) {
+                const isAdmin: boolean = await hasUserLevel(result.userid, 1);
+
+                if (isAdmin) {
+                    return Promise.resolve({ token: token, id: result.userid });
+                }
+                return Promise.resolve();
+            }
+            else {
+                return Promise.resolve();
+            }
+        }
+        catch (error) {
+            Sentry.captureException(error);
+            return Promise.resolve();
+        }
+    }
 }

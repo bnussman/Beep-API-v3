@@ -3,9 +3,9 @@ import * as express from 'express';
 import database from'../utils/db';
 import { Validator } from "node-input-validator";
 import * as Sentry from "@sentry/node";
-import { Response, Request, Controller, Route, Get, Path, Example, Post, Security, Body, Tags, Delete } from 'tsoa';
+import { Response, Request, Controller, Route, Get, Path, Example, Post, Security, Body, Tags, Delete, Patch } from 'tsoa';
 import { APIStatus, APIResponse } from "../utils/Error";
-import { ReportUserParams, UserResult, DetailedUser, UsersResult } from "../user/user";
+import { ReportUserParams, UserResult, DetailedUser, UsersResult, EditUserParams } from "../user/user";
 import { deleteUser } from "../account/helpers";
 
 @Tags("User")
@@ -40,12 +40,20 @@ export class UserController extends Controller {
         status: APIStatus.Error, 
         message: "Unable to get user profile"
     })
+    @Security("optionalAdmin")
     @Get("{id}")
-    public async getUser(@Path() id: string): Promise<UserResult | APIResponse> {
-        const userItems = ['first', 'last', 'capacity', 'isStudent', 'masksRequired', 'queueSize', 'singlesRate', 'groupRate', 'venmo', 'isBeeping', 'photoUrl'];
-        
+    public async getUser(@Request() request: express.Request, @Path() id: string): Promise<UserResult | APIResponse> {
         try {
-            const result = await r.table("users").get(id).pluck(...userItems).run((await database.getConn()));
+            let result;
+
+            if (request.user?.id) {
+                //@ts-ignore this is valid, the typings are wrong
+                result = await r.table("users").get(id).without('password').run((await database.getConn()));
+            }
+            else {
+                const userItems = ['first', 'last', 'capacity', 'isStudent', 'masksRequired', 'queueSize', 'singlesRate', 'groupRate', 'venmo', 'isBeeping', 'photoUrl'];
+                result = await r.table("users").get(id).pluck(...userItems).run((await database.getConn()));
+            }
 
             this.setStatus(200);
             return {
@@ -54,6 +62,7 @@ export class UserController extends Controller {
             };
         }
         catch (error) {
+            console.log(error);
             if (error.name == "ReqlNonExistenceError") {
                 this.setStatus(404);
                 return new APIResponse(APIStatus.Error, "That user does not exist");
@@ -194,6 +203,38 @@ export class UserController extends Controller {
             Sentry.captureException(error);
             this.setStatus(500);
             return new APIResponse(APIStatus.Error, "Unable to get users list");
+        }
+    }
+
+    /**
+     * Edit a user account
+     * @param {EditUserParams} requestBody - user can send any or all account params
+     * @returns {APIResponse}
+     */
+    @Example<APIResponse>({
+        status: APIStatus.Success,
+        message: "Successfully edited profile."
+    })
+    @Response<APIResponse>(500, "Server Error", {
+        status: APIStatus.Error,
+        message: "Unable to edit account"
+    })
+    @Security("token", ["admin"])
+    @Patch("{id}")
+    public async editUser(@Path() id: string, @Body() requestBody: EditUserParams): Promise<APIResponse> {
+        try {
+            const result: r.WriteResult = await r.table("users").get(id).update(requestBody).run((await database.getConn()));
+
+            if (result.unchanged > 0) {
+                return new APIResponse(APIStatus.Warning, "Nothing was changed about the user's profile");
+            }
+           
+            return new APIResponse(APIStatus.Success, "Successfully edited user");
+        }
+        catch (error) {
+            Sentry.captureException(error);
+            this.setStatus(500);
+            return new APIResponse(APIStatus.Error, "Unable to edit account");
         }
     }
 }
