@@ -56,13 +56,32 @@ export interface ReportsResponse {
  *   "reason": "hhgfh",
  *   "reportedId": "22192b90-54f8-49b5-9dcf-26049454716b",
  *   "reporterId": "ca34cc7b-de97-40b7-a1ab-148f6c43d073",
- *   "timestamp": 1607803770171
+ *   "timestamp": 1607803770171,
+ *   "adminNotes": "Guy was mad at other guy for smoking weed in his Prius",
+ *   "handled": false,
+ *   "handledBy": null
  * }
  */
 export interface Report {
-    id: string;
+    id?: string;
     reason: string;
     reportedId: string;
     reporterId: string;
     timestamp: number;
+    adminNotes: string | null;
+    handled: boolean;
+    handledBy: string | null;
+}
+
+/**
+ * Update a Report
+ *
+ * @example {
+ *   "adminNotes": "Guy was mad at other guy for eating in his Tacoma",
+ *   "handled": true
+ * }
+ */
+export interface UpdateReportParams {
+    adminNotes?: string;
+    handled?: boolean;
 }

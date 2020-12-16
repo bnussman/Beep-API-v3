@@ -3,9 +3,9 @@ import * as express from 'express';
 import database from'../utils/db';
 import { Validator } from "node-input-validator";
 import * as Sentry from "@sentry/node";
-import { Response, Controller, Request, Post, Body, Route, Example, Security, Tags, Get, Query } from 'tsoa';
+import { Response, Controller, Request, Post, Body, Route, Example, Security, Tags, Get, Query, Patch, Path } from 'tsoa';
 import { APIStatus, APIResponse } from "../utils/Error";
-import { Report, ReportsResponse, ReportUserParams } from "../reports/reports";
+import { Report, ReportsResponse, ReportUserParams, UpdateReportParams } from "../reports/reports";
 
 @Tags("Reports")
 @Route("reports")
@@ -38,11 +38,14 @@ export class ReportsController extends Controller {
             return new APIResponse(APIStatus.Error, v.errors);
         }
 
-        const document = {
+        const document: Report = {
             reporterId: request.user.id,
             reportedId: requestBody.id,
             reason: requestBody.reason,
-            timestamp: Date.now()
+            timestamp: Date.now(),
+            adminNotes: null,
+            handled: false,
+            handledBy: null
         };
         
         try {
@@ -84,14 +87,20 @@ export class ReportsController extends Controller {
                 reason: "Actual sexiest beeper 🤤",
                 reportedId: "22192b90-54f8-49b5-9dcf-26049454716b",
                 reporterId: "de623bd0-c000-4f74-a342-2620da1c6e9f",
-                timestamp: 1603395053099
+                timestamp: 1603395053099,
+                adminNotes: "Guy was mad at other guy for smoking weed in his Prius",
+                handled: false,
+                handledBy: null
             },
             {
                 id: "c5008c11-d7ea-4f69-9b42-6698237d15bb",
                 reason: "hhgfh",
                 reportedId: "22192b90-54f8-49b5-9dcf-26049454716b",
                 reporterId: "ca34cc7b-de97-40b7-a1ab-148f6c43d073",
-                timestamp: 1607803770171
+                timestamp: 1607803770171,
+                adminNotes: "Guy was mad at other guy for drinking a Whiteclaw in his F250",
+                handled: true,
+                handledBy: "22192b90-54f8-49b5-9dcf-26049454716b"
             }
         ]
     })
@@ -136,5 +145,50 @@ export class ReportsController extends Controller {
             this.setStatus(500);
             return new APIResponse(APIStatus.Error, "Unable to get reports list");
         }
+    }
+
+    /**
+     * Edit a report entry
+     *
+     * An admin can mark the report as handled and add notes
+     *
+     * @param {UpdateReportParams} requestBody - user can send any or all update report params
+     * @returns {APIResponse}
+     */
+    @Example<APIResponse>({
+        status: APIStatus.Success,
+        message: "Successfully updated report"
+    })
+    @Response<APIResponse>(500, "Server Error", {
+        status: APIStatus.Error,
+        message: "Unable to edit report"
+    })
+    @Security("token", ["admin"])
+    @Patch("{id}")
+    public async updateReport(@Request() request: express.Request, @Path() id: string, @Body() requestBody: UpdateReportParams): Promise<APIResponse> {
+        try {
+            let toUpdateData;
+
+            if (requestBody.handled) {
+                toUpdateData = { ...requestBody, handledBy: request.user.id};
+            }
+            else {
+                toUpdateData = requestBody;
+            }
+
+            const result: r.WriteResult = await r.table("userReports").get(id).update(toUpdateData).run((await database.getConn()));
+
+            if (result.unchanged > 0) {
+                return new APIResponse(APIStatus.Warning, "Nothing was changed about the report");
+            }
+           
+            return new APIResponse(APIStatus.Success, "Successfully updated report");
+        }
+        catch (error) {
+            Sentry.captureException(error);
+            this.setStatus(500);
+            return new APIResponse(APIStatus.Error, "Unable to edit report");
+        }
+
     }
 }
