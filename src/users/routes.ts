@@ -1,7 +1,7 @@
 import * as r from 'rethinkdb';
 import database from'../utils/db';
 import * as Sentry from "@sentry/node";
-import { Response, Controller, Route, Get, Example, Security, Tags } from 'tsoa';
+import { Response, Controller, Route, Get, Example, Security, Tags, Query } from 'tsoa';
 import { APIStatus, APIResponse } from "../utils/Error";
 import { DetailedUser, UsersResult } from "../user/user";
 
@@ -10,8 +10,15 @@ import { DetailedUser, UsersResult } from "../user/user";
 export class UsersController extends Controller {
 
     /**
-     * Get a list of every Beep App User for admins
-     * @returns {UsersResponse | APIResponse}
+     * Get a list of every Beep App User for admins.
+     *
+     * You can specify and offset and show to get pagination. Ex: https://ridebeep.app/v1/users?offset=10&show=10
+     *
+     * If you do not specify an offset or a show ammount, the API will return EVERY user
+     *
+     * @param {number} [offset] where to start in the DB
+     * @param {number} [show] how many to show from start
+     * @returns {UsersResponse | APIResponse} [result]
      */
     @Example<UsersResult>({
         status: APIStatus.Success,
@@ -45,9 +52,26 @@ export class UsersController extends Controller {
     })
     @Security("token", ["admin"])
     @Get()
-    public async getUsers(): Promise<UsersResult | APIResponse> {
+    public async getUsers(@Query() offset?: number, @Query() show?: number): Promise<UsersResult | APIResponse> {
         try {
-            const cursor = await r.table("users").without('password').run((await database.getConn()));        
+            let cursor;
+
+            if (offset) {
+                if (show) {
+                    cursor = await r.table("users").without('password').slice(offset, offset + show).run((await database.getConn()));
+                }
+                else {
+                    cursor = await r.table("users").without('password').slice(offset).run((await database.getConn()));
+                }
+            }
+            else {
+                if (show) {
+                    cursor = await r.table("users").without('password').limit(show).run((await database.getConn()));
+                }
+                else {
+                    cursor = await r.table("users").without('password').run((await database.getConn()));
+                }
+            }
 
             const data: DetailedUser[] = await cursor.toArray();
 
