@@ -80,6 +80,7 @@ export interface DetailedUser {
 //TODO: example data
 export interface UsersResult {
     status: APIStatus;
+    total: number,
     users: DetailedUser[];
 }
 

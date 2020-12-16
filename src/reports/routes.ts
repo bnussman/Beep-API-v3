@@ -6,6 +6,7 @@ import * as Sentry from "@sentry/node";
 import { Response, Controller, Request, Post, Body, Route, Example, Security, Tags, Get, Query, Patch, Path } from 'tsoa';
 import { APIStatus, APIResponse } from "../utils/Error";
 import { Report, ReportsResponse, ReportUserParams, UpdateReportParams } from "../reports/reports";
+import { getNumReports } from "./helpers";
 
 @Tags("Reports")
 @Route("reports")
@@ -81,6 +82,7 @@ export class ReportsController extends Controller {
      */
     @Example<ReportsResponse>({
         status: APIStatus.Success,
+        total: 20,
         reports: [
             {
                 id: "0c4dd21b-54bc-4e51-bed7-a7fd1ade00fe",
@@ -111,6 +113,8 @@ export class ReportsController extends Controller {
     @Security("token", ["admin"])
     @Get()
     public async getReports(@Query() offset?: number, @Query() show?: number): Promise<ReportsResponse | APIResponse> {
+        const numberOfReports: number = await getNumReports();
+
         try {
             let cursor
 
@@ -137,6 +141,7 @@ export class ReportsController extends Controller {
 
             return {
                 status: APIStatus.Success,
+                total: numberOfReports,
                 reports: data
             };
         }

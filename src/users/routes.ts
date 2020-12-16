@@ -6,6 +6,7 @@ import { Response, Controller, Request, Route, Get, Example, Security, Tags, Que
 import { APIStatus, APIResponse } from "../utils/Error";
 import { DetailedUser, EditUserParams, UserResult, UsersResult } from "../users/users";
 import { deleteUser } from '../account/helpers';
+import {getNumUsers} from './helpers';
 
 @Tags("Users")
 @Route("users")
@@ -141,6 +142,7 @@ export class UsersController extends Controller {
      */
     @Example<UsersResult>({
         status: APIStatus.Success,
+        total: 128,
         users: [
             {
                 capacity: 4,
@@ -172,6 +174,8 @@ export class UsersController extends Controller {
     @Security("token", ["admin"])
     @Get()
     public async getUsers(@Query() offset?: number, @Query() show?: number): Promise<UsersResult | APIResponse> {
+        const numberOfUsers: number = await getNumUsers();
+
         try {
             let cursor;
 
@@ -198,6 +202,7 @@ export class UsersController extends Controller {
 
             return {
                 status: APIStatus.Success,
+                total: numberOfUsers,
                 users: data
             };
         }

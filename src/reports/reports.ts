@@ -45,6 +45,7 @@ export interface ReportUserParams {
  */
 export interface ReportsResponse {
     status: APIStatus, 
+    total: number,
     reports: Report[]
 }
 
