@@ -43,7 +43,8 @@ export interface UpdatePushTokenParams {
 }
 
 /**
- * Update Expo Push Token
+ * When user POSTs to verify their account, they need to send the
+ * id of the verify entry
  *
  * @example {
  *   "id": "22192b90-54f8-49b5-9dcf-26049454716b"

@@ -7,6 +7,7 @@ import { Response, Controller, Request, Post, Body, Route, Example, Security, Ta
 import { APIStatus, APIResponse } from "../utils/Error";
 import { Report, ReportsResponse, ReportUserParams, UpdateReportParams } from "../reports/reports";
 import { getNumReports } from "./helpers";
+import { getUserFromId } from '../auth/helpers';
 
 @Tags("Reports")
 @Route("reports")
@@ -135,14 +136,26 @@ export class ReportsController extends Controller {
                 }
             }
 
-            const data: Report[] = await cursor.toArray();
+            const result = await cursor.toArray();
+
+            /*
+            for (let i = 0; i < result.length; i++) {
+                const reporterUserData = await getUserFromId(result[i].reporterId, "first", "last");
+                const reportedUserData = await getUserFromId(result[i].reportedId, "first", "last");
+
+                delete result[i].reporterId;
+                delete result[i].reportedId;
+
+                result[i] = { ...result[i], reporter: reporterUserData, reported: reportedUserData };
+            }
+            */
 
             this.setStatus(200);
 
             return {
                 status: APIStatus.Success,
                 total: numberOfReports,
-                reports: data
+                reports: result
             };
         }
         catch (error) {

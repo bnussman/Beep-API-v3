@@ -198,6 +198,8 @@ export async function getUserFromId(id: string, ...pluckItems: string[]): Promis
         //this probabaly means that the user identified by id no longer exists
     }
 
+    if (result != null) result = {...result, id: id}
+
     return result;
 }
 
