@@ -245,6 +245,7 @@ export class BeeperController extends Controller {
                 else {
                     const finishedBeep = result.changes[0].old_val;
                     finishedBeep.beepersid = request.user.id;
+                    finishedBeep.doneTime = Date.now();
 
                     storeBeepEvent(finishedBeep);
                 }
