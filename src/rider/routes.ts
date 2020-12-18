@@ -242,6 +242,8 @@ export class RiderController extends Controller {
             venmo: "banksnussman",
             photoUrl: "https://ridebeepapp.s3.amazonaws.com/images/22192b90-54f8-49b5-9dcf-26049454716b-1604517623067.jpg"
         },
+        origin: "place",
+        destination: "other place",
         groupSize: 1,
         isAccepted: true,
         ridersQueuePosition: 0,
@@ -310,6 +312,8 @@ export class RiderController extends Controller {
                         "isAccepted": queueEntry.isAccepted,
                         "ridersQueuePosition": ridersQueuePosition,
                         "state": queueEntry.state,
+                        "origin": queueEntry.origin,
+                        "destination": queueEntry.destination,
                         "beeper": {
                             "id": beepersID,
                             "first": beepersInfo.first,
@@ -333,6 +337,8 @@ export class RiderController extends Controller {
                         "status": APIStatus.Success,
                         "groupSize": queueEntry.groupSize,
                         "isAccepted": queueEntry.isAccepted,
+                        "origin": queueEntry.origin,
+                        "destination": queueEntry.destination,
                         "beeper": {
                             "id": beepersID,
                             "first": beepersInfo.first,

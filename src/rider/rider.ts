@@ -106,6 +106,8 @@ export interface RiderStatusResult {
     ridersQueuePosition?: number;
     state?: number;
     beeper: BeeperData
+    origin: string;
+    destination: string;
 }
 
 /**
