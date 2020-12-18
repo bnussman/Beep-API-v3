@@ -6,7 +6,7 @@ import { Response, Controller, Request, Route, Get, Example, Security, Tags, Que
 import { APIStatus, APIResponse } from "../utils/Error";
 import { DetailedUser, EditUserParams, UserResult, UsersResult } from "../users/users";
 import { deleteUser } from '../account/helpers';
-import {getNumUsers} from './helpers';
+import { getNumUsers } from './helpers';
 
 @Tags("Users")
 @Route("users")
