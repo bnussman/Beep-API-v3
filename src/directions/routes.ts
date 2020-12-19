@@ -5,7 +5,7 @@ import fetch from 'node-fetch';
 @Tags("Directions")
 @Route("directions")
 export class DirectionsController extends Controller {
-    //@Security("token")
+    @Security("token")
     @Get("{start}/{end}")
     public async getDirections(@Path() start: string, @Path() end: string): Promise<any | APIResponse> {
         try {
