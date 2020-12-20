@@ -1,4 +1,5 @@
 import { APIStatus } from '../utils/Error';
+import { MinimalUser } from '../beeps/beeps';
 
 /**
  * Example of a submitted report
@@ -46,7 +47,13 @@ export interface ReportUserParams {
 export interface ReportsResponse {
     status: APIStatus, 
     total: number,
-    reports: Report[]
+    reports: ReportWithUserData[]
+}
+
+interface ReportWithUserData {
+    report: Report;
+    reporter: MinimalUser;
+    reported: MinimalUser;
 }
 
 /**

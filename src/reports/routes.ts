@@ -83,27 +83,33 @@ export class ReportsController extends Controller {
      */
     @Example<ReportsResponse>({
         status: APIStatus.Success,
-        total: 20,
+        total: 18,
         reports: [
             {
-                id: "0c4dd21b-54bc-4e51-bed7-a7fd1ade00fe",
-                reason: "Actual sexiest beeper 🤤",
-                reportedId: "22192b90-54f8-49b5-9dcf-26049454716b",
-                reporterId: "de623bd0-c000-4f74-a342-2620da1c6e9f",
-                timestamp: 1603395053099,
-                adminNotes: "Guy was mad at other guy for smoking weed in his Prius",
-                handled: false,
-                handledBy: null
-            },
-            {
-                id: "c5008c11-d7ea-4f69-9b42-6698237d15bb",
-                reason: "hhgfh",
-                reportedId: "22192b90-54f8-49b5-9dcf-26049454716b",
-                reporterId: "ca34cc7b-de97-40b7-a1ab-148f6c43d073",
-                timestamp: 1607803770171,
-                adminNotes: "Guy was mad at other guy for drinking a Whiteclaw in his F250",
-                handled: true,
-                handledBy: "22192b90-54f8-49b5-9dcf-26049454716b"
+                report: {
+                    adminNotes: null,
+                    handled: false,
+                    handledBy: null,
+                    id: "540ad73c-875a-4ac9-b067-b9d7b02eccf9",
+                    reason: "This is a test report after lots of changes recently!!",
+                    reportedId: "22192b90-54f8-49b5-9dcf-26049454716b",
+                    reporterId: "ca34cc7b-de97-40b7-a1ab-148f6c43d073",
+                    timestamp: 1608178391732
+                },
+                reported: {
+                    first: "Banks",
+                    id: "22192b90-54f8-49b5-9dcf-26049454716b",
+                    last: "Nussman",
+                    photoUrl: "https://ridebeepapp.s3.amazonaws.com/images/22192b90-54f8-49b5-9dcf-26049454716b-1608086704764.jpg",
+                    username: "banks"
+                },
+                reporter: {
+                    first: "Test",
+                    id: "ca34cc7b-de97-40b7-a1ab-148f6c43d073",
+                    last: "User",
+                    photoUrl: "https://ridebeepapp.s3.amazonaws.com/images/ca34cc7b-de97-40b7-a1ab-148f6c43d073-1607039319321.jpg",
+                    username: "test"
+                }
             }
         ]
     })
