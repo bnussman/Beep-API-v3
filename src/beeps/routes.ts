@@ -5,6 +5,7 @@ import * as Sentry from "@sentry/node";
 import * as r from 'rethinkdb';
 import { BeepEntry, BeepResponse, BeepsResponse } from './beeps';
 import database from '../utils/db';
+import { withouts } from '../utils/config';
 
 @Tags("beeps")
 @Route("beeps")
@@ -63,18 +64,87 @@ export class BeepsController extends Controller {
 
             if (offset) {
                 if (show) {
-                    cursor = await r.table("beeps").orderBy(r.desc('timeEnteredQueue')).slice(offset, offset + show).run((await database.getConn()));
+                    cursor = await r.table("beeps")
+                        //@ts-ignore
+                        .eqJoin("riderid", r.table("users")).without({ right: { ...withouts } })
+                        //@ts-ignore
+                        .map((doc) => ({
+                            beep: doc("left"),
+                            rider: doc("right")
+                        }))
+                        //@ts-ignore
+                        .eqJoin(r.row("beep")("beepersid"), r.table("users")).without({ right: { ...withouts } })
+                        //@ts-ignore
+                        .map((doc) => ({
+                            beep: doc("left")("beep"),
+                            rider: doc("left")("rider"),
+                            beeper: doc("right")
+                        }))
+                        //@ts-ignore
+                        .orderBy(r.desc(r.row('beep')('timeEnteredQueue'))).slice(offset, offset + show).run((await database.getConn()));
                 }
                 else {
-                    cursor = await r.table("beeps").orderBy(r.desc('timeEnteredQueue')).slice(offset).run((await database.getConn()));
+                    cursor = await r.table("beeps")
+                        //@ts-ignore
+                        .eqJoin("riderid", r.table("users")).without({ right: { ...withouts } })
+                        //@ts-ignore
+                        .map((doc) => ({
+                            beep: doc("left"),
+                            rider: doc("right")
+                        }))
+                        //@ts-ignore
+                        .eqJoin(r.row("beep")("beepersid"), r.table("users")).without({ right: { ...withouts } })
+                        //@ts-ignore
+                        .map((doc) => ({
+                            beep: doc("left")("beep"),
+                            rider: doc("left")("rider"),
+                            beeper: doc("right")
+                        }))
+                        //@ts-ignore
+                        .orderBy(r.desc(r.row('beep')('timeEnteredQueue'))).slice(offset).run((await database.getConn()));
                 }
             }
             else {
                 if (show) {
-                    cursor = await r.table("beeps").orderBy(r.desc('timeEnteredQueue')).limit(show).run((await database.getConn()));
+                    cursor = await r.table("beeps")
+                        //@ts-ignore
+                        .eqJoin("riderid", r.table("users")).without({ right: {password: true}})
+                        //@ts-ignore
+                        .map((doc) => ({
+                            beep: doc("left"),
+                            rider: doc("right")
+                        }))
+                        //@ts-ignore
+                        .eqJoin(r.row("beep")("beepersid"), r.table("users")).without({ right: { ...withouts } })
+                        //@ts-ignore
+                        .map((doc) => ({
+                            beep: doc("left")("beep"),
+                            rider: doc("left")("rider"),
+                            beeper: doc("right")
+                        }))
+                        //@ts-ignore
+                        .orderBy(r.desc(r.row('beep')('timeEnteredQueue'))).limit(show).run((await database.getConn()));
                 }
                 else {
-                    cursor = await r.table("beeps").orderBy(r.desc('timeEnteredQueue')).run((await database.getConn()));
+                    cursor = await r.table("beeps")
+                        //@ts-ignore
+                        .eqJoin("riderid", r.table("users")).without({ right: { ...withouts} })
+                        //@ts-ignore
+                        .map((doc) => ({
+                            beep: doc("left"),
+                            rider: doc("right")
+                        }))
+                        //@ts-ignore
+                        .eqJoin(r.row("beep")("beepersid"), r.table("users")).without({ right: { ...withouts } })
+                        //@ts-ignore
+                        .map((doc) => ({
+                            beep: doc("left")("beep"),
+                            rider: doc("left")("rider"),
+                            beeper: doc("right")
+                        }))
+
+                        //@ts-ignore
+                        .orderBy(r.desc(r.row('beep')('timeEnteredQueue'))).run((await database.getConn()));
                 }
             }
 
@@ -89,6 +159,7 @@ export class BeepsController extends Controller {
             };
         }
         catch (error) {
+            console.log(error);
             Sentry.captureException(error);
             this.setStatus(500);
             return new APIResponse(APIStatus.Error, "Unable to get reports list");
@@ -138,7 +209,5 @@ export class BeepsController extends Controller {
             this.setStatus(500);
             return new APIResponse(APIStatus.Error, error);
         }
-
     }
-
 }

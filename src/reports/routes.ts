@@ -7,7 +7,7 @@ import { Response, Controller, Request, Post, Body, Route, Example, Security, Ta
 import { APIStatus, APIResponse } from "../utils/Error";
 import { Report, ReportResponse, ReportsResponse, ReportUserParams, UpdateReportParams } from "../reports/reports";
 import { getNumReports } from "./helpers";
-import { getUserFromId } from '../auth/helpers';
+import { withouts } from '../utils/config';
 
 @Tags("Reports")
 @Route("reports")
@@ -121,34 +121,94 @@ export class ReportsController extends Controller {
 
             if (offset) {
                 if (show) {
-                    cursor = await r.table("userReports").orderBy(r.desc('timestamp')).slice(offset, offset + show).run((await database.getConn()));
+                    cursor = await r.table("userReports")
+                        //@ts-ignore
+                        .eqJoin("reporterId", r.table("users")).without({ right: { ...withouts} })
+                        //@ts-ignore
+                        .map((doc) => ({
+                            report: doc("left"),
+                            reporter: doc("right")
+                        }))
+                        //@ts-ignore
+                        .eqJoin(r.row("report")("reportedId"), r.table("users")).without({ right: { ...withouts } })
+                        //@ts-ignore
+                        .map((doc) => ({
+                            report: doc("left")("report"),
+                            reporter: doc("left")("reporter"),
+                            reported: doc("right")
+                        }))
+
+                        //@ts-ignore
+                        .orderBy(r.desc(r.row("report")("timestamp"))).slice(offset, offset + show).run((await database.getConn()));
                 }
                 else {
-                    cursor = await r.table("userReports").orderBy(r.desc('timestamp')).slice(offset).run((await database.getConn()));
+                    cursor = await r.table("userReports")
+                        //@ts-ignore
+                        .eqJoin("reporterId", r.table("users")).without({ right: { ...withouts} })
+                        //@ts-ignore
+                        .map((doc) => ({
+                            report: doc("left"),
+                            reporter: doc("right")
+                        }))
+                        //@ts-ignore
+                        .eqJoin(r.row("report")("reportedId"), r.table("users")).without({ right: { ...withouts } })
+                        //@ts-ignore
+                        .map((doc) => ({
+                            report: doc("left")("report"),
+                            reporter: doc("left")("reporter"),
+                            reported: doc("right")
+                        }))
+
+                        //@ts-ignore
+                        .orderBy(r.desc(r.row("report")("timestamp"))).slice(offset).run((await database.getConn()));
                 }
             }
             else {
                 if (show) {
-                    cursor = await r.table("userReports").orderBy(r.desc('timestamp')).limit(show).run((await database.getConn()));
+                    cursor = await r.table("userReports")
+                        //@ts-ignore
+                        .eqJoin("reporterId", r.table("users")).without({ right: { ...withouts} })
+                        //@ts-ignore
+                        .map((doc) => ({
+                            report: doc("left"),
+                            reporter: doc("right")
+                        }))
+                        //@ts-ignore
+                        .eqJoin(r.row("report")("reportedId"), r.table("users")).without({ right: { ...withouts } })
+                        //@ts-ignore
+                        .map((doc) => ({
+                            report: doc("left")("report"),
+                            reporter: doc("left")("reporter"),
+                            reported: doc("right")
+                        }))
+
+                        //@ts-ignore
+                        .orderBy(r.desc(r.row("report")("timestamp"))).limit(show).run((await database.getConn()));
                 }
                 else {
-                    cursor = await r.table("userReports").orderBy(r.desc('timestamp')).run((await database.getConn()));
+                    cursor = await r.table("userReports")
+                        //@ts-ignore
+                        .eqJoin("reporterId", r.table("users")).without({ right: { ...withouts} })
+                        //@ts-ignore
+                        .map((doc) => ({
+                            report: doc("left"),
+                            reporter: doc("right")
+                        }))
+                        //@ts-ignore
+                        .eqJoin(r.row("report")("reportedId"), r.table("users")).without({ right: { ...withouts } })
+                        //@ts-ignore
+                        .map((doc) => ({
+                            report: doc("left")("report"),
+                            reporter: doc("left")("reporter"),
+                            reported: doc("right")
+                        }))
+
+                        //@ts-ignore
+                        .orderBy(r.desc(r.row("report")("timestamp"))).run((await database.getConn()));
                 }
             }
 
             const result = await cursor.toArray();
-
-            /*
-            for (let i = 0; i < result.length; i++) {
-                const reporterUserData = await getUserFromId(result[i].reporterId, "first", "last");
-                const reportedUserData = await getUserFromId(result[i].reportedId, "first", "last");
-
-                delete result[i].reporterId;
-                delete result[i].reportedId;
-
-                result[i] = { ...result[i], reporter: reporterUserData, reported: reportedUserData };
-            }
-            */
 
             this.setStatus(200);
 
@@ -159,6 +219,7 @@ export class ReportsController extends Controller {
             };
         }
         catch (error) {
+            console.log(error);
             Sentry.captureException(error);
             this.setStatus(500);
             return new APIResponse(APIStatus.Error, "Unable to get reports list");
