@@ -10,7 +10,8 @@ import { BeepTableResult, UserPluckResult } from '../types/beep';
 import * as Sentry from "@sentry/node";
 import { APIStatus, APIResponse } from "../utils/Error";
 import { Response, Body, Controller, Post, Route, Security, Tags, Request, Delete, Example, Get, Put, Patch } from 'tsoa';
-import { BeeperHistoryResult, ChangePasswordParams, EditAccountParams, RiderHistoryResult, UpdatePushTokenParams, VerifyAccountParams, VerifyAccountResult } from "./account";
+import { BeeperHistoryResult, ChangePasswordParams, EditAccountParams, RiderHistoryResult, RiderHistoryWithBeeperData, UpdatePushTokenParams, VerifyAccountParams, VerifyAccountResult } from "./account";
+import { withouts } from '../utils/config';
 
 @Tags("Account")
 @Route("account")
@@ -355,19 +356,30 @@ export class AccountController extends Controller {
      * @returns {RiderHistoryResult | APIResponse}
      */
     @Example<RiderHistoryResult>({
-        status: APIStatus.Success, 
-        data: [{
-            beepersid: "ad072e2d-73af-4292-8e70-41c5a47bada5",
-            destination: "Tasty",
-            groupSize: 1,
-            id: "b500bb45-094e-437c-887b-e6b6d815ba12",
-            isAccepted: true,
-            origin: "241 Marich Ln Marich Ln Boone, NC 28607",
-            riderid: "22192b90-54f8-49b5-9dcf-26049454716b",
-            state: 3,
-            timeEnteredQueue: 1603318791872,
-            riderName: "Banks Nussman"
-        }]
+        status: APIStatus.Success,
+        data: [
+            {
+                beep: {
+                    beepersid: "ca34cc7b-de97-40b7-a1ab-148f6c43d073",
+                    destination: "Hoey Hall",
+                    doneTime: 1608484088896,
+                    groupSize: 1,
+                    id: "58be9754-d973-42a7-ab6c-682ff41d7da9",
+                    isAccepted: true,
+                    origin: "5617 Camelot Dr Camelot Dr Charlotte, NC 28270",
+                    riderid: "22192b90-54f8-49b5-9dcf-26049454716b",
+                    state: 3,
+                    timeEnteredQueue: 1608484062417
+                },
+                beeper: {
+                    first: "Test",
+                    id: "ca34cc7b-de97-40b7-a1ab-148f6c43d073",
+                    last: "User",
+                    photoUrl: "https://ridebeepapp.s3.amazonaws.com/images/ca34cc7b-de97-40b7-a1ab-148f6c43d073-1607039319321.jpg",
+                    username: "test"
+                }
+            }
+        ]
     })
     @Response<APIResponse>(500, "Server Error", {
         status: APIStatus.Error,
@@ -377,27 +389,20 @@ export class AccountController extends Controller {
     @Get("history/rider")
     public async getRideHistory(@Request() request: express.Request): Promise<APIResponse | RiderHistoryResult> {
         try {
-            const cursor: r.Cursor = await r.table("beeps").filter({ riderid: request.user.id }).orderBy(r.desc("timeEnteredQueue")).run((await database.getConn()));
+            const cursor: r.Cursor = await r.table("beeps")
+                .filter({ riderid: request.user.id })
+                //@ts-ignore
+                .eqJoin('beepersid', r.table("users")).without({ right: { ...withouts } })
+                //@ts-ignore
+                .map((doc) => ({
+                    beep: doc("left"),
+                    beeper: doc("right")
+                }))
+                //@ts-ignore
+                .orderBy(r.desc(r.row('beep')('timeEnteredQueue')))
+                .run((await database.getConn()));
 
-            const result: BeepTableResult[] = await cursor.toArray();
-
-            for (let i = 0; i < result.length; i++) {
-                let user = {
-                    first: "Deleted",
-                    last: "User"
-                };
-
-                const userData = await getUserFromId(result[i].beepersid, "first", "last");
-
-                if (userData && userData.first != undefined && userData.last != undefined) {
-                    user = {
-                        first: userData.first,
-                        last: userData.last
-                    };
-                }
-
-                result[i].beepersName = user.first + " " + user.last;
-            }
+            const result: RiderHistoryWithBeeperData[] = await cursor.toArray();
             
             this.setStatus(200);
             return {
@@ -406,6 +411,7 @@ export class AccountController extends Controller {
             };
         }
         catch (error) {
+            console.log(error);
             Sentry.captureException(error);
             this.setStatus(500);
             return new APIResponse(APIStatus.Error, "Unable to get rider history");
@@ -418,18 +424,29 @@ export class AccountController extends Controller {
      */
     @Example<BeeperHistoryResult>({
         status: APIStatus.Success,
-        data: [{
-            beepersid: "ad072e2d-73af-4292-8e70-41c5a47bada5",
-            destination: "Hoey Hall",
-            groupSize: 1,
-            id: "b500bb45-094e-437c-887b-e6b6d815ba12",
-            isAccepted: true,
-            origin: "241 Marich Ln Marich Ln Boone, NC 28607",
-            riderid: "22192b90-54f8-49b5-9dcf-26049454716b",
-            state: 3,
-            timeEnteredQueue: 1603318791872,
-            riderName: "Banks Nussman"
-        }]
+        data: [
+            {
+                beep: {
+                    beepersid: "22192b90-54f8-49b5-9dcf-26049454716b",
+                    destination: "5617 Camelot Dr. Chatlotte, NC",
+                    doneTime: 1608504258230,
+                    groupSize: 3,
+                    id: "9f109d79-d494-4e81-91c8-20cc95edc6f8",
+                    isAccepted: true,
+                    origin: "1586-B U.S. Hwy 421 S U.S. Highway 421 South Boone, North Carolina 28607",
+                    riderid: "ca34cc7b-de97-40b7-a1ab-148f6c43d073",
+                    state: 3,
+                    timeEnteredQueue: 1608504246661
+                },
+                rider: {
+                    first: "Test",
+                    id: "ca34cc7b-de97-40b7-a1ab-148f6c43d073",
+                    last: "User",
+                    photoUrl: "https://ridebeepapp.s3.amazonaws.com/images/ca34cc7b-de97-40b7-a1ab-148f6c43d073-1607039319321.jpg",
+                    username: "test"
+                }
+            }
+        ]
     })
     @Response<APIResponse>(500, "Server Error", {
         status: APIStatus.Error,
@@ -439,27 +456,20 @@ export class AccountController extends Controller {
     @Get("history/beeper")
     public async getBeepHistory(@Request() request: express.Request): Promise<APIResponse | BeeperHistoryResult> {
         try {
-            const cursor: r.Cursor = await r.table("beeps").filter({ beepersid: request.user.id }).orderBy(r.desc("timeEnteredQueue")).run((await database.getConn()));
+            const cursor: r.Cursor = await r.table("beeps")
+                .filter({ beepersid: request.user.id })
+                //@ts-ignore
+                .eqJoin('riderid', r.table("users")).without({ right: { ...withouts } })
+                //@ts-ignore
+                .map((doc) => ({
+                    beep: doc("left"),
+                    rider: doc("right")
+                }))
+                //@ts-ignore
+                .orderBy(r.desc(r.row('beep')('timeEnteredQueue')))
+                .run((await database.getConn()));
 
             const result = await cursor.toArray();
-
-            for (let i = 0; i < result.length; i++) {
-                let user = {
-                    first: "Deleted",
-                    last: "User"
-                };
-
-                const userData = await getUserFromId(result[i].riderid, "first", "last");
-
-                if (userData && userData.first != undefined && userData.last != undefined) {
-                    user = {
-                        first: userData.first,
-                        last: userData.last
-                    };
-                }
-
-                result[i].riderName = user.first + " " + user.last;
-            }
             
             this.setStatus(200);
             return {
