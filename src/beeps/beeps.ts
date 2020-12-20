@@ -38,6 +38,11 @@ export interface BeepsResponse {
     beeps: BeepEntry[]
 }
 
+export interface BeepResponse {
+    status: APIStatus;
+    beep: BeepEntry;
+}
+
 /**
  * Beep Entry Example
  *

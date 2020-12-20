@@ -230,9 +230,13 @@ export class ReportsController extends Controller {
             timestamp: 1607803770171
         }
     })
+    @Response<APIResponse>(404, "Not found", {
+        status: APIStatus.Error,
+        message: "This report entry does not exist"
+    })
     @Response<APIResponse>(500, "Server Error", {
         status: APIStatus.Error,
-        message: "Unable to edit report"
+        message: "Unable to get report"
     })
     @Security("token", ["admin"])
     @Get("{id}")
@@ -240,7 +244,10 @@ export class ReportsController extends Controller {
         try {
             const result = await r.table("userReports").get(id).run((await database.getConn())) as Report;
 
-            console.log(result);
+            if (!result) {
+                this.setStatus(404);
+                return new APIResponse(APIStatus.Error, "This report entry does not exist");
+            }
 
             return {
                 status: APIStatus.Success, 

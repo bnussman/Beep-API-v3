@@ -1,9 +1,9 @@
 import { APIStatus, APIResponse } from '../utils/Error';
-import { Get, Response, Tags, Route, Controller, Security, Query, Example } from 'tsoa';
+import { Get, Response, Tags, Route, Controller, Security, Query, Example, Path } from 'tsoa';
 import { getNumBeeps } from './helpers';
 import * as Sentry from "@sentry/node";
 import * as r from 'rethinkdb';
-import { BeepsResponse } from './beeps';
+import { BeepEntry, BeepResponse, BeepsResponse } from './beeps';
 import database from '../utils/db';
 
 @Tags("beeps")
@@ -93,6 +93,52 @@ export class BeepsController extends Controller {
             this.setStatus(500);
             return new APIResponse(APIStatus.Error, "Unable to get reports list");
         }
+    }
+
+    /**
+     * Get a beep entry
+     *
+     * An admin can get the details of a single beep
+     *
+     * @returns {BeepResponse | APIResponse}
+     */
+    /*
+    @Example<BeepResponse>({
+        status: APIStatus.Success,
+        beep: {
+        }
+    })
+    */
+    @Response<APIResponse>(404, "Not found", {
+        status: APIStatus.Error,
+        message: "This beep entry does not exist"
+    })
+    @Response<APIResponse>(500, "Server Error", {
+        status: APIStatus.Error,
+        message: "Unable to get beep entry"
+    })
+    @Security("token", ["admin"])
+    @Get("{id}")
+    public async getBeep(@Path() id: string): Promise<BeepResponse | APIResponse> {
+        try {
+            const result = await r.table("beeps").get(id).run((await database.getConn())) as BeepEntry;
+
+            if (!result) {
+                this.setStatus(404);
+                return new APIResponse(APIStatus.Error, "This beep entry does not exist");
+            }
+
+            return {
+                status: APIStatus.Success, 
+                beep: result
+            };
+        }
+        catch (error) {
+            Sentry.captureException(error);
+            this.setStatus(500);
+            return new APIResponse(APIStatus.Error, error);
+        }
+
     }
 
 }
