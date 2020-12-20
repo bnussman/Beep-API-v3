@@ -5,7 +5,7 @@ import { Validator } from "node-input-validator";
 import * as Sentry from "@sentry/node";
 import { Response, Controller, Request, Post, Body, Route, Example, Security, Tags, Get, Query, Patch, Path } from 'tsoa';
 import { APIStatus, APIResponse } from "../utils/Error";
-import { Report, ReportsResponse, ReportUserParams, UpdateReportParams } from "../reports/reports";
+import { Report, ReportResponse, ReportsResponse, ReportUserParams, UpdateReportParams } from "../reports/reports";
 import { getNumReports } from "./helpers";
 import { getUserFromId } from '../auth/helpers';
 
@@ -206,6 +206,51 @@ export class ReportsController extends Controller {
             Sentry.captureException(error);
             this.setStatus(500);
             return new APIResponse(APIStatus.Error, "Unable to edit report");
+        }
+
+    }
+
+    /**
+     * Get a report entry
+     *
+     * An admin can get the details of a single report
+     *
+     * @returns {ReportResponse | APIResponse}
+     */
+    @Example<ReportResponse>({
+        status: APIStatus.Success,
+        report: {
+            adminNotes: "I called the guy and took care of it. ",
+            handled: true,
+            handledBy: "22192b90-54f8-49b5-9dcf-26049454716b",
+            id: "c5008c11-d7ea-4f69-9b42-6698237d15bb",
+            reason: "hhgfh",
+            reportedId: "22192b90-54f8-49b5-9dcf-26049454716b",
+            reporterId: "ca34cc7b-de97-40b7-a1ab-148f6c43d073",
+            timestamp: 1607803770171
+        }
+    })
+    @Response<APIResponse>(500, "Server Error", {
+        status: APIStatus.Error,
+        message: "Unable to edit report"
+    })
+    @Security("token", ["admin"])
+    @Get("{id}")
+    public async getReport(@Path() id: string): Promise<ReportResponse | APIResponse> {
+        try {
+            const result = await r.table("userReports").get(id).run((await database.getConn())) as Report;
+
+            console.log(result);
+
+            return {
+                status: APIStatus.Success, 
+                report: result
+            };
+        }
+        catch (error) {
+            Sentry.captureException(error);
+            this.setStatus(500);
+            return new APIResponse(APIStatus.Error, error);
         }
 
     }

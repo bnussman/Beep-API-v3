@@ -50,6 +50,28 @@ export interface ReportsResponse {
 }
 
 /**
+ * Example of a get report response
+ *
+ * @exmaple {
+ *    "status": "success",
+ *    "report": {
+ *        "adminNotes": "I called the guy and took care of it. ",
+ *        "handled": true,
+ *        "handledBy": "22192b90-54f8-49b5-9dcf-26049454716b",
+ *        "id": "c5008c11-d7ea-4f69-9b42-6698237d15bb",
+ *        "reason": "hhgfh",
+ *        "reportedId": "22192b90-54f8-49b5-9dcf-26049454716b",
+ *        "reporterId": "ca34cc7b-de97-40b7-a1ab-148f6c43d073",
+ *        "timestamp": 1607803770171
+ *    }
+ * }
+ */
+export interface ReportResponse {
+    status: APIStatus;
+    report: Report;
+}
+
+/**
  * Single Report
  *
  * @example {
