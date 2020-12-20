@@ -63,18 +63,18 @@ export class BeepsController extends Controller {
 
             if (offset) {
                 if (show) {
-                    cursor = await r.table("beeps").orderBy(r.desc('timeEnteredQueue')).slice(offset, offset + show).run((await database.getConnHistory()));
+                    cursor = await r.table("beeps").orderBy(r.desc('timeEnteredQueue')).slice(offset, offset + show).run((await database.getConn()));
                 }
                 else {
-                    cursor = await r.table("beeps").orderBy(r.desc('timeEnteredQueue')).slice(offset).run((await database.getConnHistory()));
+                    cursor = await r.table("beeps").orderBy(r.desc('timeEnteredQueue')).slice(offset).run((await database.getConn()));
                 }
             }
             else {
                 if (show) {
-                    cursor = await r.table("beeps").orderBy(r.desc('timeEnteredQueue')).limit(show).run((await database.getConnHistory()));
+                    cursor = await r.table("beeps").orderBy(r.desc('timeEnteredQueue')).limit(show).run((await database.getConn()));
                 }
                 else {
-                    cursor = await r.table("beeps").orderBy(r.desc('timeEnteredQueue')).run((await database.getConnHistory()));
+                    cursor = await r.table("beeps").orderBy(r.desc('timeEnteredQueue')).run((await database.getConn()));
                 }
             }
 

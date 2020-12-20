@@ -4,7 +4,7 @@ import * as Sentry from "@sentry/node";
 
 export async function getNumBeeps(): Promise<number> {
     try {
-        return r.table("beeps").count().run((await database.getConnHistory()));
+        return r.table("beeps").count().run((await database.getConn()));
     }
     catch (error) {
         Sentry.captureException(error);

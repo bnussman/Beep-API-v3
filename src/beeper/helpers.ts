@@ -46,7 +46,7 @@ export async function getPersonalInfo (userid: string): Promise<UserPluckResult>
  */
 export async function storeBeepEvent (event: BeepTableResult): Promise<void> {
     try {
-        r.table("beeps").insert(event).run((await database.getConnHistory()));
+        r.table("beeps").insert(event).run((await database.getConn()));
     }
     catch (error) {
         Sentry.captureException(error);

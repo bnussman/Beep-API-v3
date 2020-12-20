@@ -8,14 +8,14 @@ class Database {
     private port: number;
     public conn: Connection | null;
     public connQueues: Connection | null;
-    public connHisory: Connection | null;
+    public connLocations: Connection | null;
 
     constructor() {
         this.host = "192.168.1.116";
         this.port = 28015;
         this.conn = null;
         this.connQueues = null;
-        this.connHisory = null;
+        this.connLocations = null;
     }
 
     public async connect(run?: () => void): Promise<void> {
@@ -23,7 +23,7 @@ class Database {
             console.log("Connecting to database...");
             this.conn = await r.connect(this.getConnectionOptions("beep"));
             this.connQueues = await r.connect(this.getConnectionOptions("beepQueues"));
-            this.connHisory = await r.connect(this.getConnectionOptions("beepHistory"));
+            this.connLocations = await r.connect(this.getConnectionOptions("beepLocations"));
             if (run) run();
         } 
         catch (error) {
@@ -36,7 +36,7 @@ class Database {
     public async close(): Promise<void> {
         await this.conn?.close();
         await this.connQueues?.close();
-        await this.connHisory?.close();
+        await this.connLocations?.close();
     }
 
     private getConnectionOptions(databaseName: string): ConnectionOptions {
@@ -117,13 +117,13 @@ class Database {
         return this.connQueues;
     }
 
-    public async getConnHistory(): Promise<Connection> {
-        if (this.connHisory == null) {
+    public async getConnLocations(): Promise<Connection> {
+        if (this.connLocations == null) {
             Sentry.captureMessage("No connection to RethinkDB");
 
-            this.connHisory = await r.connect(this.getConnectionOptions("beepHistory"));
+            this.connLocations = await r.connect(this.getConnectionOptions("beepLocations"));
 
-            if (this.connHisory.open) {
+            if (this.connLocations.open) {
                 Sentry.captureMessage("Succesfully reconnected to RethinkDB");
             }
             else {
@@ -131,12 +131,12 @@ class Database {
             }
         }
 
-        if (!this.connHisory.open) {
+        if (!this.connLocations.open) {
             Sentry.captureMessage("Connection to RethinkDB is not open");
 
-            this.connHisory = await r.connect(this.getConnectionOptions("beepHistory"));
+            this.connLocations = await r.connect(this.getConnectionOptions("beepLocations"));
 
-            if (this.connHisory.open) {
+            if (this.connLocations.open) {
                 Sentry.captureMessage("Succesfully reconnected to RethinkDB");
             }
             else {
@@ -144,12 +144,12 @@ class Database {
             }
         }
 
-        if (this.connHisory == null || !this.connHisory.open) {
+        if (this.connLocations == null || !this.connLocations.open) {
             Sentry.captureException("Unable to establish connection to RethinkDB");
             throw new Error("Unable to establish connection to RethinkDB");
         }
 
-        return this.connHisory;
+        return this.connLocations;
     }
 }
 

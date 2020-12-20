@@ -377,7 +377,7 @@ export class AccountController extends Controller {
     @Get("history/rider")
     public async getRideHistory(@Request() request: express.Request): Promise<APIResponse | RiderHistoryResult> {
         try {
-            const cursor: r.Cursor = await r.table("beeps").filter({ riderid: request.user.id }).orderBy(r.desc("timeEnteredQueue")).run((await database.getConnHistory()));
+            const cursor: r.Cursor = await r.table("beeps").filter({ riderid: request.user.id }).orderBy(r.desc("timeEnteredQueue")).run((await database.getConn()));
 
             const result: BeepTableResult[] = await cursor.toArray();
 
@@ -439,7 +439,7 @@ export class AccountController extends Controller {
     @Get("history/beeper")
     public async getBeepHistory(@Request() request: express.Request): Promise<APIResponse | BeeperHistoryResult> {
         try {
-            const cursor: r.Cursor = await r.table("beeps").filter({ beepersid: request.user.id }).orderBy(r.desc("timeEnteredQueue")).run((await database.getConnHistory()));
+            const cursor: r.Cursor = await r.table("beeps").filter({ beepersid: request.user.id }).orderBy(r.desc("timeEnteredQueue")).run((await database.getConn()));
 
             const result = await cursor.toArray();
 
