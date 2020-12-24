@@ -7,6 +7,9 @@ import { APIStatus, APIResponse } from "../utils/Error";
 import { DetailedUser, EditUserParams, UserResult, UsersResult } from "../users/users";
 import { deleteUser } from '../account/helpers';
 import { getNumUsers } from './helpers';
+import { BeeperHistoryResult, RiderHistoryResult, RiderHistoryWithBeeperData } from '../account/account';
+import { hasUserLevel } from '../auth/helpers';
+import { withouts } from '../utils/config';
 
 @Tags("Users")
 @Route("users")
@@ -210,6 +213,151 @@ export class UsersController extends Controller {
             Sentry.captureException(error);
             this.setStatus(500);
             return new APIResponse(APIStatus.Error, "Unable to get users list");
+        }
+    }
+
+    /**
+     * Get all of the rides of this user in the history table
+     * @returns {RiderHistoryResult | APIResponse}
+     */
+    @Example<RiderHistoryResult>({
+        status: APIStatus.Success,
+        data: [
+            {
+                beep: {
+                    beepersid: "ca34cc7b-de97-40b7-a1ab-148f6c43d073",
+                    destination: "Hoey Hall",
+                    doneTime: 1608484088896,
+                    groupSize: 1,
+                    id: "58be9754-d973-42a7-ab6c-682ff41d7da9",
+                    isAccepted: true,
+                    origin: "5617 Camelot Dr Camelot Dr Charlotte, NC 28270",
+                    riderid: "22192b90-54f8-49b5-9dcf-26049454716b",
+                    state: 3,
+                    timeEnteredQueue: 1608484062417
+                },
+                beeper: {
+                    first: "Test",
+                    id: "ca34cc7b-de97-40b7-a1ab-148f6c43d073",
+                    last: "User",
+                    photoUrl: "https://ridebeepapp.s3.amazonaws.com/images/ca34cc7b-de97-40b7-a1ab-148f6c43d073-1607039319321.jpg",
+                    username: "test"
+                }
+            }
+        ]
+    })
+    @Response<APIResponse>(500, "Server Error", {
+        status: APIStatus.Error,
+        message: "Unable to get rider history"
+    })
+    @Security("token")
+    @Get("{id}/history/rider")
+    public async getRideHistory(@Request() request: express.Request, @Path() id: string): Promise<APIResponse | RiderHistoryResult> {
+        if (request.user.id != id) {
+            const isAdmin = await hasUserLevel(request.user.id, 1);
+
+            if (!isAdmin) return new APIResponse(APIStatus.Error, "You must be an admin to view other peoples history");
+        }
+
+        try {
+            const cursor: r.Cursor = await r.table("beeps")
+                .filter({ riderid: id })
+                //@ts-ignore
+                .eqJoin('beepersid', r.table("users")).without({ right: { ...withouts } })
+                //@ts-ignore
+                .map((doc) => ({
+                    beep: doc("left"),
+                    beeper: doc("right")
+                }))
+                //@ts-ignore
+                .orderBy(r.desc(r.row('beep')('timeEnteredQueue')))
+                .run((await database.getConn()));
+
+            const result: RiderHistoryWithBeeperData[] = await cursor.toArray();
+            
+            this.setStatus(200);
+            return {
+                status: APIStatus.Success, 
+                data: result
+            };
+        }
+        catch (error) {
+            console.log(error);
+            Sentry.captureException(error);
+            this.setStatus(500);
+            return new APIResponse(APIStatus.Error, "Unable to get rider history");
+        }
+    }
+
+    /**
+     * Get all of the beeps of this user in the history table
+     * @returns {BeeperHistoryResult | APIResponse}
+     */
+    @Example<BeeperHistoryResult>({
+        status: APIStatus.Success,
+        data: [
+            {
+                beep: {
+                    beepersid: "22192b90-54f8-49b5-9dcf-26049454716b",
+                    destination: "5617 Camelot Dr. Chatlotte, NC",
+                    doneTime: 1608504258230,
+                    groupSize: 3,
+                    id: "9f109d79-d494-4e81-91c8-20cc95edc6f8",
+                    isAccepted: true,
+                    origin: "1586-B U.S. Hwy 421 S U.S. Highway 421 South Boone, North Carolina 28607",
+                    riderid: "ca34cc7b-de97-40b7-a1ab-148f6c43d073",
+                    state: 3,
+                    timeEnteredQueue: 1608504246661
+                },
+                rider: {
+                    first: "Test",
+                    id: "ca34cc7b-de97-40b7-a1ab-148f6c43d073",
+                    last: "User",
+                    photoUrl: "https://ridebeepapp.s3.amazonaws.com/images/ca34cc7b-de97-40b7-a1ab-148f6c43d073-1607039319321.jpg",
+                    username: "test"
+                }
+            }
+        ]
+    })
+    @Response<APIResponse>(500, "Server Error", {
+        status: APIStatus.Error,
+        message: "Unable to get beeper history"
+    })
+    @Security("token")
+    @Get("{id}/history/beeper")
+    public async getBeepHistory(@Request() request: express.Request, @Path() id: string): Promise<APIResponse | BeeperHistoryResult> {
+        if (request.user.id != id) {
+            const isAdmin = await hasUserLevel(request.user.id, 1);
+
+            if (!isAdmin) return new APIResponse(APIStatus.Error, "You must be an admin to view other peoples history");
+        }
+
+        try {
+            const cursor: r.Cursor = await r.table("beeps")
+                .filter({ beepersid: id })
+                //@ts-ignore
+                .eqJoin('riderid', r.table("users")).without({ right: { ...withouts } })
+                //@ts-ignore
+                .map((doc) => ({
+                    beep: doc("left"),
+                    rider: doc("right")
+                }))
+                //@ts-ignore
+                .orderBy(r.desc(r.row('beep')('timeEnteredQueue')))
+                .run((await database.getConn()));
+
+            const result = await cursor.toArray();
+            
+            this.setStatus(200);
+            return {
+                status: APIStatus.Success, 
+                data: result
+            };
+        }
+        catch (error) {
+            Sentry.captureException(error);
+            this.setStatus(500);
+            return new APIResponse(APIStatus.Error, "Unable to get beeper history");
         }
     }
 }
