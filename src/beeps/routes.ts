@@ -7,7 +7,7 @@ import { BeepEntry, BeepResponse, BeepsResponse } from './beeps';
 import database from '../utils/db';
 import { withouts } from '../utils/config';
 
-@Tags("beeps")
+@Tags("Beeps")
 @Route("beeps")
 export class BeepsController extends Controller {
 

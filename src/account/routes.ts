@@ -6,7 +6,7 @@ import { createVerifyEmailEntryAndSendEmail, getUserFromId } from "../auth/helpe
 import database from '../utils/db';
 import { isEduEmail, getEmail, deleteUser } from './helpers';
 import { Validator } from "node-input-validator";
-import { BeepTableResult, UserPluckResult } from '../types/beep';
+import { UserPluckResult } from '../types/beep';
 import * as Sentry from "@sentry/node";
 import { APIStatus, APIResponse } from "../utils/Error";
 import { Response, Body, Controller, Post, Route, Security, Tags, Request, Delete, Example, Get, Put, Patch } from 'tsoa';
