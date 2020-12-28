@@ -91,7 +91,7 @@ export class AccountController extends Controller {
                 }
                 
                 //calles helper function that will create a db entry for email varification and also send the email
-                createVerifyEmailEntryAndSendEmail(request.user.id, requestBody.email, requestBody.first);
+                //createVerifyEmailEntryAndSendEmail(request.user.id, requestBody.email, requestBody.first);
             }
 
             return new APIResponse(APIStatus.Success, "Successfully edited profile.");
@@ -322,7 +322,7 @@ export class AccountController extends Controller {
         }
 
         //create a new entry with their current email address and send in email
-        await createVerifyEmailEntryAndSendEmail(request.user.id, user.email, user.first);
+        //await createVerifyEmailEntryAndSendEmail(request.user.id, user.email, user.first);
 
         return new APIResponse(APIStatus.Success, "Successfully re-sent varification email to " + user.email);
     }

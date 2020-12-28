@@ -9,6 +9,20 @@ import { initializeSentry } from "./utils/sentry";
 import database from "./utils/db";
 import { Server } from "http";
 import cors from "cors";
+import {EntityManager, EntityRepository, MikroORM} from "@mikro-orm/core";
+import {TokenEntry} from "./entities/TokenEntry";
+import {User} from "./entities/User";
+import {VerifyEmail} from "./entities/VerifyEmail";
+
+const url = `mongodb+srv://banks:${process.env.MONGODB_PASSWORD}@beep.5zzlx.mongodb.net/test?retryWrites=true&w=majority`;
+
+export const BeepORM = {} as {
+    orm: MikroORM,
+    em: EntityManager
+    userRepository: EntityRepository<User>,
+    tokenRepository: EntityRepository<TokenEntry>,
+    verifyEmailRepository: EntityRepository<VerifyEmail>,
+};
 
 export default class BeepAPIServer {
     private app: Application;
@@ -39,7 +53,21 @@ export default class BeepAPIServer {
         this.server?.close();
     }
 
-    private setup(): void {
+    private async setup(): Promise<void> {
+
+        BeepORM.orm = await MikroORM.init({
+            entities: ['./build/src/entities/*.js'],
+            entitiesTs: ['./src/entities/*.ts'],
+            dbName: 'beep',
+            type: 'mongo',
+            clientUrl: url
+        });
+
+        BeepORM.em = BeepORM.orm.em;
+        BeepORM.userRepository = BeepORM.orm.em.getRepository(User);
+        BeepORM.tokenRepository = BeepORM.orm.em.getRepository(TokenEntry);
+        BeepORM.verifyEmailRepository = BeepORM.orm.em.getRepository(VerifyEmail);
+
         this.app.use(cors());
         this.app.use(express.json());
         this.app.use(express.urlencoded({ extended: true, limit: "50mb" }));

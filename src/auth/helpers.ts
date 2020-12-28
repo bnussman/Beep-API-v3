@@ -5,7 +5,11 @@ import database from'../utils/db';
 import * as nodemailer from "nodemailer";
 import { transporter } from "../utils/mailer";
 import * as Sentry from "@sentry/node";
-import { v4 as uuidv4 } from "uuid";
+import { TokenEntry } from '../entities/TokenEntry';
+import { BeepORM } from '../app';
+import { User } from '../entities/User';
+import { VerifyEmail } from '../entities/VerifyEmail';
+import { ObjectId } from '@mikro-orm/mongodb';
 
 /**
  * Generates an authentication token and a token for that token (for offline logouts), stores
@@ -14,44 +18,15 @@ import { v4 as uuidv4 } from "uuid";
  * @param userid a user's ID which is used to associate a token with a userid in our tokens table
  * @return user's id, auth token, and auth token's token to be used by login and sign up
  */
-export async function getToken(userid: string): Promise<TokenData> {
-    //this information will be inserted into the tokens table and returned by this function
-    const document = {
-        'userid': userid,
-        'tokenid': uuidv4()
+export async function getToken(user: User): Promise<TokenData> {
+    const t = new TokenEntry(user);
+    await BeepORM.tokenRepository.persistAndFlush(t);
+
+    return {
+        userid: user.id,
+        tokenid: t.tokenid,
+        token: t.id
     };
-
-    //insert our new auth token into our tokens table
-    try {
-        const result: WriteResult = await r.table("tokens").insert(document).run((await database.getConn()));
-
-        //if nothing was inserted into the tokens table, we know something is wrong
-        if (result.inserted == 0) {
-            Sentry.captureException("Somehow, tokenData was not inserted, this is very bad");
-            return ({
-                'userid': userid,
-                'tokenid': "yikes",
-                'token': "yikes"
-            });
-        }
-
-        const token: string = result.generated_keys[0];
-
-        //return the data we generated
-        return ({
-            'userid': document.userid,
-            'tokenid': document.tokenid,
-            'token': token
-        });
-    } 
-    catch (error) {
-        Sentry.captureException(error);
-        return ({
-            'userid': userid,
-            'tokenid': "yikes",
-            'token': "yikes"
-        });
-    }
 }
 
 /**
@@ -257,7 +232,7 @@ export async function deactivateTokens(userid: string): Promise<void> {
  * @param first string is the user's first name to make the email more personalized
  * @returns void
  */
-export function sendVerifyEmailEmail(email: string, id: string, first: string | undefined): void {
+export function sendVerifyEmailEmail(email: string, id: ObjectId, first: string | undefined): void {
 
     const url: string = process.env.NODE_ENV === "development" ? "https://dev.ridebeep.app" : "https://ridebeep.app";
  
@@ -288,32 +263,17 @@ export function sendVerifyEmailEmail(email: string, id: string, first: string | 
  * @param first is the user's first name so we can make the email more personal
  * @returns void
  */
-export async function createVerifyEmailEntryAndSendEmail(id: string, email: string | undefined, first: string | undefined): Promise<void> {
+export async function createVerifyEmailEntryAndSendEmail(user: User, email: string | undefined, first: string | undefined): Promise<void> {
     if (!email || !first) {
         Sentry.captureException(new Error("Did not create verify email entry or send email due to no email or first name"));
         return;
     }
 
-    //this is what will be inserted into the verifyEmail table
-    const document = {
-        "time": Date.now(),
-        "userid": id,
-        "email": email
-    };
+    const entry = new VerifyEmail(user, email);
+    await BeepORM.verifyEmailRepository.persistAndFlush(entry);
 
-    try {
-        const result: WriteResult = await r.table("verifyEmail").insert(document).run((await database.getConn()));
-
-        //get the generated id from RethinkDB write result because that id is the token the user uses for varification
-        const verifyId: string = result.generated_keys[0];
-
-        //send the email
-        sendVerifyEmailEmail(email, verifyId, first);
-    }
-    catch (error) {
-        //RethinkDB unable to insert into verifyEmail table
-        Sentry.captureException(error);
-    }
+    //send the email
+    sendVerifyEmailEmail(email, entry.id, first);
 }
 
 /**

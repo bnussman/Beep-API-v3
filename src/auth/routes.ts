@@ -3,7 +3,6 @@ import * as r from 'rethinkdb';
 import express from 'express';
 import { Cursor, WriteResult } from 'rethinkdb';
 import database from '../utils/db';
-import { User } from '../types/beep';
 import { sha256 } from 'js-sha256';
 import { getToken, setPushToken, getUserFromEmail, sendResetEmail, deactivateTokens, createVerifyEmailEntryAndSendEmail, doesUserExist } from './helpers';
 import { UserPluckResult } from "../types/beep";
@@ -11,6 +10,9 @@ import { Validator } from "node-input-validator";
 import * as Sentry from "@sentry/node";
 import { ForgotPasswordParams, LoginParams, LoginResponse, LogoutParams, RemoveTokenParams, ResetPasswordParams, SignUpParams } from "./auth";
 import { APIResponse, APIStatus } from '../utils/Error';
+import { wrap } from '@mikro-orm/core';
+import { BeepORM } from '../app';
+import { User } from '../entities/User';
 
 @Tags("Auth")
 @Route("auth")
@@ -77,7 +79,7 @@ export class AuthController extends Controller {
             const cursor: Cursor = await r.table("users").filter({ "username": requestBody.username }).run((await database.getConn()));
 
             try {
-                const result: User = await cursor.next();
+                const result = await cursor.next();
 
                 if (result.password == sha256(requestBody.password)) {
                     //if authenticated, get new auth tokens
@@ -100,8 +102,8 @@ export class AuthController extends Controller {
                         'email': result.email,
                         'phone': result.phone,
                         'venmo': result.venmo,
-                        'token': tokenData.token,
-                        'tokenid': tokenData.tokenid,
+                        'token': tokenData.token.toHexString(),
+                        'tokenid': tokenData.tokenid.toHexString(),
                         'singlesRate': result.singlesRate,
                         'groupRate': result.groupRate,
                         'capacity': result.capacity,
@@ -206,80 +208,37 @@ export class AuthController extends Controller {
             return new APIResponse(APIStatus.Error, "That username is already in use");
         }
 
-        //This is the row that will be inserted into our users RethinkDB table
-        const document = {
+        const user = new User();
+        wrap(user).assign(requestBody);
+        await BeepORM.userRepository.persistAndFlush(user);
+    
+        const tokenData = await getToken(user);
+
+        //because user signed up, create a verify email entry in the db, this function will send the email
+        createVerifyEmailEntryAndSendEmail(user, requestBody.email, requestBody.first);
+
+        //produce our REST API output
+        return ({
+            'status': APIStatus.Success,
+            'id': user.id.toHexString(),
+            'username': requestBody.username,
             'first': requestBody.first,
             'last': requestBody.last,
             'email': requestBody.email,
             'phone': requestBody.phone,
             'venmo': requestBody.venmo,
-            'username': requestBody.username,
-            'password': sha256(requestBody.password),
-            'isBeeping': false,
-            'queueSize': 0,
-            'inQueueOfUserID': null,
-            'pushToken': requestBody.expoPushToken || null,
+            'token': tokenData.token.toHexString(),
+            'tokenid': tokenData.tokenid.toHexString(),
             'singlesRate': 3.00,
             'groupRate': 2.00,
             'capacity': 4,
+            'isBeeping': false,
             'userLevel': 0,
             'isEmailVerified': false,
             'isStudent': false,
-            'masksRequired': false
-        };
-    
-        try {
-            const result: WriteResult = await r.table("users").insert(document).run((await database.getConn()));
-
-            //if we successfully inserted our new user...
-            if (result.inserted == 1) {
-                //line below uses the RethinkDB result to get us the user's id the rethinkdb generated for us
-                const userid = result.generated_keys[0];
-                //user our getToken function to get an auth token on signup
-                const tokenData = await getToken(userid);
-
-                //because signup was successful we must make their queue table
-                r.db("beepQueues").tableCreate(userid).run((await database.getConnQueues()));
-                //also make them a location table
-                r.db("beepLocations").tableCreate(userid).run((await database.getConnLocations()));
-
-                //because user signed up, create a verify email entry in the db, this function will send the email
-                createVerifyEmailEntryAndSendEmail(userid, requestBody.email, requestBody.first);
-
-                //produce our REST API output
-                return ({
-                    'status': APIStatus.Success,
-                    'id': userid,
-                    'username': requestBody.username,
-                    'first': requestBody.first,
-                    'last': requestBody.last,
-                    'email': requestBody.email,
-                    'phone': requestBody.phone,
-                    'venmo': requestBody.venmo,
-                    'token': tokenData.token,
-                    'tokenid': tokenData.tokenid,
-                    'singlesRate': 3.00,
-                    'groupRate': 2.00,
-                    'capacity': 4,
-                    'isBeeping': false,
-                    'userLevel': 0,
-                    'isEmailVerified': false,
-                    'isStudent': false,
-                    'masksRequired': false,
-                    'photoUrl': null
-                });
-            }
-            else {
-                //RethinkDB says that a new entry was NOT inserted, something went wrong...
-                this.setStatus(500);
-                return new APIResponse(APIStatus.Error, "New user was not inserted into the database");
-            }
-        }
-        catch (error) {
-            Sentry.captureException(error);
-            this.setStatus(500);
-            return new APIResponse(APIStatus.Error, error.message);
-        }
+            'masksRequired': false,
+            'photoUrl': null
+        });
     }
     
     /**

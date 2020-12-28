@@ -1,7 +1,9 @@
+import { ObjectId } from '@mikro-orm/mongodb';
+
 export interface TokenData {
-    userid: string,
-    token: string,
-    tokenid: string
+    userid: ObjectId,
+    token: ObjectId,
+    tokenid: ObjectId
 }
 
 export interface BeepError {

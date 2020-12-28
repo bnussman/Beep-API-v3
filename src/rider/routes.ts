@@ -8,6 +8,9 @@ import * as Sentry from "@sentry/node";
 import { Response, Controller, Post, Route, Security, Tags, Request, Body, Get, Example, Patch, Delete } from 'tsoa';
 import { BeeperListItem, BeeperListResult, ChooseBeepParams, ChooseBeepResponse, LeaveQueueParams, RiderStatusResult } from "./rider";
 import { APIResponse, APIStatus } from '../utils/Error';
+import { BeepORM } from '../app';
+import { QueueEntry } from '../entities/QueueEntry';
+import { wrap } from '@mikro-orm/core';
     
 @Tags("Rider")
 @Route("rider")
@@ -83,6 +86,24 @@ export class RiderController extends Controller {
             'destination': requestBody.destination,
             'state': 0
         };
+
+        const newEntry2 = {
+            'rider': '5fe9f57b6fb5b1f03cfd2c27',
+            'beeper': '5fe9f81e552ca6f7fbcc3181',
+            'timeEnteredQueue': Date.now(),
+            'isAccepted': false,
+            'groupSize': requestBody.groupSize,
+            'origin': requestBody.origin,
+            'destination': requestBody.destination,
+            'state': 0
+        };
+
+        const q = new QueueEntry();
+
+        wrap(q).assign(newEntry2, {em: BeepORM.em });
+
+        BeepORM.em.persistAndFlush(q);
+
 
         try {
             //insert newEntry into beeper's queue table

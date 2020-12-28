@@ -22,6 +22,8 @@
     "author": "Banks Nussman",
     "license": "ISC",
     "dependencies": {
+        "@mikro-orm/core": "^4.3.4",
+        "@mikro-orm/mongodb": "^4.3.4",
         "@sentry/integrations": "^5.29.0",
         "@sentry/node": "^5.29.0",
         "@sentry/tracing": "^5.29.0",
