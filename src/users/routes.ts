@@ -10,6 +10,10 @@ import { getNumUsers } from './helpers';
 import { BeeperHistoryResult, RiderHistoryResult, RiderHistoryWithBeeperData } from '../account/account';
 import { hasUserLevel } from '../auth/helpers';
 import { withouts } from '../utils/config';
+import {BeepORM} from '../app';
+import {ObjectId} from '@mikro-orm/mongodb';
+import {wrap} from '@mikro-orm/core';
+import { User } from '../entities/User';
 
 @Tags("Users")
 @Route("users")
@@ -22,19 +26,7 @@ export class UsersController extends Controller {
      */
     @Example<UserResult>({
         status: APIStatus.Success, 
-        user: {
-            first: "Banks",
-            last: "Last",
-            capacity: 4,
-            isStudent: true,
-            masksRequired: false,
-            queueSize: 0,
-            singlesRate: 2.99,
-            groupRate: 1.99,
-            venmo: "banksnussman",
-            isBeeping: false,
-            photoUrl: "https://ridebeepapp.s3.amazonaws.com/images/22192b90-54f8-49b5-9dcf-26049454716b.JPG"
-        }
+        user: new User()
     })
     @Response<APIResponse>(404, "User not found", {
         status: APIStatus.Error, 
@@ -47,34 +39,19 @@ export class UsersController extends Controller {
     @Security("optionalAdmin")
     @Get("{id}")
     public async getUser(@Request() request: express.Request, @Path() id: string): Promise<UserResult | APIResponse> {
-        try {
-            let result;
 
-            if (request.user?.id) {
-                //@ts-ignore this is valid, the typings are wrong
-                result = await r.table("users").get(id).without('password').run((await database.getConn()));
-            }
-            else {
-                const userItems = ['first', 'last', 'capacity', 'isStudent', 'masksRequired', 'queueSize', 'singlesRate', 'groupRate', 'venmo', 'isBeeping', 'photoUrl'];
-                result = await r.table("users").get(id).pluck(...userItems).run((await database.getConn()));
-            }
+        const user = await BeepORM.userRepository.findOne(new ObjectId(id));
 
-            this.setStatus(200);
-            return {
-                'status': APIStatus.Success,
-                'user': result
-            };
+        if (!user) {
+            this.setStatus(404);
+            return new APIResponse(APIStatus.Error, "User not found");
         }
-        catch (error) {
-            console.log(error);
-            if (error.name == "ReqlNonExistenceError") {
-                this.setStatus(404);
-                return new APIResponse(APIStatus.Error, "That user does not exist");
-            }
-            Sentry.captureException(error);
-            this.setStatus(500);
-            return new APIResponse(APIStatus.Error, "Unable to get user profile");
-        }
+
+        this.setStatus(200);
+        return {
+            status: APIStatus.Success,
+            user: user
+        };
     }
 
     /**
@@ -92,7 +69,15 @@ export class UsersController extends Controller {
     @Security("token", ["admin"])
     @Delete("{id}")
     public async removeUser(@Path() id: string): Promise<APIResponse> {
-        if (await deleteUser(id)) {
+        const user = await BeepORM.userRepository.findOne(new ObjectId(id));
+
+        if (!user) {
+            this.setStatus(404);
+            return new APIResponse(APIStatus.Error, "User not found");
+        }
+
+
+        if (await deleteUser(user)) {
             this.setStatus(200);
             return new APIResponse(APIStatus.Success, "Successfully deleted user");
         }
@@ -116,20 +101,19 @@ export class UsersController extends Controller {
     @Security("token", ["admin"])
     @Patch("{id}")
     public async editUser(@Path() id: string, @Body() requestBody: EditUserParams): Promise<APIResponse> {
-        try {
-            const result: r.WriteResult = await r.table("users").get(id).update(requestBody).run((await database.getConn()));
 
-            if (result.unchanged > 0) {
-                return new APIResponse(APIStatus.Warning, "Nothing was changed about the user's profile");
-            }
-           
-            return new APIResponse(APIStatus.Success, "Successfully edited user");
+        const user = await BeepORM.userRepository.findOne(new ObjectId(id));
+
+        if (!user) {
+            this.setStatus(404);
+            return new APIResponse(APIStatus.Error, "User not found");
         }
-        catch (error) {
-            Sentry.captureException(error);
-            this.setStatus(500);
-            return new APIResponse(APIStatus.Error, "Unable to edit account");
-        }
+
+        wrap(user).assign(requestBody);
+
+        await BeepORM.userRepository.persistAndFlush(user);
+
+        return new APIResponse(APIStatus.Success, "Successfully edited user");
     }
 
     /**
@@ -253,8 +237,8 @@ export class UsersController extends Controller {
     @Security("token")
     @Get("{id}/history/rider")
     public async getRideHistory(@Request() request: express.Request, @Path() id: string): Promise<APIResponse | RiderHistoryResult> {
-        if (request.user.id != id) {
-            const isAdmin = await hasUserLevel(request.user.id, 1);
+        if (request.user.user.id != new ObjectId(id)) {
+            const isAdmin = await hasUserLevel(request.user.user, 1);
 
             if (!isAdmin) return new APIResponse(APIStatus.Error, "You must be an admin to view other peoples history");
         }
@@ -326,8 +310,8 @@ export class UsersController extends Controller {
     @Security("token")
     @Get("{id}/history/beeper")
     public async getBeepHistory(@Request() request: express.Request, @Path() id: string): Promise<APIResponse | BeeperHistoryResult> {
-        if (request.user.id != id) {
-            const isAdmin = await hasUserLevel(request.user.id, 1);
+        if (request.user.user.id != new ObjectId(id)) {
+            const isAdmin = await hasUserLevel(request.user.user, 1);
 
             if (!isAdmin) return new APIResponse(APIStatus.Error, "You must be an admin to view other peoples history");
         }

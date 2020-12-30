@@ -242,26 +242,8 @@ export class AuthController extends Controller {
     })
     @Post("token")
     public async removeToken (@Body() requestBody: RemoveTokenParams): Promise<APIResponse> {
-        //RethinkDB query to delete entry in tokens table.
-        try {
-            const result: WriteResult = await r.table("tokens").filter({'tokenid': requestBody.tokenid}).delete().run((await database.getConn()));
-
-            //if RethinkDB tells us something was deleted, logout was successful
-            if (result.deleted == 1) {
-                this.setStatus(200);
-                return new APIResponse(APIStatus.Success, "Token was revoked");
-            }
-            else {
-                //Nothing was deleted in the db, so there was some kind of error
-                this.setStatus(500);
-                return new APIResponse(APIStatus.Error, "Token was not deleted in our database.");
-            }
-        }
-        catch (error) {
-            Sentry.captureException(error);
-            this.setStatus(500);
-            return new APIResponse(APIStatus.Error, error.message);
-        }
+        await BeepORM.tokenRepository.removeAndFlush({tokenid: requestBody.tokenid});
+        return new APIResponse(APIStatus.Success, "Token was revoked");
     }
 
     /**

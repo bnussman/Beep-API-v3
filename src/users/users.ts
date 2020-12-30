@@ -1,4 +1,5 @@
 import { APIStatus } from "../utils/Error";
+import { User } from '../entities/User';
 
 /**
  * Public User Result
@@ -51,7 +52,7 @@ export interface PublicUser {
 */
 export interface UserResult {
     status: APIStatus;
-    user: PublicUser;
+    user: User;
 }
 
 //TODO: example data

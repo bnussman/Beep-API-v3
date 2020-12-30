@@ -1,5 +1,7 @@
 import { UserPluckResult } from "../types/beep";
 import { APIStatus } from "../utils/Error";
+import { QueueEntry } from '../entities/QueueEntry';
+import {ObjectId} from "@mikro-orm/mongodb";
 
 /**
  * Set Beeprs Status Paramaters
@@ -48,7 +50,7 @@ export interface SetBeeperStatusParams {
  */
 export interface GetBeeperQueueResult {
     status: APIStatus,
-    queue: BeepQueueTableEntry[]; 
+    queue: QueueEntry[]; 
 }
 
 /**
@@ -95,6 +97,6 @@ export interface BeepQueueTableEntry {
  */
 export interface SetBeeperQueueParams {
     value: string;
-    riderID: string;
-    queueID: string;
+    riderID: ObjectId;
+    queueID: ObjectId;
 }

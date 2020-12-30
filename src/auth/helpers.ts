@@ -205,15 +205,8 @@ export function sendResetEmail(email: string, id: string, first: string | undefi
  * @param userid string of their user id
  * @returns void
  */
-export async function deactivateTokens(userid: string): Promise<void> {
-    try {
-        //delete all entries in the tokens db where userid matches
-        r.table("tokens").filter({ userid: userid }).delete().run((await database.getConn()));
-    }
-    catch (error) {
-        //RethinkDB error when deleteing push tokens for userid
-        Sentry.captureException(error);
-    }
+export async function deactivateTokens(user: User): Promise<void> {
+    await BeepORM.tokenRepository.removeAndFlush({ user: user });
 }
 
 /**

@@ -9,6 +9,10 @@ import * as Sentry from "@sentry/node";
 import { Response, Controller, Request, Body, Tags, Security, Post, Route, Example, Get, Patch } from 'tsoa';
 import { APIResponse, APIStatus } from '../utils/Error';
 import { BeepQueueTableEntry, GetBeeperQueueResult, SetBeeperQueueParams, SetBeeperStatusParams } from './beeper';
+import {wrap} from '@mikro-orm/core';
+import {BeepORM} from 'src/app';
+import {ObjectId} from '@mikro-orm/mongodb';
+import { User } from '../entities/User';
 
 @Tags("Beeper")
 @Route("beeper")
@@ -62,7 +66,7 @@ export class BeeperController extends Controller {
         //if beeper is setting isBeeping to false
         if (requestBody.isBeeping == false) {
             //get beepers queue size
-            const queueSize = await getQueueSize(request.user.id);
+            const queueSize = request.user.user.queueSize;
             //we must make sure their queue is empty before they stop beeping
             if (queueSize > 0) {
                 this.setStatus(400);
@@ -70,18 +74,10 @@ export class BeeperController extends Controller {
             }
         }
 
-        try {
-            const result: WriteResult = await r.table('users').get(request.user.id).update({ isBeeping: requestBody.isBeeping, singlesRate: requestBody.singlesRate, groupRate: requestBody.groupRate, capacity: requestBody.capacity, masksRequired: requestBody.masksRequired }).run((await database.getConn()));
-            //TODO check result 
-            //If there was no DB error, our update query was successful. return success with REST API
-            this.setStatus(200);
-            return new APIResponse(APIStatus.Success, "Successfully updated beeping status.");
-        }
-        catch (error) {
-            Sentry.captureException(error);
-            this.setStatus(500);
-            return new APIResponse(APIStatus.Error, "Unable to set beeper status");
-        }
+        wrap(request.user.user).assign(requestBody);
+
+        this.setStatus(200);
+        return new APIResponse(APIStatus.Success, "Successfully updated beeping status.");
     }
 
 
@@ -95,21 +91,15 @@ export class BeeperController extends Controller {
         status: APIStatus.Success,
         queue: [
             {
+                beeper: new User(),
                 destination: "Tasty",
                 groupSize: 1,
-                id: "b500bb45-094e-437c-887b-e6b6d815ba12",
+                id: new ObjectId(),
                 isAccepted: true,
                 origin: "241 Marich Ln Marich Ln Boone, NC 28607",
-                riderid: "22192b90-54f8-49b5-9dcf-26049454716b",
+                rider: new User(),
                 state: 0,
-                timeEnteredQueue: 1603318791872,
-                personalInfo: {
-                    first: "Banks",
-                    isStudent: true,
-                    last: "Nussman",
-                    phone: "7049968597",
-                    venmo: "banksnussman"
-                }
+                timeEnteredQueue: 1603318791872
             }
         ]
     })
@@ -120,29 +110,15 @@ export class BeeperController extends Controller {
     @Security("token")
     @Get("queue")
     public async getBeeperQueue(@Request() request: express.Request): Promise<APIResponse | GetBeeperQueueResult> {
-        try {
-            //TODO whattt
-            //@ts-ignore
-            const result: BeepQueueTableEntry[] = await r.table(request.user.id).orderBy('timeEnteredQueue').run((await database.getConnQueues()));
 
-            //for every entry in a beeper's queue, add personal info
-            for (const doc of result) {
-                //for every queue entry, add personal info of the rider
-                doc['personalInfo'] = await getPersonalInfo(doc.riderid);
-            }
+        const result = await BeepORM.queueEntryRepository.find({ beeper: request.user.user });
 
-            //after processing, send data.
-            this.setStatus(200);
-            return {
-                'status': APIStatus.Success,
-                'queue': result
-            };
-        }
-        catch (error) {
-            Sentry.captureException(error);
-            this.setStatus(500);
-            return new APIResponse(APIStatus.Error, "Unable to get beeper queue");
-        }
+        //after processing, send data.
+        this.setStatus(200);
+        return {
+            status: APIStatus.Success,
+            queue: result
+        };
     }
     
     /**
@@ -150,6 +126,7 @@ export class BeeperController extends Controller {
      * @param {SetBeeperQueueParams} requestBody - beeper sends the status they want to set, the rider's id, and the queue entry id
      * @returns {APIResponse}
      */
+    /*
     @Example<APIResponse>({
         status: APIStatus.Success,
         message: "Successfully removed user from queue."
@@ -173,8 +150,12 @@ export class BeeperController extends Controller {
                 //we need this to count the number of people before this rider in the queue
                 const cursor = await r.table(request.user.id).filter({'riderid': requestBody.riderID}).pluck('timeEnteredQueue').run((await database.getConnQueues()));
 
+                //const a = await BeepORM.queueEntryRepository.findOne({ rider: requestBody.riderID, beeper: request.user.user });
+
                 //resolve the query and get the time this rider entered the queue as a const
-                const timeEnteredQueue = (await cursor.next()).timeEnteredQueue;
+                const timeEnteredQueue = a?.timeEnteredQueue;
+
+                //const b = await BeepORM.queueEntryRepository.count();
 
                 //query to get rider's actual position in the queue
                 const ridersQueuePosition = await r.table(request.user.id).filter(r.row('timeEnteredQueue').lt(timeEnteredQueue).and(r.row('isAccepted').eq(false))).count().run((await database.getConnQueues()));
@@ -326,4 +307,5 @@ export class BeeperController extends Controller {
             }
         }
     }
+    */
 }

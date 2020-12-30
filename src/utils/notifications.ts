@@ -2,6 +2,7 @@ import * as r from 'rethinkdb';
 import { request } from "https";
 import database from"../utils/db";
 import * as Sentry from "@sentry/node";
+import { User } from '../entities/User';
 
 /**
  * Use Expo's API to send a push notification
@@ -9,8 +10,8 @@ import * as Sentry from "@sentry/node";
  * @param title for the notification
  * @param message is the body of the push notification
  */
-export async function sendNotification(userid: string, title: string, message: string, categoryIdentifier?: string): Promise<void> {
-    const pushToken = await getPushToken(userid);
+export async function sendNotification(user: User, title: string, message: string, categoryIdentifier?: string): Promise<void> {
+    const pushToken = user.pushToken;
 
     if (!pushToken) return;
 

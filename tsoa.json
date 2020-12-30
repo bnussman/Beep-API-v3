@@ -35,5 +35,8 @@
     "routes": {
         "routesDir": "build",
         "authenticationModule": "src/utils/authentication.ts"
-    }
+    },
+    "ignore": [
+        "**/node_modules/@sentry/**"
+    ] 
 }

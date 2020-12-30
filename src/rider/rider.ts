@@ -1,4 +1,6 @@
+import {ObjectId} from "@mikro-orm/mongodb";
 import { APIStatus } from "../utils/Error";
+import { User } from "../entities/User";
 
 /**
  * Choose Beep Params
@@ -14,7 +16,7 @@ export interface ChooseBeepParams {
     groupSize: number;
     origin: string;
     destination: string;
-    beepersID: string;
+    beepersID: ObjectId;
 }
 
 /**
@@ -38,7 +40,7 @@ export interface ChooseBeepParams {
  */
 export interface ChooseBeepResponse {
     status: APIStatus,
-    beeper: BeeperData
+    beeper: User
 }
 
 /**
@@ -71,7 +73,7 @@ export interface BeeperData {
     masksRequired: boolean;
     phone?: string;
     venmo?: string;
-    photoUrl: string | null;
+    photoUrl: string | null | undefined;
 }
 
 /**
@@ -105,7 +107,7 @@ export interface RiderStatusResult {
     isAccepted: boolean;
     ridersQueuePosition?: number;
     state?: number;
-    beeper: BeeperData
+    beeper: User;
     origin: string;
     destination: string;
 }

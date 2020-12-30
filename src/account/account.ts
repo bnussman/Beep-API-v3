@@ -1,3 +1,4 @@
+import {ObjectId} from "@mikro-orm/mongodb";
 import { BeepEntry, MinimalUser } from "../beeps/beeps";
 import { BeepTableResult } from "../types/beep";
 import { APIStatus } from "../utils/Error";
@@ -52,7 +53,7 @@ export interface UpdatePushTokenParams {
  * }
  */
 export interface VerifyAccountParams {
-    id: string;
+    id: ObjectId;
 }
 
 /**

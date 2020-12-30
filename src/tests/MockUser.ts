@@ -1,3 +1,4 @@
+/*
 import { User, UserPluckResult } from "../types/beep";
 
 export default class MockUser {
@@ -62,3 +63,4 @@ export default class MockUser {
         };
     }
 }
+*/

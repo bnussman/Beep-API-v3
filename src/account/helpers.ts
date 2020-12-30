@@ -3,6 +3,8 @@ import * as r from 'rethinkdb';
 import database from "../utils/db";
 import { deactivateTokens } from "../auth/helpers";
 import * as Sentry from "@sentry/node";
+import {BeepORM} from "../app";
+import { User } from '../entities/User';
 
 /**
  * checks last 4 characters of an email address
@@ -35,27 +37,15 @@ export async function getEmail(id: string): Promise<string | undefined> {
  * @param id string the user's id
  * @returns boolean true if delete was successful
  */
-export async function deleteUser(id: string): Promise<boolean> {
+export async function deleteUser(user: User): Promise<boolean> {
     //delete user document in user table
-    try {
-        r.table("users").get(id).delete().run((await database.getConn()));
-    }
-    catch (error) {
-        Sentry.captureException(error);
-        return false;
-    }
+    await BeepORM.userRepository.removeAndFlush(user);
 
     //delete user's queue table from beepQueues 
-    try {
-        r.db("beepQueues").tableDrop(id).run((await database.getConnQueues()));
-    }
-    catch (error) {
-        Sentry.captureException(error);
-        return false;
-    }
+    await BeepORM.queueEntryRepository.removeAndFlush({ beeper: user });
 
     //deative all of the user's tokens
-    deactivateTokens(id);
+    deactivateTokens(user);
 
     return true;
 }
