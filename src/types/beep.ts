@@ -1,7 +1,8 @@
 import { ObjectId } from '@mikro-orm/mongodb';
+import { User } from '../entities/User';
 
 export interface TokenData {
-    userid: ObjectId,
+    userid?: ObjectId,
     token: ObjectId,
     tokenid: ObjectId
 }
@@ -10,31 +11,29 @@ export interface BeepError {
     status: string;
     message: string;
 }
-
+/*
 export interface User {
-    id: string;
+    id: ObjectId;
     first: string;
     last: string;
     email: string;
     phone: string;
     venmo: string;
     username: string;
-    password: string;
+    password?: string;
     capacity: number;
     singlesRate: number;
     groupRate: number;
-    pushToken: string | null;
-    inQueueOfUserID: string | null;
+    pushToken?: string | null;
     isBeeping: boolean;
     queueSize: number;
     userLevel: number;
     isEmailVerified: boolean;
     isStudent: boolean;
-    token: string;
-    tokenid: string;
     masksRequired: boolean;
     photoUrl: string | null;
 }
+*/
 
 export interface UserPluckResult {
     id?: string;
@@ -70,8 +69,8 @@ export interface TokenPluckResult {
 }
 
 export interface AuthUser {
-    id: string,
-    token: string
+    user: User,
+    token: TokenEntry
 }
 
 export interface BeepTableResult {

@@ -10,6 +10,7 @@ import { BeepORM } from '../app';
 import { User } from '../entities/User';
 import { VerifyEmail } from '../entities/VerifyEmail';
 import { ObjectId } from '@mikro-orm/mongodb';
+import { wrap } from '@mikro-orm/core';
 
 /**
  * Generates an authentication token and a token for that token (for offline logouts), stores
@@ -34,15 +35,14 @@ export async function getToken(user: User): Promise<TokenData> {
  * @param id a user's id in which we want to update their push tokens
  * @param token the expo push token for the user
  */
-export async function setPushToken(id: string | null, token: string | null): Promise<void> {
-    if (!id) return;
+export async function setPushToken(user: User, token: string | null): Promise<void> {
+    if (!user) return;
     //run query to get user and update their pushToken
-    try {
-        await r.table("users").get(id).update({pushToken: token}).run((await database.getConn()));
-    }
-    catch(error) {
-        Sentry.captureException(error);
-    }
+    wrap(user).assign({
+        pushToken: token
+    });
+
+    await BeepORM.userRepository.persistAndFlush(user);
 }
 
 /**
@@ -78,18 +78,8 @@ export async function isTokenValid(token: string): Promise<string | null> {
  * @prarm level is the desired user level
  * @returns a promice that is a boolean. True if user has level, false otherwise
  */
-export async function hasUserLevel(userid: string, level: number): Promise<boolean> {
-    try {
-        const userLevel: any = await r.table("users").get(userid).pluck('userLevel').run((await database.getConn()));
-
-        //return a boolean, true if user has desired level, false otherwise
-        return level == userLevel.userLevel;
-    }
-    catch (error) {
-        //in prod, log error with our logger i guess
-        Sentry.captureException(error);
-    }
-    return false;
+export async function hasUserLevel(user: User, level: number): Promise<boolean> {
+    return level == user.userLevel;
 }
 
 /**
@@ -98,6 +88,7 @@ export async function hasUserLevel(userid: string, level: number): Promise<boole
  * @param token a user's auth token
  * @returns promice that resolves to null or a user's id
  */
+/*
 export async function isAdmin(token: string): Promise<string | null> {
     const id: string | null = await isTokenValid(token);
 
@@ -110,6 +101,7 @@ export async function isAdmin(token: string): Promise<string | null> {
     }
     return null;
 }
+*/
 
 /**
  * get user data given an email

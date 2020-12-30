@@ -13,6 +13,8 @@ import { APIResponse, APIStatus } from '../utils/Error';
 import { wrap } from '@mikro-orm/core';
 import { BeepORM } from '../app';
 import { User } from '../entities/User';
+import { ObjectId } from '@mikro-orm/mongodb';
+import { TokenEntry } from '../entities/TokenEntry';
 
 @Tags("Auth")
 @Route("auth")
@@ -25,25 +27,29 @@ export class AuthController extends Controller {
      */
     @Post("login")
     @Example<LoginResponse>({
-        capacity: 4,
-        email: "nussmanwb@appstate.edu",
-        first: "Banks",
-        groupRate: "2",
-        id: "22192b90-54f8-49b5-9dcf-26049454716b",
-        isBeeping: false,
-        isEmailVerified: true,
-        isStudent: true,
-        last: "Nussman",
-        masksRequired: true,
-        phone: "7049968597",
-        singlesRate: "3",
         status: APIStatus.Success,
-        token: "657c2dde-649e-4271-9ffd-73ecbdd854f2",
-        tokenid: "7ab19f41-f0cf-4a86-ba56-def56a0576f6",
-        userLevel: 0,
-        username: "banks",
-        venmo: "banksnussman",
-        photoUrl: "https://ridebeepapp.s3.amazonaws.com/images/22192b90-54f8-49b5-9dcf-26049454716b.JPG"
+        user: {
+            capacity: 4,
+            email: "nussmanwb@appstate.edu",
+            first: "Banks",
+            groupRate: 2,
+            id: new ObjectId(),
+            isBeeping: false,
+            isEmailVerified: true,
+            isStudent: true,
+            last: "Nussman",
+            masksRequired: true,
+            phone: "7049968597",
+            singlesRate: 3,
+            userLevel: 0,
+            username: "banks",
+            venmo: "banksnussman",
+            queueSize: 0
+        },
+        tokens: {
+            token: new ObjectId(),
+            tokenid: new ObjectId(),
+        }
     })
     @Response<APIResponse>(422, "Invalid Input", {
         status: APIStatus.Error, 
@@ -75,62 +81,25 @@ export class AuthController extends Controller {
             return new APIResponse(APIStatus.Error, v.errors);
         }
 
-        try {
-            const cursor: Cursor = await r.table("users").filter({ "username": requestBody.username }).run((await database.getConn()));
+        const user = await BeepORM.userRepository.findOne({ username: requestBody.username });
 
-            try {
-                const result = await cursor.next();
+        if (user?.password == sha256(requestBody.password)) {
+            //if authenticated, get new auth tokens
+            const tokenData = await getToken(user);
 
-                if (result.password == sha256(requestBody.password)) {
-                    //if authenticated, get new auth tokens
-                    const tokenData = await getToken(result.id);
-
-                    if (requestBody.expoPushToken) {
-                        setPushToken(result.id, requestBody.expoPushToken);
-                    }
-
-                    //close the RethinkDB cursor to prevent leak
-                    cursor.close();
-
-                    //send out data to REST API
-                    return ({
-                        'status': APIStatus.Success,
-                        'id': result.id,
-                        'username': result.username,
-                        'first': result.first,
-                        'last': result.last,
-                        'email': result.email,
-                        'phone': result.phone,
-                        'venmo': result.venmo,
-                        'token': tokenData.token.toHexString(),
-                        'tokenid': tokenData.tokenid.toHexString(),
-                        'singlesRate': result.singlesRate,
-                        'groupRate': result.groupRate,
-                        'capacity': result.capacity,
-                        'isBeeping': result.isBeeping,
-                        'userLevel': result.userLevel,
-                        'isEmailVerified': result.isEmailVerified,
-                        'isStudent': result.isStudent,
-                        'masksRequired': result.masksRequired,
-                        'photoUrl': result.photoUrl
-                    });
-                }
-                else {
-                    cursor.close();
-                    this.setStatus(401);
-                    return new APIResponse(APIStatus.Error, "Password is incorrect");
-                }
+            if (requestBody.expoPushToken) {
+                setPushToken(user, requestBody.expoPushToken);
             }
-            catch (error) {
-                cursor.close();
-                this.setStatus(401);
-                return new APIResponse(APIStatus.Error, "User not found");
-            }
+
+            return ({
+                status: APIStatus.Success,
+                user: user,
+                tokens: { ...tokenData }
+            });
         }
-        catch (error) {
-            Sentry.captureException(error);
-            this.setStatus(500);
-            return new APIResponse(APIStatus.Error, error.message);
+        else {
+            this.setStatus(401);
+            return new APIResponse(APIStatus.Error, "Password is incorrect");
         }
     }
 
@@ -142,25 +111,29 @@ export class AuthController extends Controller {
      */
     @Post("signup")
     @Example<LoginResponse>({
-        capacity: 4,
-        email: "nussmanwb@appstate.edu",
-        first: "Banks",
-        groupRate: "2",
-        id: "22192b90-54f8-49b5-9dcf-26049454716b",
-        isBeeping: false,
-        isEmailVerified: true,
-        isStudent: true,
-        last: "Nussman",
-        masksRequired: true,
-        phone: "7049968597",
-        singlesRate: "3",
         status: APIStatus.Success,
-        token: "657c2dde-649e-4271-9ffd-73ecbdd854f2",
-        tokenid: "7ab19f41-f0cf-4a86-ba56-def56a0576f6",
-        userLevel: 0,
-        username: "banks",
-        venmo: "banksnussman",
-        photoUrl: null
+        user: {
+            capacity: 4,
+            email: "nussmanwb@appstate.edu",
+            first: "Banks",
+            groupRate: 2,
+            id: new ObjectId(),
+            isBeeping: false,
+            isEmailVerified: true,
+            isStudent: true,
+            last: "Nussman",
+            masksRequired: true,
+            phone: "7049968597",
+            singlesRate: 3,
+            userLevel: 0,
+            username: "banks",
+            venmo: "banksnussman",
+            queueSize: 0
+        },
+        tokens: {
+            token: new ObjectId(),
+            tokenid: new ObjectId(),
+        }
     })
     @Response<APIResponse>(422, "Invalid Input", {
         status: APIStatus.Error, 
@@ -218,27 +191,11 @@ export class AuthController extends Controller {
         createVerifyEmailEntryAndSendEmail(user, requestBody.email, requestBody.first);
 
         //produce our REST API output
-        return ({
-            'status': APIStatus.Success,
-            'id': user.id.toHexString(),
-            'username': requestBody.username,
-            'first': requestBody.first,
-            'last': requestBody.last,
-            'email': requestBody.email,
-            'phone': requestBody.phone,
-            'venmo': requestBody.venmo,
-            'token': tokenData.token.toHexString(),
-            'tokenid': tokenData.tokenid.toHexString(),
-            'singlesRate': 3.00,
-            'groupRate': 2.00,
-            'capacity': 4,
-            'isBeeping': false,
-            'userLevel': 0,
-            'isEmailVerified': false,
-            'isStudent': false,
-            'masksRequired': false,
-            'photoUrl': null
-        });
+        return {
+            status: APIStatus.Success,
+            user: user,
+            tokens: { ...tokenData }
+        };
     }
     
     /**
@@ -257,33 +214,17 @@ export class AuthController extends Controller {
     @Security("token")
     @Post("logout")
     public async logout (@Request() request: express.Request, @Body() requestBody: LogoutParams): Promise<APIResponse> {
-        //RethinkDB query to delete entry in tokens table.
-        try {
-            const result: WriteResult = await r.table("tokens").get(request.user.token).delete().run((await database.getConn()));
+        await BeepORM.tokenRepository.removeAndFlush(request.user.token);
 
-            //if RethinkDB tells us something was deleted, logout was successful
-            if (result.deleted == 1) {
-                //unset the user's push token
-                if (requestBody.isApp) {
-                    //if user signs out in our iOS or Android app, unset their push token.
-                    //We must check this beacuse we don't want the website to un-set a push token
-                    setPushToken(request.user.id, null);
-                }
-                //return success message
-                this.setStatus(200);
-                return new APIResponse(APIStatus.Success, "Token was revoked");
-            }
-            else {
-                //Nothing was deleted in the db, so there was some kind of error
-                this.setStatus(500);
-                return new APIResponse(APIStatus.Error, "Token was not deleted in our database.");
-            }
+        if (requestBody.isApp) {
+            //if user signs out in our iOS or Android app, unset their push token.
+            //We must check this beacuse we don't want the website to un-set a push token
+            setPushToken(request.user.user, null);
         }
-        catch (error) {
-            Sentry.captureException(error);
-            this.setStatus(500);
-            return new APIResponse(APIStatus.Error, error.message);
-        }
+
+        //return success message
+        this.setStatus(200);
+        return new APIResponse(APIStatus.Success, "Token was revoked");
     }
 
     /**

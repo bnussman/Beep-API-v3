@@ -27,7 +27,7 @@ export class User {
     venmo!: string;
 
     @Property()
-    password!: string;
+    password?: string;
 
     @Property()
     isBeeping = false;
@@ -57,8 +57,13 @@ export class User {
     userLevel = 0;
 
     @Property({ nullable: true })
-    pushToken!: string;
+    pushToken?: string;
 
+    @Property({ nullable: true })
+    photoUrl?: string;
+
+    /*
     @OneToMany(() => QueueEntry, q => q.beeper)
     queue = new Collection<QueueEntry>(this);
+    */
 }
