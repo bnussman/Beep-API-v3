@@ -12,13 +12,17 @@ import { User } from "../entities/User";
 export async function expressAuthentication(request: express.Request, securityName: string, scopes?: string[]): Promise<any> {
     if (securityName === "token") {
         //get the Authorization header and split after the first space because it will say Bearer first
-        const token: ObjectId | undefined = request.get("Authorization")?.split(" ")[1] as ObjectId | undefined;
+        const token: string | undefined = request.get("Authorization")?.split(" ")[1];
 
         if (!token) {
             return Promise.reject(new APIAuthResponse(APIStatus.Error, "You must provide an authentication token"));
         }
 
-        const tokenEntryResult = await BeepORM.tokenRepository.findOne(token);
+        console.log(token);
+
+        const tokenEntryResult = await BeepORM.tokenRepository.findOne(new ObjectId(token));
+
+        console.log(tokenEntryResult);
 
         if (!tokenEntryResult) {
             return Promise.reject(new APIAuthResponse(APIStatus.Error, "Your token is not valid"));

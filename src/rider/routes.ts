@@ -206,8 +206,13 @@ export class RiderController extends Controller {
     @Security("token")
     @Get("status")
     public async getRiderStatus (@Request() request: express.Request): Promise<APIResponse | RiderStatusResult> {
-
-        const r = await BeepORM.queueEntryRepository.findOne({ rider: request.user.user });
+        let r;
+        try {
+            r = await BeepORM.queueEntryRepository.findOne({ rider: request.user.user });
+        }
+        catch (e) {
+            console.log("here", e);
+        }
 
         if (!r) {
             this.setStatus(200);

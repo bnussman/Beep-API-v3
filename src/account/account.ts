@@ -53,7 +53,7 @@ export interface UpdatePushTokenParams {
  * }
  */
 export interface VerifyAccountParams {
-    id: ObjectId;
+    id: string;
 }
 
 /**

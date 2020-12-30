@@ -12,8 +12,9 @@ import { APIStatus, APIResponse } from "../utils/Error";
 import { Response, Body, Controller, Post, Route, Security, Tags, Request, Delete, Example, Get, Put, Patch } from 'tsoa';
 import { BeeperHistoryResult, ChangePasswordParams, EditAccountParams, RiderHistoryResult, RiderHistoryWithBeeperData, UpdatePushTokenParams, VerifyAccountParams, VerifyAccountResult } from "./account";
 import { withouts } from '../utils/config';
-import {BeepORM} from 'src/app';
+import {BeepORM} from '../app';
 import {wrap} from '@mikro-orm/core';
+import {ObjectId} from '@mikro-orm/mongodb';
 
 @Tags("Account")
 @Route("account")
@@ -194,7 +195,7 @@ export class AccountController extends Controller {
     })
     @Post("verify")
     public async verifyAccount (@Body() requestBody: VerifyAccountParams): Promise<VerifyAccountResult | APIResponse> {
-        const entry = await BeepORM.verifyEmailRepository.findOne(requestBody.id);
+        const entry = await BeepORM.verifyEmailRepository.findOne(new ObjectId(requestBody.id));
 
         if (!entry) {
             this.setStatus(404);
@@ -209,6 +210,9 @@ export class AccountController extends Controller {
         }
 
         //use the helper function getEmail to get user's email address from their id
+        /*
+        console.log(entry);
+        console.log(entry.user);
         const usersEmail: string | undefined = entry.user.email;
 
         //this case should not happen because of validation, but just in case
@@ -222,6 +226,7 @@ export class AccountController extends Controller {
             this.setStatus(400);
             return new APIResponse(APIStatus.Error, "You tried to verify an email address that is not the same as your current email.");
         }
+        */
 
         let update;
 
@@ -234,16 +239,20 @@ export class AccountController extends Controller {
             update = {isEmailVerified: true};
         }
 
-        wrap(entry.user).assign(update);
+        const user = await BeepORM.userRepository.findOne(entry.user);
 
-        await BeepORM.userRepository.persistAndFlush(entry.user);
+        if (!user) return new APIResponse(APIStatus.Error, "error");
+
+        wrap(user).assign(update);
+
+        await BeepORM.userRepository.persistAndFlush(user);
 
         await BeepORM.verifyEmailRepository.removeAndFlush(entry);
 
         return ({
             "status": APIStatus.Success,
             "message": "Successfully verified email",
-            "data": {...update, "email": usersEmail}
+            "data": {...update, "email": entry.email}
         });
     }
 
@@ -262,10 +271,12 @@ export class AccountController extends Controller {
     @Security("token")
     @Post("verify/resend")
     public async resendEmailVarification(@Request() request: express.Request): Promise<APIResponse> {
-        await BeepORM.verifyEmailRepository.removeAndFlush({ user: request.user.user });
+        await BeepORM.verifyEmailRepository.nativeDelete({ user: request.user.user });
 
         //create a new entry with their current email address and send in email
         await createVerifyEmailEntryAndSendEmail(request.user.user, request.user.user.email, request.user.user.first);
+
+        console.log(request.user);
 
         return new APIResponse(APIStatus.Success, "Successfully re-sent varification email to " + request.user.user.email);
     }

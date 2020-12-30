@@ -1,4 +1,4 @@
-import { Entity, ManyToOne, PrimaryKey, Property } from "@mikro-orm/core";
+import { Entity, IdentifiedReference, ManyToOne, PrimaryKey, Property, Reference } from "@mikro-orm/core";
 import { ObjectId } from "@mikro-orm/mongodb";
 import { User } from "./User";
 
@@ -8,8 +8,8 @@ export class VerifyEmail {
     @PrimaryKey()
     id!: ObjectId;
 
-    @ManyToOne()
-    user: User;
+    @ManyToOne(() => User, { wrappedReference: true })
+    user!: IdentifiedReference<User>;
 
     @Property() 
     time = Date.now();
@@ -18,7 +18,7 @@ export class VerifyEmail {
     email!: string;
     
     constructor(u: User, e: string) {
-        this.user = u;
+        this.user = Reference.create(u);
         this.email = e;
     }
 }

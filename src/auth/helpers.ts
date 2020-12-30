@@ -269,9 +269,9 @@ export async function createVerifyEmailEntryAndSendEmail(user: User, email: stri
  */
 export async function doesUserExist(username: string): Promise<boolean> {
     try {
-        const count: number = await r.table("users").filter({ username: username }).count().run((await database.getConn()));
+        const c = await BeepORM.userRepository.count({username: username});
         
-        if (count >= 1) {
+        if (c >= 1) {
             return true;        
         }
     }

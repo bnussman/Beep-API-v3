@@ -10,7 +10,7 @@ import { Response, Controller, Request, Body, Tags, Security, Post, Route, Examp
 import { APIResponse, APIStatus } from '../utils/Error';
 import { BeepQueueTableEntry, GetBeeperQueueResult, SetBeeperQueueParams, SetBeeperStatusParams } from './beeper';
 import {wrap} from '@mikro-orm/core';
-import {BeepORM} from 'src/app';
+import {BeepORM} from '../app';
 import {ObjectId} from '@mikro-orm/mongodb';
 import { User } from '../entities/User';
 
@@ -75,6 +75,8 @@ export class BeeperController extends Controller {
         }
 
         wrap(request.user.user).assign(requestBody);
+
+        await BeepORM.userRepository.persistAndFlush(request.user.user);
 
         this.setStatus(200);
         return new APIResponse(APIStatus.Success, "Successfully updated beeping status.");

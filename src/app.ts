@@ -69,6 +69,7 @@ export default class BeepAPIServer {
         BeepORM.userRepository = BeepORM.orm.em.getRepository(User);
         BeepORM.tokenRepository = BeepORM.orm.em.getRepository(TokenEntry);
         BeepORM.verifyEmailRepository = BeepORM.orm.em.getRepository(VerifyEmail);
+        BeepORM.queueEntryRepository = BeepORM.orm.em.getRepository(QueueEntry);
 
         this.app.use(cors());
         this.app.use(express.json());
