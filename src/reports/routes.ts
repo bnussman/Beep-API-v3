@@ -3,7 +3,7 @@ import * as express from 'express';
 import database from'../utils/db';
 import { Validator } from "node-input-validator";
 import * as Sentry from "@sentry/node";
-import { Response, Controller, Request, Post, Body, Route, Example, Security, Tags, Get, Query, Patch, Path } from 'tsoa';
+import { Response, Controller, Request, Post, Body, Route, Example, Security, Tags, Get, Query, Patch, Path, Delete } from 'tsoa';
 import { APIStatus, APIResponse } from "../utils/Error";
 import { Report, ReportResponse, ReportsResponse, ReportUserParams, UpdateReportParams } from "../reports/reports";
 import { getNumReports } from "./helpers";
@@ -326,6 +326,33 @@ export class ReportsController extends Controller {
             this.setStatus(500);
             return new APIResponse(APIStatus.Error, error);
         }
+    }
 
+    /**
+     * Delete a report entry by id
+     * @returns {APIResponse}
+     */
+    @Example<APIResponse>({
+        status: APIStatus.Success,
+        message: "Successfully deleted report"
+    })
+    @Response<APIResponse>(500, "Server Error", {
+        status: APIStatus.Error,
+        message: "Unable to delete report"
+    })
+    @Security("token", ["admin"])
+    @Delete("{id}")
+    public async deleteReport(@Path() id: string): Promise<APIResponse> {
+        try {
+            const result = await r.table("userReports").get(id).delete().run((await database.getConn()));
+            console.log(result);
+            this.setStatus(200);
+            return new APIResponse(APIStatus.Success, "Successfully deleted report");
+        }
+        catch(error) {
+            Sentry.captureException(error);
+            this.setStatus(500);
+            return new APIResponse(APIStatus.Error, "Unable to delete report");
+        }
     }
 }
