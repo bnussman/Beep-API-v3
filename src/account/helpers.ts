@@ -54,6 +54,15 @@ export async function deleteUser(id: string): Promise<boolean> {
         return false;
     }
 
+    //delete user's location table from beepLocations 
+    try {
+        r.db("beepLocations").tableDrop(id).run((await database.getConnLocations()));
+    }
+    catch (error) {
+        Sentry.captureException(error);
+        return false;
+    }
+
     //deative all of the user's tokens
     deactivateTokens(id);
 
