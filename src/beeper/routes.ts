@@ -83,68 +83,6 @@ export class BeeperController extends Controller {
             return new APIResponse(APIStatus.Error, "Unable to set beeper status");
         }
     }
-
-
-    /**
-     * User calls this to get there queue when beeping.
-     * Our Socket server is responcible for telling a client a change occoured, it will prompt
-     * a call to this endpoint to get the queue and data
-     * @returns {GetBeeperQueueResult} 
-     */
-    @Example<GetBeeperQueueResult>({
-        status: APIStatus.Success,
-        queue: [
-            {
-                destination: "Tasty",
-                groupSize: 1,
-                id: "b500bb45-094e-437c-887b-e6b6d815ba12",
-                isAccepted: true,
-                origin: "241 Marich Ln Marich Ln Boone, NC 28607",
-                riderid: "22192b90-54f8-49b5-9dcf-26049454716b",
-                state: 0,
-                timeEnteredQueue: 1603318791872,
-                personalInfo: {
-                    first: "Banks",
-                    isStudent: true,
-                    last: "Nussman",
-                    phone: "7049968597",
-                    venmo: "banksnussman"
-                }
-            }
-        ]
-    })
-    @Response<APIResponse>(500, "Server Error", {
-        status: APIStatus.Error, 
-        message: "Unable to get beeper queue"
-    })
-    @Security("token")
-    @Get("queue")
-    public async getBeeperQueue(@Request() request: express.Request): Promise<APIResponse | GetBeeperQueueResult> {
-        try {
-            //TODO whattt
-            //@ts-ignore
-            const result: BeepQueueTableEntry[] = await r.table(request.user.id).orderBy('timeEnteredQueue').run((await database.getConnQueues()));
-
-            //for every entry in a beeper's queue, add personal info
-            //TODO use a table join insted
-            for (const doc of result) {
-                //for every queue entry, add personal info of the rider
-                doc['personalInfo'] = await getPersonalInfo(doc.riderid);
-            }
-
-            //after processing, send data.
-            this.setStatus(200);
-            return {
-                'status': APIStatus.Success,
-                'queue': result
-            };
-        }
-        catch (error) {
-            Sentry.captureException(error);
-            this.setStatus(500);
-            return new APIResponse(APIStatus.Error, "Unable to get beeper queue");
-        }
-    }
     
     /**
      * A beeper calls this to set the status of one entry in their queue
