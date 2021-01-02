@@ -126,6 +126,7 @@ export class BeeperController extends Controller {
             const result: BeepQueueTableEntry[] = await r.table(request.user.id).orderBy('timeEnteredQueue').run((await database.getConnQueues()));
 
             //for every entry in a beeper's queue, add personal info
+            //TODO use a table join insted
             for (const doc of result) {
                 //for every queue entry, add personal info of the rider
                 doc['personalInfo'] = await getPersonalInfo(doc.riderid);
