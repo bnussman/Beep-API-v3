@@ -5,7 +5,7 @@ import database from '../utils/db';
 import { sendNotification } from '../utils/notifications';
 import { Validator } from "node-input-validator";
 import * as Sentry from "@sentry/node";
-import { Response, Controller, Post, Route, Security, Tags, Request, Body, Get, Example, Patch, Delete } from 'tsoa';
+import { Response, Controller, Route, Security, Tags, Request, Body, Get, Example, Patch, Delete } from 'tsoa';
 import { BeeperListItem, BeeperListResult, ChooseBeepParams, ChooseBeepResponse, LeaveQueueParams, RiderStatusResult } from "./rider";
 import { APIResponse, APIStatus } from '../utils/Error';
 import { getUsersCurrentLocation } from './helpers';
@@ -51,7 +51,7 @@ export class RiderController extends Controller {
     })
     @Security("token")
     @Patch("choose")
-    public async chooseBeep (@Request() request: express.Request, @Body() requestBody: ChooseBeepParams): Promise<ChooseBeepResponse | APIResponse> {
+    public async chooseBeep(@Request() request: express.Request, @Body() requestBody: ChooseBeepParams): Promise<ChooseBeepResponse | APIResponse> {
         const v = new Validator(requestBody, {
             groupSize: "required|numeric",
             origin: "required",
@@ -147,11 +147,12 @@ export class RiderController extends Controller {
     })
     @Security("token")
     @Get("find")
-    public async findBeep (@Request() request: express.Request): Promise<APIResponse | ChooseBeepResponse> {
+    public async findBeep(@Request() request: express.Request): Promise<APIResponse | ChooseBeepResponse> {
+        const items: string[] = ['id', 'first', 'last', 'queueSize', 'singlesRate', 'groupRate', 'capacity', 'userLevel', 'isStudent', 'masksRequired', 'photoUrl'];
         //rethinkdb query to search users table (in acending order by queueSize) for users where isBeeping is true
         //and id is not equal to requester's, and limit by 1 to decide a riders beeper
         try {
-            const cursor: Cursor = await r.table('users').orderBy({'index': 'queueSize'}).filter(r.row('isBeeping').eq(true).and(r.row('id').ne(request.user.id))).limit(1).run((await database.getConn()));
+            const cursor: Cursor = await r.table('users').orderBy({'index': 'queueSize'}).filter(r.row('isBeeping').eq(true).and(r.row('id').ne(request.user.id))).pluck(...items).limit(1).run((await database.getConn()));
 
             try {
                 const result = await cursor.next();
@@ -159,20 +160,8 @@ export class RiderController extends Controller {
                 //if we made it to this point, user has found a beep and it has been
                 //registered in our db. Send output with nessesary data to rider.
                 return {
-                    'status': APIStatus.Success,
-                    'beeper': {
-                        'id': result.id,
-                        'first': result.first,
-                        'last': result.last,
-                        'queueSize': result.queueSize,
-                        'singlesRate': result.singlesRate,
-                        'groupRate': result.groupRate,
-                        'capacity': result.capacity,
-                        'userLevel': result.userLevel,
-                        'isStudent': result.isStudent,
-                        'masksRequired': result.masksRequired,
-                        'photoUrl': result.photoUrl
-                    }
+                    status: APIStatus.Success,
+                    beeper: { ...result }
                 };
             }
             catch (error) {
