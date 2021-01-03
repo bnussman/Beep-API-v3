@@ -94,7 +94,7 @@ export class RiderController extends Controller {
             this.setStatus(500);
             return new APIResponse(APIStatus.Error, "Unable to choose beep");
         }
-
+        /*
         try {
             //update beeper's queue size in the users table
             r.table('users').get(requestBody.beepersID).update({'queueSize': r.row('queueSize').add(1)}).run((await database.getConn()));
@@ -105,6 +105,7 @@ export class RiderController extends Controller {
             this.setStatus(500);
             return new APIResponse(APIStatus.Error, "Unable to choose beep");
         }
+        */
 
         try {
             //update rider's inQueueOfUserID
@@ -297,7 +298,7 @@ export class RiderController extends Controller {
 
                 //get rider's position in the queue by using a count query where we count entries where they entered the queue earlier
                 //(they have an earlier timestamp)
-                const ridersQueuePosition = await r.table(beepersID).filter(r.row('timeEnteredQueue').lt(queueEntry.timeEnteredQueue).and(r.row('isAccepted').eq(true))).count().run((await database.getConnQueues()));
+                const ridersQueuePosition = await r.table(beepersID).filter(r.row('timeEnteredQueue').lt(queueEntry.timeEnteredQueue)).count().run((await database.getConnQueues()));
 
                 //get beeper's information
                 const beepersInfo = await r.table('users').get(beepersID).pluck('first', 'last', 'phone', 'venmo', 'singlesRate', 'groupRate', 'queueSize', 'userLevel', 'isStudent', 'capacity', 'masksRequired', 'photoUrl').run((await database.getConn()));
