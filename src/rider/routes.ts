@@ -8,6 +8,7 @@ import * as Sentry from "@sentry/node";
 import { Response, Controller, Post, Route, Security, Tags, Request, Body, Get, Example, Patch, Delete } from 'tsoa';
 import { BeeperListItem, BeeperListResult, ChooseBeepParams, ChooseBeepResponse, LeaveQueueParams, RiderStatusResult } from "./rider";
 import { APIResponse, APIStatus } from '../utils/Error';
+import { getUsersCurrentLocation } from './helpers';
     
 @Tags("Rider")
 @Route("rider")
@@ -355,6 +356,11 @@ export class RiderController extends Controller {
                         }
                     };
                 }
+
+                if (queueEntry.state == 1) {
+                    output = { ...output, beepersLocation: (await getUsersCurrentLocation(beepersID))}
+                }
+
                 //respond with appropriate output
                 return output;
             }

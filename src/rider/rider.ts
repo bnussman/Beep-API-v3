@@ -108,6 +108,7 @@ export interface RiderStatusResult {
     beeper: BeeperData
     origin: string;
     destination: string;
+    beepersLocation?: any;
 }
 
 /**
