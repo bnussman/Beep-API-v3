@@ -199,20 +199,22 @@ export class BeeperController extends Controller {
                 return new APIResponse(APIStatus.Error, "Unable set beeper queue item");
             }
             
-            try {
-                //decrease beeper's queue size
-                const result: WriteResult = await r.table('users').get(request.user.id).update({'queueSize': r.row('queueSize').sub(1)}).run((await database.getConn()));
-                //handle any RethinkDB error
-                //ensure we actually updated something
-                if (result.replaced != 1) {
-                    this.setStatus(500);
-                    return new APIResponse(APIStatus.Error, "Nothing was changed in beeper's queue table. This should not have happended...");
+            if (requestBody.value == 'complete') {
+                try {
+                    //decrease beeper's queue size
+                    const result: WriteResult = await r.table('users').get(request.user.id).update({'queueSize': r.row('queueSize').sub(1)}).run((await database.getConn()));
+                    //handle any RethinkDB error
+                    //ensure we actually updated something
+                    if (result.replaced != 1) {
+                        this.setStatus(500);
+                        return new APIResponse(APIStatus.Error, "Nothing was changed in beeper's queue table. This should not have happended...");
+                    }
                 }
-            }
-            catch (error) {
-                Sentry.captureException(error);
-                this.setStatus(500);
-                return new APIResponse(APIStatus.Error, "Unable set beeper queue item");
+                catch (error) {
+                    Sentry.captureException(error);
+                    this.setStatus(500);
+                    return new APIResponse(APIStatus.Error, "Unable set beeper queue item");
+                }
             }
 
             try {
