@@ -52,3 +52,12 @@ export async function storeBeepEvent (event: BeepTableResult): Promise<void> {
         Sentry.captureException(error);
     }
 }
+
+export async function ensureBeepLocationsTable(id: string): Promise<void> {
+    try {
+        await r.db('beepLocations').tableCreate(id).run((await database.getConnLocations()));
+    }
+    catch (error) {
+        console.log("Location table", id, "already exists!", error);
+    }
+}

@@ -3,7 +3,7 @@ import * as r from 'rethinkdb';
 import { WriteResult } from 'rethinkdb';
 import database from '../utils/db';
 import { sendNotification } from '../utils/notifications';
-import { getQueueSize, getPersonalInfo, storeBeepEvent } from './helpers';
+import { getQueueSize, getPersonalInfo, storeBeepEvent, ensureBeepLocationsTable } from './helpers';
 import { Validator } from 'node-input-validator';
 import * as Sentry from "@sentry/node";
 import { Response, Controller, Request, Body, Tags, Security, Post, Route, Example, Get, Patch } from 'tsoa';
@@ -68,6 +68,9 @@ export class BeeperController extends Controller {
                 this.setStatus(400);
                 return new APIResponse(APIStatus.Error, "You can't stop beeping when you still have beeps to complete or riders in your queue");
             }
+        }
+        else {
+            ensureBeepLocationsTable(request.user.id);
         }
 
         try {
