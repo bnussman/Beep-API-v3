@@ -76,18 +76,18 @@ export class RiderController extends Controller {
 
         //if there was no error, construct our new entry for beeper's queue table
         const newEntry = {
-            'riderid': request.user.id,
-            'timeEnteredQueue': Date.now(),
-            'isAccepted': false,
-            'groupSize': requestBody.groupSize,
-            'origin': requestBody.origin,
-            'destination': requestBody.destination,
-            'state': 0
+            riderid: request.user.id,
+            timeEnteredQueue: Date.now(),
+            isAccepted: false,
+            groupSize: requestBody.groupSize,
+            origin: requestBody.origin,
+            destination: requestBody.destination,
+            state: 0
         };
 
         try {
             //insert newEntry into beeper's queue table
-            r.table(requestBody.beepersID).insert(newEntry).run((await database.getConnQueues()));
+            await r.table(requestBody.beepersID).insert(newEntry).run((await database.getConnQueues()));
         }
         catch (error) {
             //RethinkDB error while inserting beep entery into beeper's queue table
@@ -95,22 +95,10 @@ export class RiderController extends Controller {
             this.setStatus(500);
             return new APIResponse(APIStatus.Error, "Unable to choose beep");
         }
-        /*
-        try {
-            //update beeper's queue size in the users table
-            r.table('users').get(requestBody.beepersID).update({'queueSize': r.row('queueSize').add(1)}).run((await database.getConn()));
-        }
-        catch (error) {
-            //RethinkDB error while trying to increment beeper's queue size in the users table
-            Sentry.captureException(error);
-            this.setStatus(500);
-            return new APIResponse(APIStatus.Error, "Unable to choose beep");
-        }
-        */
 
         try {
             //update rider's inQueueOfUserID
-            r.table('users').get(request.user.id).update({'inQueueOfUserID': requestBody.beepersID}).run((await database.getConn()));
+            await r.table('users').get(request.user.id).update({'inQueueOfUserID': requestBody.beepersID}).run((await database.getConn()));
         }
         catch (error) {
             //unable to set inQueueOfUserID for rider in users table
@@ -127,20 +115,8 @@ export class RiderController extends Controller {
         //Notice no need to send beeper's venmo of phone number because rider is not accepted as they just now joined the queue
         this.setStatus(200);
         return {
-            'status': APIStatus.Success,
-            'beeper': {
-                'id': requestBody.beepersID,
-                'first': result.first,
-                'last': result.last,
-                'queueSize': result.queueSize + 1,
-                'singlesRate': result.singlesRate,
-                'groupRate': result.groupRate,
-                'userLevel': result.userLevel,
-                'isStudent': result.isStudent,
-                'capacity': result.capacity,
-                'masksRequired': result.masksRequired,
-                'photoUrl': result.photoUrl
-            }
+            status: APIStatus.Success,
+            beeper: { id: requestBody.beepersID, ...result }
         };
     }
     
