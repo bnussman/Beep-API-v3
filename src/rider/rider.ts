@@ -72,6 +72,19 @@ export interface BeeperData {
     phone?: string;
     venmo?: string;
     photoUrl: string | null;
+    location?: LocationData;
+}
+
+export interface LocationData {
+    id?: string;
+    accuracy: number;
+    altitude: number;
+    altitudeAccuracy: number;
+    heading: number;
+    latitude: number;
+    longitude: number;
+    speed: number;
+    timestamp?: number;
 }
 
 /**
@@ -105,7 +118,7 @@ export interface RiderStatusResult {
     isAccepted: boolean;
     ridersQueuePosition?: number;
     state?: number;
-    beeper: BeeperData
+    beeper: BeeperData;
     origin: string;
     destination: string;
     beepersLocation?: any;

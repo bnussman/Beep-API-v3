@@ -301,64 +301,31 @@ export class RiderController extends Controller {
                 //(they have an earlier timestamp)
                 const ridersQueuePosition = await r.table(beepersID).filter(r.row('timeEnteredQueue').lt(queueEntry.timeEnteredQueue)).count().run((await database.getConnQueues()));
 
-                //get beeper's information
-                const beepersInfo = await r.table('users').get(beepersID).pluck('first', 'last', 'phone', 'venmo', 'singlesRate', 'groupRate', 'queueSize', 'userLevel', 'isStudent', 'capacity', 'masksRequired', 'photoUrl').run((await database.getConn()));
-
-                let output: RiderStatusResult;
+                let keys: string[];
 
                 if (queueEntry.isAccepted) {
-                    //if rider is accepted by beeper, give them data along with more personal info like full name and phone number
-                    output = {
-                        "status": APIStatus.Success,
-                        "groupSize": queueEntry.groupSize,
-                        "isAccepted": queueEntry.isAccepted,
-                        "ridersQueuePosition": ridersQueuePosition,
-                        "state": queueEntry.state,
-                        "origin": queueEntry.origin,
-                        "destination": queueEntry.destination,
-                        "beeper": {
-                            "id": beepersID,
-                            "first": beepersInfo.first,
-                            "last": beepersInfo.last,
-                            "phone": beepersInfo.phone,
-                            "venmo": beepersInfo.venmo,
-                            "queueSize": beepersInfo.queueSize,
-                            "singlesRate": beepersInfo.singlesRate,
-                            "groupRate": beepersInfo.groupRate,
-                            'capacity': beepersInfo.capacity,
-                            'userLevel': beepersInfo.userLevel,
-                            'isStudent': beepersInfo.isStudent,
-                            'masksRequired': beepersInfo.masksRequired,
-                            'photoUrl': beepersInfo.photoUrl
-                        }
-                    };
-                }
+                    keys = ['first', 'last', 'phone', 'venmo', 'singlesRate', 'groupRate', 'queueSize', 'userLevel', 'isStudent', 'capacity', 'masksRequired', 'photoUrl'];
+                } 
                 else {
-                    //rider is not yet accepted, give them info, but exclude less personal info
-                    output = {
-                        "status": APIStatus.Success,
-                        "groupSize": queueEntry.groupSize,
-                        "isAccepted": queueEntry.isAccepted,
-                        "origin": queueEntry.origin,
-                        "destination": queueEntry.destination,
-                        "beeper": {
-                            "id": beepersID,
-                            "first": beepersInfo.first,
-                            "last": beepersInfo.last,
-                            "queueSize": beepersInfo.queueSize,
-                            "singlesRate": beepersInfo.singlesRate,
-                            "groupRate": beepersInfo.groupRate,
-                            'capacity': beepersInfo.capacity,
-                            'userLevel': beepersInfo.userLevel,
-                            'isStudent': beepersInfo.isStudent,
-                            'masksRequired': beepersInfo.masksRequired,
-                            'photoUrl': beepersInfo.photoUrl
-                        }
-                    };
+                    keys = ['first', 'last', 'singlesRate', 'groupRate', 'queueSize', 'userLevel', 'isStudent', 'capacity', 'masksRequired', 'photoUrl'];
                 }
 
+                //get beeper's information
+                const beepersInfo = await r.table('users').get(beepersID).pluck(...keys).run((await database.getConn()));
+
+                //if rider is accepted by beeper, give them data along with more personal info like full name and phone number
+                const output: RiderStatusResult = {
+                    status: APIStatus.Success,
+                    ridersQueuePosition: ridersQueuePosition,
+                    beeper: { id: beepersID, ...beepersInfo },
+                    ...queueEntry
+                };
+
                 if (queueEntry.state == 1) {
-                    output = { ...output, beepersLocation: (await getUsersCurrentLocation(beepersID))}
+                    //if beep is in state 1 (which is on the way), attack the locarion of the beeper in the response
+                    //this allows the rider client to get the initial ETA, the socket will handle updates
+                    const locationData = await getUsersCurrentLocation(beepersID);
+                    if (locationData) output['beeper']['location'] = locationData;
                 }
 
                 //respond with appropriate output
