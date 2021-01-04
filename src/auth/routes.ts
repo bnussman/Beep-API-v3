@@ -91,27 +91,27 @@ export class AuthController extends Controller {
                     cursor.close();
 
                     //send out data to REST API
-                    return ({
-                        'status': APIStatus.Success,
-                        'id': result.id,
-                        'username': result.username,
-                        'first': result.first,
-                        'last': result.last,
-                        'email': result.email,
-                        'phone': result.phone,
-                        'venmo': result.venmo,
-                        'token': tokenData.token,
-                        'tokenid': tokenData.tokenid,
-                        'singlesRate': result.singlesRate,
-                        'groupRate': result.groupRate,
-                        'capacity': result.capacity,
-                        'isBeeping': result.isBeeping,
-                        'userLevel': result.userLevel,
-                        'isEmailVerified': result.isEmailVerified,
-                        'isStudent': result.isStudent,
-                        'masksRequired': result.masksRequired,
-                        'photoUrl': result.photoUrl
-                    });
+                    return {
+                        status: APIStatus.Success,
+                        id: result.id,
+                        username: result.username,
+                        first: result.first,
+                        last: result.last,
+                        email: result.email,
+                        phone: result.phone,
+                        venmo: result.venmo,
+                        token: tokenData.token,
+                        tokenid: tokenData.tokenid,
+                        singlesRate: result.singlesRate,
+                        groupRate: result.groupRate,
+                        capacity: result.capacity,
+                        isBeeping: result.isBeeping,
+                        userLevel: result.userLevel,
+                        isEmailVerified: result.isEmailVerified,
+                        isStudent: result.isStudent,
+                        masksRequired: result.masksRequired,
+                        photoUrl: result.photoUrl
+                    };
                 }
                 else {
                     cursor.close();
@@ -208,24 +208,24 @@ export class AuthController extends Controller {
 
         //This is the row that will be inserted into our users RethinkDB table
         const document = {
-            'first': requestBody.first,
-            'last': requestBody.last,
-            'email': requestBody.email,
-            'phone': requestBody.phone,
-            'venmo': requestBody.venmo,
-            'username': requestBody.username,
-            'password': sha256(requestBody.password),
-            'isBeeping': false,
-            'queueSize': 0,
-            'inQueueOfUserID': null,
-            'pushToken': requestBody.expoPushToken || null,
-            'singlesRate': 3.00,
-            'groupRate': 2.00,
-            'capacity': 4,
-            'userLevel': 0,
-            'isEmailVerified': false,
-            'isStudent': false,
-            'masksRequired': false
+            first: requestBody.first,
+            last: requestBody.last,
+            email: requestBody.email,
+            phone: requestBody.phone,
+            venmo: requestBody.venmo,
+            username: requestBody.username,
+            password: sha256(requestBody.password),
+            isBeeping: false,
+            queueSize: 0,
+            inQueueOfUserID: null,
+            pushToken: requestBody.expoPushToken || null,
+            singlesRate: 3.00,
+            groupRate: 2.00,
+            capacity: 4,
+            userLevel: 0,
+            isEmailVerified: false,
+            isStudent: false,
+            masksRequired: false
         };
     
         try {
@@ -247,27 +247,27 @@ export class AuthController extends Controller {
                 createVerifyEmailEntryAndSendEmail(userid, requestBody.email, requestBody.first);
 
                 //produce our REST API output
-                return ({
-                    'status': APIStatus.Success,
-                    'id': userid,
-                    'username': requestBody.username,
-                    'first': requestBody.first,
-                    'last': requestBody.last,
-                    'email': requestBody.email,
-                    'phone': requestBody.phone,
-                    'venmo': requestBody.venmo,
-                    'token': tokenData.token,
-                    'tokenid': tokenData.tokenid,
-                    'singlesRate': 3.00,
-                    'groupRate': 2.00,
-                    'capacity': 4,
-                    'isBeeping': false,
-                    'userLevel': 0,
-                    'isEmailVerified': false,
-                    'isStudent': false,
-                    'masksRequired': false,
-                    'photoUrl': null
-                });
+                return {
+                    status: APIStatus.Success,
+                    id: userid,
+                    username: requestBody.username,
+                    first: requestBody.first,
+                    last: requestBody.last,
+                    email: requestBody.email,
+                    phone: requestBody.phone,
+                    venmo: requestBody.venmo,
+                    token: tokenData.token,
+                    tokenid: tokenData.tokenid,
+                    singlesRate: 3.00,
+                    groupRate: 2.00,
+                    capacity: 4,
+                    isBeeping: false,
+                    userLevel: 0,
+                    isEmailVerified: false,
+                    isStudent: false,
+                    masksRequired: false,
+                    photoUrl: null
+                };
             }
             else {
                 //RethinkDB says that a new entry was NOT inserted, something went wrong...

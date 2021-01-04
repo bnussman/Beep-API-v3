@@ -9,9 +9,8 @@ import { Validator } from "node-input-validator";
 import { UserPluckResult } from '../types/beep';
 import * as Sentry from "@sentry/node";
 import { APIStatus, APIResponse } from "../utils/Error";
-import { Response, Body, Controller, Post, Route, Security, Tags, Request, Delete, Example, Get, Put, Patch } from 'tsoa';
-import { BeeperHistoryResult, ChangePasswordParams, EditAccountParams, RiderHistoryResult, RiderHistoryWithBeeperData, UpdatePushTokenParams, VerifyAccountParams, VerifyAccountResult } from "./account";
-import { withouts } from '../utils/config';
+import { Response, Body, Controller, Post, Route, Security, Tags, Request, Delete, Example, Put, Patch } from 'tsoa';
+import { ChangePasswordParams, EditAccountParams, UpdatePushTokenParams, VerifyAccountParams, VerifyAccountResult } from "./account";
 
 @Tags("Account")
 @Route("account")
@@ -254,10 +253,10 @@ export class AccountController extends Controller {
             //use the helper function isEduEmail to check if user is a student
             if (isEduEmail(entry.email)) {
                 //if user is a student ensure we update isStudent
-                update = {isEmailVerified: true, isStudent: true};
+                update = { isEmailVerified: true, isStudent: true };
             }
             else {
-                update = {isEmailVerified: true};
+                update = { isEmailVerified: true };
             }
 
             try {
@@ -265,9 +264,9 @@ export class AccountController extends Controller {
                 await r.table("users").get(entry.userid).update(update).run((await database.getConn()));
 
                 return ({
-                    "status": APIStatus.Success,
-                    "message": "Successfully verified email",
-                    "data": {...update, "email": usersEmail}
+                    status: APIStatus.Success,
+                    message: "Successfully verified email",
+                    data: {...update, email: usersEmail}
                 });
             }
             catch(error) {

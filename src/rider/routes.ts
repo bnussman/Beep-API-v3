@@ -223,7 +223,7 @@ export class RiderController extends Controller {
     })
     @Security("token")
     @Get("status")
-    public async getRiderStatus (@Request() request: express.Request): Promise<APIResponse | RiderStatusResult> {
+    public async getRiderStatus(@Request() request: express.Request): Promise<APIResponse | RiderStatusResult> {
         let result;
 
         //get rider's inQueueOfUserID in our user's db so we know what queue to look into
@@ -331,18 +331,6 @@ export class RiderController extends Controller {
             this.setStatus(500);
             return new APIResponse(APIStatus.Error, "Unable to leave queue");
         }
-       
-        /*
-        try {
-            //decreace beeper's queue size
-            r.table('users').get(requestBody.beepersID).update({'queueSize': r.row('queueSize').sub(1)}).run((await database.getConn()));
-        }
-        catch (error) {
-            Sentry.captureException(error);
-            this.setStatus(500);
-            return new APIResponse(APIStatus.Error, "Unable to leave queue");
-        }
-        */
 
         try {
             //set rider's inQueueOfUserID value to null because they are no longer in a queue

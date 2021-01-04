@@ -63,8 +63,8 @@ export class UsersController extends Controller {
 
             this.setStatus(200);
             return {
-                'status': APIStatus.Success,
-                'user': result
+                status: APIStatus.Success,
+                user: result
             };
         }
         catch (error) {
@@ -419,8 +419,8 @@ export class UsersController extends Controller {
             //after processing, send data.
             this.setStatus(200);
             return {
-                'status': APIStatus.Success,
-                'queue': result
+                status: APIStatus.Success,
+                queue: result
             };
         }
         catch (error) {

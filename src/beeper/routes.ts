@@ -3,12 +3,12 @@ import * as r from 'rethinkdb';
 import { WriteResult } from 'rethinkdb';
 import database from '../utils/db';
 import { sendNotification } from '../utils/notifications';
-import { getQueueSize, getPersonalInfo, storeBeepEvent, ensureBeepLocationsTable } from './helpers';
+import { getQueueSize, storeBeepEvent, ensureBeepLocationsTable } from './helpers';
 import { Validator } from 'node-input-validator';
 import * as Sentry from "@sentry/node";
-import { Response, Controller, Request, Body, Tags, Security, Post, Route, Example, Get, Patch } from 'tsoa';
+import { Response, Controller, Request, Body, Tags, Security, Route, Example, Patch } from 'tsoa';
 import { APIResponse, APIStatus } from '../utils/Error';
-import { BeepQueueTableEntry, GetBeeperQueueResult, SetBeeperQueueParams, SetBeeperStatusParams } from './beeper';
+import { SetBeeperQueueParams, SetBeeperStatusParams } from './beeper';
 
 @Tags("Beeper")
 @Route("beeper")
@@ -161,7 +161,10 @@ export class BeeperController extends Controller {
 
         if (requestBody.value == 'accept') {
             try {
+                //set queue entry's isAccepted vlaue to true
                 const result: WriteResult = await r.table(request.user.id).get(requestBody.queueID).update({'isAccepted': true}).run((await database.getConnQueues()));
+
+                //increase the queueSize of the beeper
                 await r.table('users').get(request.user.id).update({'queueSize': r.row('queueSize').add(1)}).run((await database.getConn()));
 
                 //TODO check write result
