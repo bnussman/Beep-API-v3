@@ -24,10 +24,11 @@ export async function sendNotification(userid: string, title: string, message: s
     });
 
     req.write(JSON.stringify({
-        "to": pushToken,
-        "title": title,
-        "body": message,
-        "_category": categoryIdentifier
+        to: pushToken,
+        title: title,
+        body: message,
+        sound: "default",
+        _category: categoryIdentifier
     }));
 
     req.end();
