@@ -321,7 +321,30 @@ export class RiderController extends Controller {
     })
     @Security("token")
     @Delete("leave")
-    public async riderLeaveQueue(@Request() request: express.Request, @Body() requestBody: LeaveQueueParams): Promise<APIResponse> {
+    public async leaveQueue(@Request() request: express.Request, @Body() requestBody: LeaveQueueParams): Promise<APIResponse> {
+        //if rider wants to leave a queue, they must not be at the top of the queue
+        //
+        // Rider can leave queue if:
+        // 1. they are not accepted
+        // 2. they are not at the top of the queue 
+        
+        
+        //in beeper's queue table, get the time the rider entered the queue
+        //we need this to count the number of people before this rider in the queue
+        const cursor = await r.table(requestBody.beepersID).filter({ riderid: request.user.id }).pluck('timeEnteredQueue', 'isAccepted').run((await database.getConnQueues()));
+        
+        const data = await cursor.next();
+
+        //query to get rider's actual position in the queue
+        const ridersQueuePosition = await r.table(requestBody.beepersID).filter(r.row('timeEnteredQueue').lt(data.timeEnteredQueue)).count().run((await database.getConnQueues()));
+
+        //if there are riders before this rider that have not been accepted,
+        //tell the beeper they must respond to them first.
+        if (ridersQueuePosition == 0 && data.isAccepted) {
+            this.setStatus(400);
+            return new APIResponse(APIStatus.Error, "You can not leave a queue when you are currenly being served");
+        }
+
         try {
             //delete entry in beeper's queue table
             const result = await r.table(requestBody.beepersID).filter({ riderid: request.user.id }).delete({ returnChanges: true }).run((await database.getConnQueues()));
