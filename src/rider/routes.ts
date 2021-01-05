@@ -321,10 +321,23 @@ export class RiderController extends Controller {
     })
     @Security("token")
     @Delete("leave")
-    public async riderLeaveQueue (@Request() request: express.Request, @Body() requestBody: LeaveQueueParams): Promise<APIResponse> {
+    public async riderLeaveQueue(@Request() request: express.Request, @Body() requestBody: LeaveQueueParams): Promise<APIResponse> {
         try {
             //delete entry in beeper's queue table
-            r.table(requestBody.beepersID).filter({'riderid': request.user.id}).delete().run((await database.getConnQueues()));
+            const result = await r.table(requestBody.beepersID).filter({ riderid: request.user.id }).delete({ returnChanges: true }).run((await database.getConnQueues()));
+
+            const entry = result.changes[0].old_val;
+
+            if (entry.isAccepted) {
+                try {
+                    await r.table("users").get(requestBody.beepersID).update({ queueSize: r.row('queueSize').sub(1) }).run((await database.getConn()));
+                }
+                catch(error) {
+                    Sentry.captureException(error);
+                    this.setStatus(500);
+                    return new APIResponse(APIStatus.Error, "Unable to leave queue");
+                }
+            }
         }
         catch (error) {
             Sentry.captureException(error);
@@ -334,7 +347,7 @@ export class RiderController extends Controller {
 
         try {
             //set rider's inQueueOfUserID value to null because they are no longer in a queue
-            r.table('users').get(request.user.id).update({'inQueueOfUserID': null}).run((await database.getConn()));
+            await r.table('users').get(request.user.id).update({'inQueueOfUserID': null}).run((await database.getConn()));
         }
         catch (error) {
             Sentry.captureException(error);

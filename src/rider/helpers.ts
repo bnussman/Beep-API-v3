@@ -14,4 +14,3 @@ export async function getUsersCurrentLocation(id: string): Promise<LocationData 
     }
     return null;
 }
-

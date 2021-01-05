@@ -165,7 +165,7 @@ export class BeeperController extends Controller {
                 const result: WriteResult = await r.table(request.user.id).get(requestBody.queueID).update({'isAccepted': true}).run((await database.getConnQueues()));
 
                 //increase the queueSize of the beeper
-                await r.table('users').get(request.user.id).update({'queueSize': r.row('queueSize').add(1)}).run((await database.getConn()));
+                await r.table('users').get(request.user.id).update({ queueSize: r.row('queueSize').add(1) }).run((await database.getConn()));
 
                 //TODO check write result
                 

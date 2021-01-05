@@ -11,6 +11,7 @@ export class DirectionsController extends Controller {
     public async getDirections(@Path() start: string, @Path() end: string): Promise<any | APIResponse> {
         try {
             const result = await fetch('https://maps.googleapis.com/maps/api/directions/json?origin=' + start + '&destination=' + end + '&key=AIzaSyBgabJrpu7-ELWiUIKJlpBz2mL6GYjwCVI');
+
             const data = await result.json();
 
             this.setStatus(result.status);
