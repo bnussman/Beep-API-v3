@@ -1,4 +1,4 @@
-import { Controller, Tags, Route, Security, Get, Path } from 'tsoa';
+import { Controller, Tags, Route, Security, Get, Path, Example, Response } from 'tsoa';
 import { APIStatus, APIResponse } from "../utils/Error";
 import { DirectionsResponse } from './directions';
 import fetch from 'node-fetch';
@@ -13,6 +13,14 @@ export class DirectionsController extends Controller {
      * @param end the end location
      * @returns {DirectionsResponse | APIResponse}
      */
+    @Example<DirectionsResponse>({
+        status: APIStatus.Success,
+        eta: "7 minutes"
+    })
+    @Response<APIResponse>(500, "Server Error", {
+        status: APIStatus.Error,
+        message: "Unable to get ETA"
+    })
     @Security("token")
     @Get("{start}/{end}")
     public async getDirections(@Path() start: string, @Path() end: string): Promise<DirectionsResponse | APIResponse> {
