@@ -28,7 +28,7 @@ export async function sendNotification(userid: string, title: string, message: s
         title: title,
         body: message,
         sound: "default",
-        _category: categoryIdentifier
+        _category: "@bnussman/Beep-" + categoryIdentifier
     }));
 
     req.end();
