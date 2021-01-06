@@ -87,7 +87,14 @@ export class RiderController extends Controller {
 
         try {
             //insert newEntry into beeper's queue table
-            await r.table(requestBody.beepersID).insert(newEntry).run((await database.getConnQueues()));
+            const result = await r.table(requestBody.beepersID).insert(newEntry).run((await database.getConnQueues()));
+            const queueId = result.generated_keys[0];
+
+            //Tell Beeper someone entered their queue asyncronously
+            sendNotification(requestBody.beepersID, "A rider has entered your queue", "Please open your app to accept or deny them.", "enteredBeeperQueue", {
+                queueID: queueId,
+                riderID: request.user.id
+            });
         }
         catch (error) {
             //RethinkDB error while inserting beep entery into beeper's queue table
@@ -106,9 +113,6 @@ export class RiderController extends Controller {
             this.setStatus(500);
             return new APIResponse(APIStatus.Error, "Unable to choose beep");
         }
-
-        //Tell Beeper someone entered their queue asyncronously
-        sendNotification(requestBody.beepersID, "A rider has entered your queue", "Please open your app to accept or deny them.", "enteredBeeperQueue");
 
         //if we made it to this point, user has found a beep and it has been
         //registered in our db. Send output with nessesary data to rider.

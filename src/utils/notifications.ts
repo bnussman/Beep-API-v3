@@ -9,7 +9,7 @@ import * as Sentry from "@sentry/node";
  * @param title for the notification
  * @param message is the body of the push notification
  */
-export async function sendNotification(userid: string, title: string, message: string, categoryIdentifier?: string): Promise<void> {
+export async function sendNotification(userid: string, title: string, message: string, categoryIdentifier?: string, data?: unknown): Promise<void> {
     const pushToken = await getPushToken(userid);
 
     if (!pushToken) return;
@@ -27,6 +27,7 @@ export async function sendNotification(userid: string, title: string, message: s
         to: pushToken,
         title: title,
         body: message,
+        data: data,
         sound: "default",
         _category: "@bnussman/Beep-" + categoryIdentifier
     }));
