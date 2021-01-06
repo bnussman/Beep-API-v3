@@ -15,3 +15,7 @@ export const withouts = {
     userLevel: true,
     venmo: true
 };
+
+export const defaultBeeperInfo = ['id', 'first', 'last', 'singlesRate', 'groupRate', 'queueSize', 'userLevel', 'isStudent', 'capacity', 'masksRequired', 'photoUrl', 'isBeeping'];
+
+export const acceptedBeeperInfo = [...defaultBeeperInfo, 'phone', 'venmo'];

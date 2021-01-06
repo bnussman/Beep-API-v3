@@ -9,6 +9,7 @@ import { Response, Controller, Route, Security, Tags, Request, Body, Get, Exampl
 import { BeeperListItem, BeeperListResult, ChooseBeepParams, ChooseBeepResponse, LeaveQueueParams, RiderStatusResult } from "./rider";
 import { APIResponse, APIStatus } from '../utils/Error';
 import { getUsersCurrentLocation } from './helpers';
+import { defaultBeeperInfo, acceptedBeeperInfo } from '../utils/config';
     
 @Tags("Rider")
 @Route("rider")
@@ -66,7 +67,7 @@ export class RiderController extends Controller {
         }
        
         //get beeper's information
-        const result = await r.table('users').get(requestBody.beepersID).pluck('first', 'last', 'queueSize', 'singlesRate', 'groupRate', 'isBeeping', 'capacity', 'isStudent', 'userLevel', 'masksRequired', 'photoUrl').run((await database.getConn()));
+        const result = await r.table('users').get(requestBody.beepersID).pluck(...defaultBeeperInfo).run((await database.getConn()));
 
         //make sure beeper is still beeping. This case WILL happen because a beeper may turn off isBeeping and rider's client may have not updated
         if (!result.isBeeping) {
@@ -120,7 +121,7 @@ export class RiderController extends Controller {
         this.setStatus(200);
         return {
             status: APIStatus.Success,
-            beeper: { id: requestBody.beepersID, ...result }
+            beeper: { ...result }
         };
     }
     
@@ -152,11 +153,8 @@ export class RiderController extends Controller {
     @Security("token")
     @Get("find")
     public async findBeep(@Request() request: express.Request): Promise<APIResponse | ChooseBeepResponse> {
-        const items: string[] = ['id', 'first', 'last', 'queueSize', 'singlesRate', 'groupRate', 'capacity', 'userLevel', 'isStudent', 'masksRequired', 'photoUrl'];
-        //rethinkdb query to search users table (in acending order by queueSize) for users where isBeeping is true
-        //and id is not equal to requester's, and limit by 1 to decide a riders beeper
         try {
-            const cursor: Cursor = await r.table('users').orderBy({'index': 'queueSize'}).filter(r.row('isBeeping').eq(true).and(r.row('id').ne(request.user.id))).pluck(...items).limit(1).run((await database.getConn()));
+            const cursor: Cursor = await r.table('users').orderBy({'index': 'queueSize'}).filter(r.row('isBeeping').eq(true).and(r.row('id').ne(request.user.id))).pluck(...defaultBeeperInfo).limit(1).run((await database.getConn()));
 
             try {
                 const result = await cursor.next();
@@ -273,10 +271,10 @@ export class RiderController extends Controller {
                 let keys: string[];
 
                 if (queueEntry.isAccepted) {
-                    keys = ['first', 'last', 'phone', 'venmo', 'singlesRate', 'groupRate', 'queueSize', 'userLevel', 'isStudent', 'capacity', 'masksRequired', 'photoUrl'];
+                    keys = acceptedBeeperInfo;
                 } 
                 else {
-                    keys = ['first', 'last', 'singlesRate', 'groupRate', 'queueSize', 'userLevel', 'isStudent', 'capacity', 'masksRequired', 'photoUrl'];
+                    keys = defaultBeeperInfo;
                 }
 
                 //get beeper's information
@@ -286,7 +284,7 @@ export class RiderController extends Controller {
                 const output: RiderStatusResult = {
                     status: APIStatus.Success,
                     ridersQueuePosition: ridersQueuePosition,
-                    beeper: { id: beepersID, ...beepersInfo },
+                    beeper: { ...beepersInfo },
                     ...queueEntry
                 };
 
@@ -410,14 +408,14 @@ export class RiderController extends Controller {
     @Get("list")
     public async getBeeperList(): Promise<APIResponse | BeeperListResult> {
         try {
-            const cursor: Cursor = await r.table("users").filter({ isBeeping: true }).pluck('first', 'last', 'queueSize', 'id', 'singlesRate', 'groupRate', 'capacity', 'userLevel', 'isStudent', 'masksRequired', 'photoUrl').run((await database.getConn()));
+            const cursor: Cursor = await r.table("users").filter({ isBeeping: true }).pluck(...defaultBeeperInfo).run((await database.getConn()));
 
             const list: BeeperListItem[] = await cursor.toArray();
 
             this.setStatus(200);
             return {
-                "status": APIStatus.Success,
-                "beeperList": list
+                status: APIStatus.Success,
+                beeperList: list
             };
         }
         catch (error) {
