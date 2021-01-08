@@ -6,7 +6,7 @@ import { Response, Controller, Request, Route, Get, Example, Security, Tags, Que
 import { APIStatus, APIResponse } from "../utils/Error";
 import { DetailedUser, EditUserParams, LocationEntry, LocationResponse, UserResult, UsersResult } from "../users/users";
 import { deleteUser } from '../account/helpers';
-import { getNumUsers } from './helpers';
+import { getNumLocations, getNumUsers } from './helpers';
 import { BeeperHistoryResult, RiderHistoryResult, RiderHistoryWithBeeperData } from '../account/account';
 import { hasUserLevel } from '../auth/helpers';
 import { withouts } from '../utils/config';
@@ -432,6 +432,7 @@ export class UsersController extends Controller {
 
     @Example<LocationResponse>({
         status: APIStatus.Success,
+        total: 1,
         locations: [
             {
                 id: "03770e5f-c2a9-4134-a724-0d5bb6ac2865",
@@ -452,16 +453,37 @@ export class UsersController extends Controller {
     })
     @Security("token", ["admin"])
     @Get("{id}/location")
-    public async getLocation(@Request() request: express.Request, @Path() id: string): Promise<LocationResponse | APIResponse> {
-        try {
-            const result = await r.table(id).orderBy(r.desc('timestamp')).limit(100).run((await database.getConnLocations()));
+    public async getLocation(@Path() id: string, @Query() offset?: number, @Query() show?: number): Promise<LocationResponse | APIResponse> {
+        const numberOfLocationEntries: number = await getNumLocations(id);
 
-            const data: LocationEntry[] = await result.toArray();
+        try {
+            let cursor;
+
+            if (offset) {
+                if (show) {
+                    cursor = await r.table(id).orderBy(r.desc('timestamp')).slice(offset, offset + show).run((await database.getConnLocations()));
+                }
+                else {
+                    cursor = await r.table(id).orderBy(r.desc('timestamp')).slice(offset).run((await database.getConnLocations()));
+                }
+            }
+            else {
+                if (show) {
+                    cursor = await r.table(id).orderBy(r.desc('timestamp')).limit(show).run((await database.getConnLocations()));
+                }
+                else {
+                    cursor = await r.table(id).orderBy(r.desc('timestamp')).run((await database.getConnLocations()));
+                }
+            }
+
+
+            const data: LocationEntry[] = await cursor.toArray();
 
             this.setStatus(200);
 
             return {
                 status: APIStatus.Success,
+                total: numberOfLocationEntries,
                 locations: data
             };
         }

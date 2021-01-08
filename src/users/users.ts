@@ -163,5 +163,6 @@ export interface LocationEntry {
  */
 export interface LocationResponse {
     status: APIStatus;
+    total: number;
     locations: LocationEntry[];
 }

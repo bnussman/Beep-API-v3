@@ -11,3 +11,13 @@ export async function getNumUsers(): Promise<number> {
     }
     return 0;
 }
+
+export async function getNumLocations(id: string): Promise<number> {
+    try {
+        return r.table(id).count().run((await database.getConnLocations()));
+    }
+    catch (error) {
+        Sentry.captureException(error);
+    }
+    return 0;
+}
