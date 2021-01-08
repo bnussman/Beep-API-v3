@@ -451,9 +451,15 @@ export class UsersController extends Controller {
         status: APIStatus.Error, 
         message: "Unable to user's location"
     })
-    @Security("token", ["admin"])
+    @Security("token")
     @Get("{id}/location")
-    public async getLocation(@Path() id: string, @Query() offset?: number, @Query() show?: number): Promise<LocationResponse | APIResponse> {
+    public async getLocation(@Request() request: express.Request, @Path() id: string, @Query() offset?: number, @Query() show?: number): Promise<LocationResponse | APIResponse> {
+        if (request.user.id != id) {
+            const isAdmin = await hasUserLevel(request.user.id, 1);
+
+            if (!isAdmin) return new APIResponse(APIStatus.Error, "You must be an admin to view other peoples history");
+        }
+
         const numberOfLocationEntries: number = await getNumLocations(id);
 
         try {
