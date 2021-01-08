@@ -4,7 +4,7 @@ import database from'../utils/db';
 import * as Sentry from "@sentry/node";
 import { Response, Controller, Request, Route, Get, Example, Security, Tags, Query, Path, Delete, Patch, Body } from 'tsoa';
 import { APIStatus, APIResponse } from "../utils/Error";
-import { DetailedUser, EditUserParams, UserResult, UsersResult } from "../users/users";
+import { DetailedUser, EditUserParams, LocationEntry, LocationResponse, UserResult, UsersResult } from "../users/users";
 import { deleteUser } from '../account/helpers';
 import { getNumUsers } from './helpers';
 import { BeeperHistoryResult, RiderHistoryResult, RiderHistoryWithBeeperData } from '../account/account';
@@ -427,6 +427,48 @@ export class UsersController extends Controller {
             Sentry.captureException(error);
             this.setStatus(500);
             return new APIResponse(APIStatus.Error, "Unable to get beeper queue");
+        }
+    }
+
+    @Example<LocationResponse>({
+        status: APIStatus.Success,
+        locations: [
+            {
+                id: "03770e5f-c2a9-4134-a724-0d5bb6ac2865",
+                accuracy: 5,
+                altitude: 963.446349948066,
+                altitudeAccuracy: 3,
+                heading: 41.47227478027344,
+                latitude: 36.206469442729095,
+                longitude: -81.668430576177,
+                speed: 14.369999885559082,
+                timestamp: 1609808229233
+            }
+        ]
+    })
+    @Response<APIResponse>(500, "Server Error", {
+        status: APIStatus.Error, 
+        message: "Unable to user's location"
+    })
+    @Security("token", ["admin"])
+    @Get("{id}/location")
+    public async getLocation(@Request() request: express.Request, @Path() id: string): Promise<LocationResponse | APIResponse> {
+        try {
+            const result = await r.table(id).orderBy(r.desc('timestamp')).limit(100).run((await database.getConnLocations()));
+
+            const data: LocationEntry[] = await result.toArray();
+
+            this.setStatus(200);
+
+            return {
+                status: APIStatus.Success,
+                locations: data
+            };
+        }
+        catch (error) {
+            Sentry.captureException(error);
+            this.setStatus(500);
+            return new APIResponse(APIStatus.Error, "Unable to user's location");
         }
     }
 }

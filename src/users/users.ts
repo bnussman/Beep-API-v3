@@ -113,3 +113,55 @@ export interface EditUserParams {
     username?: string;
     userLevel?: number;
 }
+
+/**
+ * Example Location Entry
+ *
+ * @example {
+ *   "accuracy": 5,
+ *    "altitude": 963.446349948066,
+ *    "altitudeAccuracy": 3,
+ *    "heading": 41.47227478027344,
+ *    "id": "03770e5f-c2a9-4134-a724-0d5bb6ac2865",
+ *    "latitude": 36.206469442729095,
+ *    "longitude": -81.668430576177,
+ *    "speed": 14.369999885559082,
+ *    "timestamp": 1609808229233
+ *  }
+ */
+export interface LocationEntry {
+    id: string;
+    accuracy: number;
+    altitude: number;
+    altitudeAccuracy: number;
+    heading: number;
+    latitude: number;
+    longitude: number;
+    speed: number;
+    timestamp: number;
+}
+
+/**
+ * Example User's Location Response
+ *
+ * @example {
+ *    "status": "success",
+ *    "locations": [
+ *        {
+ *            "accuracy": 5,
+ *            "altitude": 963.446349948066,
+ *            "altitudeAccuracy": 3,
+ *            "heading": 41.47227478027344,
+ *            "id": "03770e5f-c2a9-4134-a724-0d5bb6ac2865",
+ *            "latitude": 36.206469442729095,
+ *            "longitude": -81.668430576177,
+ *            "speed": 14.369999885559082,
+ *            "timestamp": 1609808229233
+ *        }
+ *     ]
+ *  }
+ */
+export interface LocationResponse {
+    status: APIStatus;
+    locations: LocationEntry[];
+}

@@ -21,19 +21,13 @@ export class FilesController {
             secretAccessKey: process.env.AWS_ACCESS_KEY_SECRET
         });
 
-        //console.log(request);
-
         await this.handleFile(request);
 
-
         let fileName = request.file.originalname;
-        //console.log(fileName);
 
         const extention = fileName.substr(fileName.lastIndexOf("."), fileName.length);
 
         fileName = request.user.id + "-" + Date.now() + extention;
-
-        //console.log(fileName);
 
         const uploadParams = {
             Body: request.file.buffer,
@@ -44,8 +38,6 @@ export class FilesController {
 
         try {
             const result = await s3.upload(uploadParams).promise();
-            
-            //console.log("Upload Success", result.Location);
 
             if (result) {
                 try {
