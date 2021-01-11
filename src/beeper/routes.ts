@@ -69,9 +69,6 @@ export class BeeperController extends Controller {
                 return new APIResponse(APIStatus.Error, "You can't stop beeping when you still have beeps to complete or riders in your queue");
             }
         }
-        else {
-            ensureBeepLocationsTable(request.user.id);
-        }
 
         try {
             const result: WriteResult = await r.table('users').get(request.user.id).update({ isBeeping: requestBody.isBeeping, singlesRate: requestBody.singlesRate, groupRate: requestBody.groupRate, capacity: requestBody.capacity, masksRequired: requestBody.masksRequired }).run((await database.getConn()));
