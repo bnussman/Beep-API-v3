@@ -57,7 +57,7 @@ export class UsersController extends Controller {
                 result = await r.table("users").get(id).without('password').run((await database.getConn()));
             }
             else {
-                const userItems = ['first', 'last', 'capacity', 'isStudent', 'masksRequired', 'queueSize', 'singlesRate', 'groupRate', 'venmo', 'isBeeping', 'photoUrl'];
+                const userItems = ['first', 'last', 'capacity', 'isStudent', 'masksRequired', 'queueSize', 'singlesRate', 'groupRate', 'venmo', 'isBeeping', 'photoUrl', 'userLevel'];
                 result = await r.table("users").get(id).pluck(...userItems).run((await database.getConn()));
             }
 
