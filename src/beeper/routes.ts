@@ -3,7 +3,7 @@ import * as r from 'rethinkdb';
 import { WriteResult } from 'rethinkdb';
 import database from '../utils/db';
 import { sendNotification } from '../utils/notifications';
-import { getQueueSize, storeBeepEvent, ensureBeepLocationsTable } from './helpers';
+import { getQueueSize, storeBeepEvent } from './helpers';
 import { Validator } from 'node-input-validator';
 import * as Sentry from "@sentry/node";
 import { Response, Controller, Request, Body, Tags, Security, Route, Example, Patch } from 'tsoa';
