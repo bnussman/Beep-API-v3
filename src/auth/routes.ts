@@ -3,7 +3,6 @@ import * as r from 'rethinkdb';
 import express from 'express';
 import { Cursor, WriteResult } from 'rethinkdb';
 import database from '../utils/db';
-import { User } from '../types/beep';
 import { sha256 } from 'js-sha256';
 import { getToken, setPushToken, getUserFromEmail, sendResetEmail, deactivateTokens, createVerifyEmailEntryAndSendEmail, doesUserExist } from './helpers';
 import { UserPluckResult } from "../types/beep";
@@ -77,7 +76,7 @@ export class AuthController extends Controller {
             const cursor: Cursor = await r.table("users").filter({ username: requestBody.username }).run((await database.getConn()));
 
             try {
-                const result: User = await cursor.next();
+                const result = await cursor.next();
 
                 if (result.password == sha256(requestBody.password)) {
                     //if authenticated, get new auth tokens
@@ -88,6 +87,8 @@ export class AuthController extends Controller {
                     }
 
                     cursor.close();
+
+                    delete result.password;
 
                     //send out data to REST API
                     return {
