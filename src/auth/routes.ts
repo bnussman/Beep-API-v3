@@ -74,7 +74,7 @@ export class AuthController extends Controller {
         }
 
         try {
-            const cursor: Cursor = await r.table("users").filter({ username: requestBody.username }).without('password').run((await database.getConn()));
+            const cursor: Cursor = await r.table("users").filter({ username: requestBody.username }).run((await database.getConn()));
 
             try {
                 const result: User = await cursor.next();
