@@ -62,7 +62,8 @@ export class AccountController extends Controller {
         }
 
         try {
-            const result: WriteResult = await r.table("users").get(request.user.id).update({first: requestBody.first, last: requestBody.last, email: requestBody.email, phone: requestBody.phone, venmo: requestBody.venmo}, {returnChanges: true}).run((await database.getConn()));
+            const result: WriteResult = await r.table("users").get(request.user.id).update(requestBody, {returnChanges: true}).run((await database.getConn()));
+
             if (result.unchanged > 0) {
                 //if RethinkDB reports no changes made, send user a warning
                 return new APIResponse(APIStatus.Warning, "Nothing was changed about your profile.");
@@ -81,7 +82,7 @@ export class AccountController extends Controller {
 
                 //if user made a change to their email, we need set their status to not verified and make them re-verify
                 try {
-                    r.table("users").get(request.user.id).update({isEmailVerified: false, isStudent: false}).run((await database.getConn()));
+                    r.table("users").get(request.user.id).update({ isEmailVerified: false, isStudent: false }).run((await database.getConn()));
                 }
                 catch (error) {
                     Sentry.captureException(error);
@@ -126,8 +127,7 @@ export class AccountController extends Controller {
     })
     @Security("token")
     @Post("password")
-    public async changePassword (@Request() request: express.Request, @Body() requestBody: ChangePasswordParams): Promise<APIResponse> {
-        //vaidator that will ensure a new password was entered
+    public async changePassword(@Request() request: express.Request, @Body() requestBody: ChangePasswordParams): Promise<APIResponse> {
         const v = new Validator(requestBody, {
             password: "required",
         });
@@ -142,8 +142,7 @@ export class AccountController extends Controller {
         const encryptedPassword = sha256(requestBody.password);
 
         try {
-            const result: WriteResult = await r.table("users").get(request.user.id).update({password: encryptedPassword}).run((await database.getConn()));
-            //TODO check if something was written by checking result
+            await r.table("users").get(request.user.id).update({ password: encryptedPassword }).run((await database.getConn()));
             this.setStatus(200);
             return new APIResponse(APIStatus.Success, "Successfully changed password.");
         }
@@ -171,8 +170,7 @@ export class AccountController extends Controller {
     @Put("pushtoken")
     public async updatePushToken (@Request() request: express.Request, @Body() requestBody: UpdatePushTokenParams): Promise<APIResponse> {
         try {
-            const result: WriteResult = await r.table("users").get(request.user.id).update({ pushToken: requestBody.expoPushToken }).run((await database.getConn()));
-            //TODO check if something was written by checking result
+            await r.table("users").get(request.user.id).update({ pushToken: requestBody.expoPushToken }).run((await database.getConn()));
             this.setStatus(200);
             return new APIResponse(APIStatus.Success, "Successfully updated push token.");
         }
@@ -216,7 +214,7 @@ export class AccountController extends Controller {
     public async verifyAccount (@Body() requestBody: VerifyAccountParams): Promise<VerifyAccountResult | APIResponse> {
         try {
             //this seems weird, but verifying the account by deleteing the entry in the db, but tell RethinkDB to retun changes
-            const result: WriteResult = await r.table("verifyEmail").get(requestBody.id).delete({returnChanges: true}).run((await database.getConn()));
+            const result: WriteResult = await r.table("verifyEmail").get(requestBody.id).delete({ returnChanges: true }).run((await database.getConn()));
 
             if (result.skipped == 1) {
                 this.setStatus(404);

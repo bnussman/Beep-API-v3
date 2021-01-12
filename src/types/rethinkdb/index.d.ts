@@ -42,7 +42,7 @@ declare module "rethinkdb" {
     export function table(name: string, options?: { useOutdated: boolean }): Table;
 
     export function asc(property: string): Sort;
-    export function desc(property: string): Sort;
+    export function desc(property: string | Expression): Sort;
 
     export function point(lng: number, lat: number): Point;
     export function polygon(...point: Point[]): Polygon;
@@ -443,13 +443,15 @@ declare module "rethinkdb" {
 
         // Manipulation
         pluck(...props: string[]): Sequence;
-        without(...props: string[]): Sequence;
+        //TODO: check this unknown
+        without(...props: string[] | unknown): Sequence;
     }
 
     type IndexFunction<U> = Expression<U> | Expression<U>[] | ((doc: Expression<any>) => Expression<U> | Expression<U>[]);
 
     interface ExpressionFunction<U> {
-        (doc: Expression<any>): Expression<U>;
+        //TODO: check this unknown, yikes
+        (doc: Expression<any>): Expression<U> | unknown;
     }
 
     interface JoinFunction<U> {
@@ -668,6 +670,7 @@ declare module "rethinkdb" {
          * See: https://rethinkdb.com/api/javascript/run/
          */
         pluck(...props: string[]): any | null;
+        without(...props: string[] | unknown): any | null;
         run(conn: Connection, opts: OperationOptions, cb: (err: Error, result: T) => void): void;
         run(conn: Connection, cb: (err: Error, result: T) => void): void;
         run(conn: Connection, opts: OperationOptions): Promise<T>;

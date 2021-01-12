@@ -74,7 +74,7 @@ export class AuthController extends Controller {
         }
 
         try {
-            const cursor: Cursor = await r.table("users").filter({ "username": requestBody.username }).run((await database.getConn()));
+            const cursor: Cursor = await r.table("users").filter({ username: requestBody.username }).run((await database.getConn()));
 
             try {
                 const result: User = await cursor.next();
@@ -87,7 +87,6 @@ export class AuthController extends Controller {
                         setPushToken(result.id, requestBody.expoPushToken);
                     }
 
-                    //close the RethinkDB cursor to prevent leak
                     cursor.close();
 
                     //send out data to REST API
@@ -344,7 +343,7 @@ export class AuthController extends Controller {
     public async removeToken (@Body() requestBody: RemoveTokenParams): Promise<APIResponse> {
         //RethinkDB query to delete entry in tokens table.
         try {
-            const result: WriteResult = await r.table("tokens").filter({'tokenid': requestBody.tokenid}).delete().run((await database.getConn()));
+            const result: WriteResult = await r.table("tokens").filter({ tokenid: requestBody.tokenid }).delete().run((await database.getConn()));
 
             //if RethinkDB tells us something was deleted, logout was successful
             if (result.deleted == 1) {
@@ -435,6 +434,7 @@ export class AuthController extends Controller {
                     //the next function is throwing an error, it is basiclly saying there is no next, so we can say 
                     //there is no entry for the user currenly in the table, which means we can procede to give them a forgot password token
                 }
+                cursor.close();
             }
             catch (error) {
                 //there was an error establishing the cursor used for looking in passwordReset
@@ -445,8 +445,8 @@ export class AuthController extends Controller {
 
             //this is what will be inserted when making a new forgot password entry
             const doccument = {
-                "userid": user.id,
-                "time": Date.now()
+                userid: user.id,
+                time: Date.now()
             }; 
 
             try {

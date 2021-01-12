@@ -1,4 +1,5 @@
 import * as r from 'rethinkdb';
+import { Cursor } from 'rethinkdb';
 import express from 'express';
 import database from'../utils/db';
 import * as Sentry from "@sentry/node";
@@ -10,7 +11,7 @@ import { getNumLocations, getNumUsers } from './helpers';
 import { BeeperHistoryResult, RiderHistoryResult, RiderHistoryWithBeeperData } from '../account/account';
 import { hasUserLevel } from '../auth/helpers';
 import { withouts } from '../utils/config';
-import { GetBeeperQueueResult } from '../beeper/beeper';
+import { BeepQueueTableEntry, GetBeeperQueueResult } from '../beeper/beeper';
 import { getPersonalInfo } from '../beeper/helpers';
 
 @Tags("Users")
@@ -53,7 +54,6 @@ export class UsersController extends Controller {
             let result;
 
             if (request.user?.id) {
-                //@ts-ignore this is valid, the typings are wrong
                 result = await r.table("users").get(id).without('password').run((await database.getConn()));
             }
             else {
@@ -262,20 +262,19 @@ export class UsersController extends Controller {
         }
 
         try {
-            const cursor: r.Cursor = await r.table("beeps")
+            const cursor: Cursor = await r.table("beeps")
                 .filter({ riderid: id })
-                //@ts-ignore
                 .eqJoin('beepersid', r.table("users")).without({ right: { ...withouts } })
-                //@ts-ignore
                 .map((doc) => ({
                     beep: doc("left"),
                     beeper: doc("right")
                 }))
-                //@ts-ignore
                 .orderBy(r.desc(r.row('beep')('timeEnteredQueue')))
                 .run((await database.getConn()));
 
             const result: RiderHistoryWithBeeperData[] = await cursor.toArray();
+
+            cursor.close();
             
             this.setStatus(200);
             return {
@@ -335,20 +334,19 @@ export class UsersController extends Controller {
         }
 
         try {
-            const cursor: r.Cursor = await r.table("beeps")
+            const cursor: Cursor = await r.table("beeps")
                 .filter({ beepersid: id })
-                //@ts-ignore
                 .eqJoin('riderid', r.table("users")).without({ right: { ...withouts } })
-                //@ts-ignore
                 .map((doc) => ({
                     beep: doc("left"),
                     rider: doc("right")
                 }))
-                //@ts-ignore
                 .orderBy(r.desc(r.row('beep')('timeEnteredQueue')))
                 .run((await database.getConn()));
 
             const result = await cursor.toArray();
+
+            cursor.close();
             
             this.setStatus(200);
             return {
@@ -405,9 +403,7 @@ export class UsersController extends Controller {
         }
 
         try {
-            //TODO whattt
-            //@ts-ignore
-            const result: BeepQueueTableEntry[] = await r.table(id).orderBy('timeEnteredQueue').run((await database.getConnQueues()));
+            const result: BeepQueueTableEntry[] = await r.table(id).orderBy('timeEnteredQueue').run((await database.getConnQueues())) as unknown as BeepQueueTableEntry[];
 
             //for every entry in a beeper's queue, add personal info
             //TODO use a table join insted

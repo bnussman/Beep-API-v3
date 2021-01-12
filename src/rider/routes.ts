@@ -106,7 +106,7 @@ export class RiderController extends Controller {
 
         try {
             //update rider's inQueueOfUserID
-            await r.table('users').get(request.user.id).update({'inQueueOfUserID': requestBody.beepersID}).run((await database.getConn()));
+            await r.table('users').get(request.user.id).update({ inQueueOfUserID: requestBody.beepersID }).run((await database.getConn()));
         }
         catch (error) {
             //unable to set inQueueOfUserID for rider in users table
@@ -154,13 +154,13 @@ export class RiderController extends Controller {
     @Get("find")
     public async findBeep(@Request() request: express.Request): Promise<APIResponse | ChooseBeepResponse> {
         try {
-            const cursor: Cursor = await r.table('users').orderBy({'index': 'queueSize'}).filter(r.row('isBeeping').eq(true).and(r.row('id').ne(request.user.id))).pluck(...defaultBeeperInfo).limit(1).run((await database.getConn()));
+            const cursor: Cursor = await r.table('users').orderBy({ index: 'queueSize' }).filter(r.row('isBeeping').eq(true).and(r.row('id').ne(request.user.id))).pluck(...defaultBeeperInfo).limit(1).run((await database.getConn()));
 
             try {
                 const result = await cursor.next();
 
-                //if we made it to this point, user has found a beep and it has been
-                //registered in our db. Send output with nessesary data to rider.
+                cursor.close();
+
                 return {
                     status: APIStatus.Success,
                     beeper: { ...result }
@@ -247,7 +247,7 @@ export class RiderController extends Controller {
         if (beepersID != null) {
             try {
                 //since we are in a queue, we need to find the db entry where the rider has you id
-                const cursor = await r.table(beepersID).filter({ riderid: request.user.id }).run((await database.getConnQueues()));
+                const cursor: Cursor = await r.table(beepersID).filter({ riderid: request.user.id }).run((await database.getConnQueues()));
                 
                 let queueEntry = null;
                 
@@ -263,6 +263,8 @@ export class RiderController extends Controller {
                     this.setStatus(200);
                     return new APIResponse(APIStatus.Error, "Currently, user is not getting a beep.");
                 }
+
+                cursor.close();
 
                 //get rider's position in the queue by using a count query where we count entries where they entered the queue earlier
                 //(they have an earlier timestamp)
@@ -333,9 +335,11 @@ export class RiderController extends Controller {
         
         //in beeper's queue table, get the time the rider entered the queue
         //we need this to count the number of people before this rider in the queue
-        const cursor = await r.table(requestBody.beepersID).filter({ riderid: request.user.id }).pluck('timeEnteredQueue', 'isAccepted').run((await database.getConnQueues()));
+        const cursor: Cursor = await r.table(requestBody.beepersID).filter({ riderid: request.user.id }).pluck('timeEnteredQueue', 'isAccepted').run((await database.getConnQueues()));
         
         const data = await cursor.next();
+
+        cursor.close();
 
         //query to get rider's actual position in the queue
         const ridersQueuePosition = await r.table(requestBody.beepersID).filter(r.row('timeEnteredQueue').lt(data.timeEnteredQueue)).count().run((await database.getConnQueues()));
@@ -411,6 +415,8 @@ export class RiderController extends Controller {
             const cursor: Cursor = await r.table("users").filter({ isBeeping: true }).pluck(...defaultBeeperInfo).run((await database.getConn()));
 
             const list: BeeperListItem[] = await cursor.toArray();
+
+            cursor.close();
 
             this.setStatus(200);
             return {

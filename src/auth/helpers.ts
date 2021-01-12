@@ -17,41 +17,34 @@ import { v4 as uuidv4 } from "uuid";
 export async function getToken(userid: string): Promise<TokenData> {
     //this information will be inserted into the tokens table and returned by this function
     const document = {
-        'userid': userid,
-        'tokenid': uuidv4()
+        userid: userid,
+        tokenid: uuidv4()
     };
 
     //insert our new auth token into our tokens table
     try {
         const result: WriteResult = await r.table("tokens").insert(document).run((await database.getConn()));
 
-        //if nothing was inserted into the tokens table, we know something is wrong
-        if (result.inserted == 0) {
-            Sentry.captureException("Somehow, tokenData was not inserted, this is very bad");
-            return ({
-                'userid': userid,
-                'tokenid': "yikes",
-                'token': "yikes"
-            });
+        if (result.inserted > 0) {
+            const token: string = result.generated_keys[0];
+
+            return {
+                token: token,
+                ...document
+            };
         }
-
-        const token: string = result.generated_keys[0];
-
-        //return the data we generated
-        return ({
-            'userid': document.userid,
-            'tokenid': document.tokenid,
-            'token': token
-        });
+        else {
+            Sentry.captureException("Somehow, tokenData was not inserted, this is very bad");
+        }
     } 
     catch (error) {
         Sentry.captureException(error);
-        return ({
-            'userid': userid,
-            'tokenid': "yikes",
-            'token': "yikes"
-        });
     }
+    return {
+        userid: userid,
+        tokenid: "yikes",
+        token: "yikes"
+    };
 }
 
 /**
