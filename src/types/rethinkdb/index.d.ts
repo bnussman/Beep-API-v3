@@ -413,7 +413,7 @@ declare module "rethinkdb" {
         // these return left, right
         innerJoin(sequence: Sequence, join: JoinFunction<boolean>): Sequence;
         outerJoin(sequence: Sequence, join: JoinFunction<boolean>): Sequence;
-        eqJoin(leftAttribute: string, rightSequence: Sequence, index?: Index): Sequence;
+        eqJoin(leftAttribute: string | any, rightSequence: Sequence, index?: Index): Sequence;
         eqJoin(leftAttribute: ExpressionFunction<any>, rightSequence: Sequence, index?: Index): Sequence;
         zip(): Sequence;
 

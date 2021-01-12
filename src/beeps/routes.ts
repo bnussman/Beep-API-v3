@@ -71,85 +71,64 @@ export class BeepsController extends Controller {
             if (offset) {
                 if (show) {
                     cursor = await r.table("beeps")
-                        //@ts-ignore
                         .eqJoin("riderid", r.table("users")).without({ right: { ...withouts } })
-                        //@ts-ignore
                         .map((doc) => ({
                             beep: doc("left"),
                             rider: doc("right")
                         }))
-                        //@ts-ignore
                         .eqJoin(r.row("beep")("beepersid"), r.table("users")).without({ right: { ...withouts } })
-                        //@ts-ignore
                         .map((doc) => ({
                             beep: doc("left")("beep"),
                             rider: doc("left")("rider"),
                             beeper: doc("right")
                         }))
-                        //@ts-ignore
                         .orderBy(r.desc(r.row('beep')('timeEnteredQueue'))).slice(offset, offset + show).run((await database.getConn()));
                 }
                 else {
                     cursor = await r.table("beeps")
-                        //@ts-ignore
                         .eqJoin("riderid", r.table("users")).without({ right: { ...withouts } })
-                        //@ts-ignore
                         .map((doc) => ({
                             beep: doc("left"),
                             rider: doc("right")
                         }))
-                        //@ts-ignore
                         .eqJoin(r.row("beep")("beepersid"), r.table("users")).without({ right: { ...withouts } })
-                        //@ts-ignore
                         .map((doc) => ({
                             beep: doc("left")("beep"),
                             rider: doc("left")("rider"),
                             beeper: doc("right")
                         }))
-                        //@ts-ignore
                         .orderBy(r.desc(r.row('beep')('timeEnteredQueue'))).slice(offset).run((await database.getConn()));
                 }
             }
             else {
                 if (show) {
                     cursor = await r.table("beeps")
-                        //@ts-ignore
                         .eqJoin("riderid", r.table("users")).without({ right: {password: true}})
-                        //@ts-ignore
                         .map((doc) => ({
                             beep: doc("left"),
                             rider: doc("right")
                         }))
-                        //@ts-ignore
                         .eqJoin(r.row("beep")("beepersid"), r.table("users")).without({ right: { ...withouts } })
-                        //@ts-ignore
                         .map((doc) => ({
                             beep: doc("left")("beep"),
                             rider: doc("left")("rider"),
                             beeper: doc("right")
                         }))
-                        //@ts-ignore
                         .orderBy(r.desc(r.row('beep')('timeEnteredQueue'))).limit(show).run((await database.getConn()));
                 }
                 else {
                     cursor = await r.table("beeps")
-                        //@ts-ignore
                         .eqJoin("riderid", r.table("users")).without({ right: { ...withouts} })
-                        //@ts-ignore
                         .map((doc) => ({
                             beep: doc("left"),
                             rider: doc("right")
                         }))
-                        //@ts-ignore
                         .eqJoin(r.row("beep")("beepersid"), r.table("users")).without({ right: { ...withouts } })
-                        //@ts-ignore
                         .map((doc) => ({
                             beep: doc("left")("beep"),
                             rider: doc("left")("rider"),
                             beeper: doc("right")
                         }))
-
-                        //@ts-ignore
                         .orderBy(r.desc(r.row('beep')('timeEnteredQueue'))).run((await database.getConn()));
                 }
             }

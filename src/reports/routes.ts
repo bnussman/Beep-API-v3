@@ -128,88 +128,64 @@ export class ReportsController extends Controller {
             if (offset) {
                 if (show) {
                     cursor = await r.table("userReports")
-                        //@ts-ignore
                         .eqJoin("reporterId", r.table("users")).without({ right: { ...withouts} })
-                        //@ts-ignore
                         .map((doc) => ({
                             report: doc("left"),
                             reporter: doc("right")
                         }))
-                        //@ts-ignore
                         .eqJoin(r.row("report")("reportedId"), r.table("users")).without({ right: { ...withouts } })
-                        //@ts-ignore
                         .map((doc) => ({
                             report: doc("left")("report"),
                             reporter: doc("left")("reporter"),
                             reported: doc("right")
                         }))
-
-                        //@ts-ignore
                         .orderBy(r.desc(r.row("report")("timestamp"))).slice(offset, offset + show).run((await database.getConn()));
                 }
                 else {
                     cursor = await r.table("userReports")
-                        //@ts-ignore
                         .eqJoin("reporterId", r.table("users")).without({ right: { ...withouts} })
-                        //@ts-ignore
                         .map((doc) => ({
                             report: doc("left"),
                             reporter: doc("right")
                         }))
-                        //@ts-ignore
                         .eqJoin(r.row("report")("reportedId"), r.table("users")).without({ right: { ...withouts } })
-                        //@ts-ignore
                         .map((doc) => ({
                             report: doc("left")("report"),
                             reporter: doc("left")("reporter"),
                             reported: doc("right")
                         }))
-
-                        //@ts-ignore
                         .orderBy(r.desc(r.row("report")("timestamp"))).slice(offset).run((await database.getConn()));
                 }
             }
             else {
                 if (show) {
                     cursor = await r.table("userReports")
-                        //@ts-ignore
                         .eqJoin("reporterId", r.table("users")).without({ right: { ...withouts} })
-                        //@ts-ignore
                         .map((doc) => ({
                             report: doc("left"),
                             reporter: doc("right")
                         }))
-                        //@ts-ignore
                         .eqJoin(r.row("report")("reportedId"), r.table("users")).without({ right: { ...withouts } })
-                        //@ts-ignore
                         .map((doc) => ({
                             report: doc("left")("report"),
                             reporter: doc("left")("reporter"),
                             reported: doc("right")
                         }))
-
-                        //@ts-ignore
                         .orderBy(r.desc(r.row("report")("timestamp"))).limit(show).run((await database.getConn()));
                 }
                 else {
                     cursor = await r.table("userReports")
-                        //@ts-ignore
                         .eqJoin("reporterId", r.table("users")).without({ right: { ...withouts} })
-                        //@ts-ignore
                         .map((doc) => ({
                             report: doc("left"),
                             reporter: doc("right")
                         }))
-                        //@ts-ignore
                         .eqJoin(r.row("report")("reportedId"), r.table("users")).without({ right: { ...withouts } })
-                        //@ts-ignore
                         .map((doc) => ({
                             report: doc("left")("report"),
                             reporter: doc("left")("reporter"),
                             reported: doc("right")
                         }))
-
-                        //@ts-ignore
                         .orderBy(r.desc(r.row("report")("timestamp"))).run((await database.getConn()));
                 }
             }
