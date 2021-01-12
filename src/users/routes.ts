@@ -273,8 +273,6 @@ export class UsersController extends Controller {
                 .run((await database.getConn()));
 
             const result: RiderHistoryWithBeeperData[] = await cursor.toArray();
-
-            cursor.close();
             
             this.setStatus(200);
             return {
@@ -345,8 +343,6 @@ export class UsersController extends Controller {
                 .run((await database.getConn()));
 
             const result = await cursor.toArray();
-
-            cursor.close();
             
             this.setStatus(200);
             return {
