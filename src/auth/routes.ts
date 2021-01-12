@@ -74,24 +74,42 @@ export class AuthController extends Controller {
         }
 
         try {
-            const cursor: Cursor = await r.table("users").filter({ username: requestBody.username }).without('password').run((await database.getConn()));
+            const cursor: Cursor = await r.table("users").filter({ username: requestBody.username }).run((await database.getConn()));
 
             try {
                 const result: User = await cursor.next();
 
                 if (result.password == sha256(requestBody.password)) {
-
+                    //if authenticated, get new auth tokens
                     const tokenData = await getToken(result.id);
 
                     if (requestBody.expoPushToken) {
                         setPushToken(result.id, requestBody.expoPushToken);
                     }
 
+                    cursor.close();
+
+                    //send out data to REST API
                     return {
                         status: APIStatus.Success,
+                        id: result.id,
+                        username: result.username,
+                        first: result.first,
+                        last: result.last,
+                        email: result.email,
+                        phone: result.phone,
+                        venmo: result.venmo,
                         token: tokenData.token,
                         tokenid: tokenData.tokenid,
-                        ...result
+                        singlesRate: result.singlesRate,
+                        groupRate: result.groupRate,
+                        capacity: result.capacity,
+                        isBeeping: result.isBeeping,
+                        userLevel: result.userLevel,
+                        isEmailVerified: result.isEmailVerified,
+                        isStudent: result.isStudent,
+                        masksRequired: result.masksRequired,
+                        photoUrl: result.photoUrl
                     };
                 }
                 else {
@@ -187,22 +205,26 @@ export class AuthController extends Controller {
             return new APIResponse(APIStatus.Error, "That username is already in use");
         }
 
-        requestBody.password = sha256(requestBody.password);
-
         //This is the row that will be inserted into our users RethinkDB table
         const document = {
-            ...requestBody,
-            userLevel: 0,
+            first: requestBody.first,
+            last: requestBody.last,
+            email: requestBody.email,
+            phone: requestBody.phone,
+            venmo: requestBody.venmo,
+            username: requestBody.username,
+            password: sha256(requestBody.password),
+            isBeeping: false,
             queueSize: 0,
             inQueueOfUserID: null,
+            pushToken: requestBody.expoPushToken || null,
             singlesRate: 3.00,
             groupRate: 2.00,
             capacity: 4,
-            isBeeping: false,
+            userLevel: 0,
             isEmailVerified: false,
             isStudent: false,
-            masksRequired: false,
-            photoUrl: null
+            masksRequired: false
         };
     
         try {
@@ -223,15 +245,27 @@ export class AuthController extends Controller {
                 //because user signed up, create a verify email entry in the db, this function will send the email
                 createVerifyEmailEntryAndSendEmail(userid, requestBody.email, requestBody.first);
 
-                delete document.password;
-                
                 //produce our REST API output
                 return {
                     status: APIStatus.Success,
                     id: userid,
+                    username: requestBody.username,
+                    first: requestBody.first,
+                    last: requestBody.last,
+                    email: requestBody.email,
+                    phone: requestBody.phone,
+                    venmo: requestBody.venmo,
                     token: tokenData.token,
                     tokenid: tokenData.tokenid,
-                    ...document
+                    singlesRate: 3.00,
+                    groupRate: 2.00,
+                    capacity: 4,
+                    isBeeping: false,
+                    userLevel: 0,
+                    isEmailVerified: false,
+                    isStudent: false,
+                    masksRequired: false,
+                    photoUrl: null
                 };
             }
             else {
