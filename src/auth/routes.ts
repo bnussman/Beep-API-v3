@@ -74,7 +74,7 @@ export class AuthController extends Controller {
         }
 
         try {
-            const cursor: Cursor = await r.table("users").filter({ username: requestBody.username }).run((await database.getConn()));
+            const cursor: Cursor = await r.table("users").filter({ username: requestBody.username }).without('password').run((await database.getConn()));
 
             try {
                 const result: User = await cursor.next();
@@ -92,24 +92,9 @@ export class AuthController extends Controller {
                     //send out data to REST API
                     return {
                         status: APIStatus.Success,
-                        id: result.id,
-                        username: result.username,
-                        first: result.first,
-                        last: result.last,
-                        email: result.email,
-                        phone: result.phone,
-                        venmo: result.venmo,
                         token: tokenData.token,
                         tokenid: tokenData.tokenid,
-                        singlesRate: result.singlesRate,
-                        groupRate: result.groupRate,
-                        capacity: result.capacity,
-                        isBeeping: result.isBeeping,
-                        userLevel: result.userLevel,
-                        isEmailVerified: result.isEmailVerified,
-                        isStudent: result.isStudent,
-                        masksRequired: result.masksRequired,
-                        photoUrl: result.photoUrl
+                        ...result
                     };
                 }
                 else {
@@ -217,7 +202,7 @@ export class AuthController extends Controller {
             isBeeping: false,
             queueSize: 0,
             inQueueOfUserID: null,
-            pushToken: requestBody.expoPushToken || null,
+            pushToken: requestBody.pushToken || null,
             singlesRate: 3.00,
             groupRate: 2.00,
             capacity: 4,

@@ -37,7 +37,7 @@ export interface SignUpParams {
     venmo: string;
     username: string;
     password: string;
-    expoPushToken?: string | null;
+    pushToken?: string | null;
 }
 
 /**
