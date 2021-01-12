@@ -5,7 +5,7 @@ const server = new BeepAPIServer();
 const app = server.getApp();
 const port = process.env.PORT || 3001;
 
-database.connect(function() {
+database.connect(() => {
     app.listen(port, () => {
         console.log(`Beep API listening at http://0.0.0.0:${port}`);
     });

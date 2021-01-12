@@ -28,8 +28,6 @@ export interface User {
     userLevel: number;
     isEmailVerified: boolean;
     isStudent: boolean;
-    token: string;
-    tokenid: string;
     masksRequired: boolean;
     photoUrl: string | null;
 }
