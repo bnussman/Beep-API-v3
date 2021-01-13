@@ -112,6 +112,6 @@ export interface Report {
  * }
  */
 export interface UpdateReportParams {
-    adminNotes?: string;
+    adminNotes?: string | null;
     handled?: boolean;
 }
