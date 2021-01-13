@@ -109,7 +109,7 @@ export interface EditUserParams {
     inQueueOfUserID?: string | null;
     isEmailVerified?: boolean;
     phone?: string;
-    pushToken?: string;
+    pushToken?: string | null;
     username?: string;
     userLevel?: number;
 }
