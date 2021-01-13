@@ -56,7 +56,7 @@ export async function setPushToken(id: string | null, token: string | null): Pro
     if (!id) return;
     //run query to get user and update their pushToken
     try {
-        await r.table("users").get(id).update({pushToken: token}).run((await database.getConn()));
+        await r.table("users").get(id).update({ pushToken: token }).run((await database.getConn()));
     }
     catch(error) {
         Sentry.captureException(error);

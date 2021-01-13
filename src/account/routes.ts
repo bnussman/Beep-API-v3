@@ -168,9 +168,9 @@ export class AccountController extends Controller {
     })
     @Security("token")
     @Put("pushtoken")
-    public async updatePushToken (@Request() request: express.Request, @Body() requestBody: UpdatePushTokenParams): Promise<APIResponse> {
+    public async updatePushToken(@Request() request: express.Request, @Body() requestBody: UpdatePushTokenParams): Promise<APIResponse> {
         try {
-            await r.table("users").get(request.user.id).update({ pushToken: requestBody.expoPushToken }).run((await database.getConn()));
+            await r.table("users").get(request.user.id).update({ pushToken: requestBody.pushToken }).run((await database.getConn()));
             this.setStatus(200);
             return new APIResponse(APIStatus.Success, "Successfully updated push token.");
         }

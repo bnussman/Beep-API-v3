@@ -1,5 +1,4 @@
 import { BeepEntry, MinimalUser } from "../beeps/beeps";
-import { BeepTableResult } from "../types/beep";
 import { APIStatus } from "../utils/Error";
 
 /**
@@ -36,11 +35,11 @@ export interface ChangePasswordParams {
  * Update Expo Push Token
  *
  * @example {
- *   "expoPushToken": "ExponentPushToken[xv1qZtFzJY_yVFHK-dmWlN]"
+ *   "pushToken": "ExponentPushToken[xv1qZtFzJY_yVFHK-dmWlN]"
  * }
  */
 export interface UpdatePushTokenParams {
-    expoPushToken: string;
+    pushToken: string;
 }
 
 /**

@@ -82,8 +82,8 @@ export class AuthController extends Controller {
                     //if authenticated, get new auth tokens
                     const tokenData = await getToken(result.id);
 
-                    if (requestBody.expoPushToken) {
-                        setPushToken(result.id, requestBody.expoPushToken);
+                    if (requestBody.pushToken) {
+                        setPushToken(result.id, requestBody.pushToken);
                     }
 
                     cursor.close();

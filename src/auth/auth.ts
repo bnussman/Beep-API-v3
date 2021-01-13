@@ -6,13 +6,13 @@ import { APIStatus } from "../utils/Error";
  * @example {
  *     "username": "banks",
  *     "password": "d9a63ka9cf982bf8921bs9",
- *     "expoPushToken": "ExponentPushToken[xv1qZtFzJY_yVFHK-dmWlN]",
+ *     "pushToken": "ExponentPushToken[xv1qZtFzJY_yVFHK-dmWlN]",
  * }
  */
 export interface LoginParams {
     username: string;
     password: string;
-    expoPushToken?: string | null;
+    pushToken?: string | null;
 }
 
 /**
@@ -26,7 +26,7 @@ export interface LoginParams {
  *     "venmo": "banksnussman",
  *     "username": "banks",
  *     "password": "d9a63ka9cf982bf8921bs9",
- *     "expoPushToken": "ExponentPushToken[xv1qZtFzJY_yVFHK-dmWlN]"
+ *     "pushToken": "ExponentPushToken[xv1qZtFzJY_yVFHK-dmWlN]"
  * }
  */
 export interface SignUpParams {
