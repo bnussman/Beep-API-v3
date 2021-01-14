@@ -178,26 +178,52 @@ export class UsersController extends Controller {
     })
     @Security("token", ["admin"])
     @Get()
-    public async getUsers(@Query() offset?: number, @Query() show?: number): Promise<UsersResult | APIResponse> {
-        const numberOfUsers: number = await getNumUsers();
+    public async getUsers(@Query() offset?: number, @Query() show?: number, @Query() search?: string): Promise<UsersResult | APIResponse> {
+        let numberOfUsers: number = await getNumUsers();
 
         try {
             let cursor;
-
-            if (offset) {
-                if (show) {
-                    cursor = await r.table("users").without('password').slice(offset, offset + show).run((await database.getConn()));
+            
+            if (search) {
+                if (offset) {
+                    if (show) {
+                        //@ts-ignore
+                        cursor = await r.table("users").without('password').filter(function(doc) { return doc.coerceTo('string').match(search); }).slice(offset, offset + show).run((await database.getConn()));
+                    }
+                    else {
+                        //@ts-ignore
+                        cursor = await r.table("users").without('password').filter(function(doc) { return doc.coerceTo('string').match(search); }).slice(offset).run((await database.getConn()));
+                    }
                 }
                 else {
-                    cursor = await r.table("users").without('password').slice(offset).run((await database.getConn()));
+                    if (show) {
+                        //@ts-ignore
+                        cursor = await r.table("users").without('password').filter(function(doc) { return doc.coerceTo('string').match(search); }).limit(show).run((await database.getConn()));
+                    }
+                    else {
+                        //@ts-ignore
+                        cursor = await r.table("users").without('password').filter(function(doc) { return doc.coerceTo('string').match(search); }).run((await database.getConn()));
+                    }
                 }
+                //@ts-ignore
+                numberOfUsers =  await r.table("users").filter(function(doc) { return doc.coerceTo('string').match(search); }).count().run((await database.getConn()));
             }
             else {
-                if (show) {
-                    cursor = await r.table("users").without('password').limit(show).run((await database.getConn()));
+                if (offset) {
+                    if (show) {
+                        cursor = await r.table("users").without('password').slice(offset, offset + show).run((await database.getConn()));
+                    }
+                    else {
+                        cursor = await r.table("users").without('password').slice(offset).run((await database.getConn()));
+                    }
                 }
                 else {
-                    cursor = await r.table("users").without('password').run((await database.getConn()));
+                    if (show) {
+                        cursor = await r.table("users").without('password').limit(show).run((await database.getConn()));
+                    }
+                    else {
+                        cursor = await r.table("users").without('password').run((await database.getConn()));
+                    }
                 }
             }
 
