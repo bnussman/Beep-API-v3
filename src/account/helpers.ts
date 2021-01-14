@@ -63,6 +63,24 @@ export async function deleteUser(id: string): Promise<boolean> {
         return false;
     }
 
+    //delete user's beep history entries 
+    try {
+        r.table("beeps").filter(r.row("beepersid").eq(id).or(r.row("riderid").eq(id))).delete().run((await database.getConn()));
+    }
+    catch (error) {
+        Sentry.captureException(error);
+        return false;
+    }
+
+    //delete user's report entries 
+    try {
+        r.table("userReports").filter(r.row("reporterId").eq(id).or(r.row("reportedId").eq(id))).delete().run((await database.getConn()));
+    }
+    catch (error) {
+        Sentry.captureException(error);
+        return false;
+    }
+
     //deative all of the user's tokens
     deactivateTokens(id);
 
