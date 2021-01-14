@@ -12,6 +12,7 @@ import { MinimalUser } from '../beeps/beeps';
 export interface ReportUserParams {
     id: string;
     reason: string;
+    beepEventId?: string;
 }
 
 /**
@@ -101,6 +102,7 @@ export interface Report {
     adminNotes: string | null;
     handled: boolean;
     handledBy: string | null;
+    beepEventId?: string;
 }
 
 /**

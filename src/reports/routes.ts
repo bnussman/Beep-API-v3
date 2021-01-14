@@ -47,7 +47,8 @@ export class ReportsController extends Controller {
             timestamp: Date.now(),
             adminNotes: null,
             handled: false,
-            handledBy: null
+            handledBy: null,
+            beepEventId: requestBody.beepEventId
         };
         
         try {
