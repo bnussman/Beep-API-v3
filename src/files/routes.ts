@@ -61,6 +61,7 @@ export class FilesController {
 
                     return {
                         status: APIStatus.Success,
+                        message: "Successfully set profile photo",
                         url: result.Location
                     };
                 }
