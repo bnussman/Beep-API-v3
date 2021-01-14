@@ -163,6 +163,14 @@ export class AuthController extends Controller {
         message: "Unable to sign up due to a server error"
     })
     public async signup (@Body() requestBody: SignUpParams): Promise<LoginResponse | APIResponse> {
+        //TODO use loop or map and make a function
+        requestBody.first = requestBody.first.trim();
+        requestBody.last = requestBody.last.trim();
+        requestBody.email = requestBody.email.trim();
+        requestBody.phone = requestBody.phone.trim();
+        requestBody.venmo = requestBody.venmo.trim();
+        requestBody.username = requestBody.username.trim();
+
         const v = new Validator(requestBody, {
             first: "required|alpha",
             last: "required|alpha",
