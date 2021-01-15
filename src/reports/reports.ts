@@ -1,5 +1,5 @@
 import { APIStatus } from '../utils/Error';
-import { MinimalUser } from '../beeps/beeps';
+import { LimitedUser } from '../users/users';
 
 /**
  * Example of a submitted report
@@ -48,13 +48,7 @@ export interface ReportUserParams {
 export interface ReportsResponse {
     status: APIStatus, 
     total: number,
-    reports: ReportWithUserData[]
-}
-
-interface ReportWithUserData {
-    report: Report;
-    reporter: MinimalUser;
-    reported: MinimalUser;
+    reports: Report[]
 }
 
 /**
@@ -63,14 +57,33 @@ interface ReportWithUserData {
  * @exmaple {
  *    "status": "success",
  *    "report": {
- *        "adminNotes": "I called the guy and took care of it. ",
- *        "handled": true,
- *        "handledBy": "22192b90-54f8-49b5-9dcf-26049454716b",
- *        "id": "c5008c11-d7ea-4f69-9b42-6698237d15bb",
- *        "reason": "hhgfh",
- *        "reportedId": "22192b90-54f8-49b5-9dcf-26049454716b",
- *        "reporterId": "ca34cc7b-de97-40b7-a1ab-148f6c43d073",
- *        "timestamp": 1607803770171
+ *        "adminNotes": null,
+ *        "beepEventId": "5553eebe-fb8d-446a-8c46-40e5b033a905",
+ *        "handled": false,
+ *        "handledByUser": {
+ *            "first": "Banks",
+ *            "id": "22192b90-54f8-49b5-9dcf-26049454716b",
+ *            "last": "Nussman",
+ *            "photoUrl": "https://ridebeepapp.s3.amazonaws.com/images/22192b90-54f8-49b5-9dcf-26049454716b-1610644210939.jpg",
+ *            "username": "banks"
+ *        },
+ *        "id": "bd8158e2-5a62-482f-866e-5a29c0adac4a",
+ *        "reason": "He tried to kill me AGAIN!!!!!",
+ *        "reported": {
+ *            "first": "Banks",
+ *            "id": "22192b90-54f8-49b5-9dcf-26049454716b",
+ *            "last": "Nussman",
+ *            "photoUrl": "https://ridebeepapp.s3.amazonaws.com/images/22192b90-54f8-49b5-9dcf-26049454716b-1610644210939.jpg",
+ *            "username": "banks"
+ *        },
+ *        "reporter": {
+ *            "first": "William",
+ *            "id": "911e0810-cfaf-4b7c-a707-74c3bd1d48c2",
+ *            "last": "Nussman",
+ *            "photoUrl": "https://ridebeepapp.s3.amazonaws.com/images/911e0810-cfaf-4b7c-a707-74c3bd1d48c2-1609649054314.jpg",
+ *            "username": "william"
+ *        },
+ *        "timestamp": 1610657263989
  *    }
  * }
  */
@@ -83,26 +96,45 @@ export interface ReportResponse {
  * Single Report
  *
  * @example {
- *   "id": "c5008c11-d7ea-4f69-9b42-6698237d15bb",
- *   "reason": "hhgfh",
- *   "reportedId": "22192b90-54f8-49b5-9dcf-26049454716b",
- *   "reporterId": "ca34cc7b-de97-40b7-a1ab-148f6c43d073",
- *   "timestamp": 1607803770171,
- *   "adminNotes": "Guy was mad at other guy for smoking weed in his Prius",
- *   "handled": false,
- *   "handledBy": null
- * }
+ *        "adminNotes": null,
+ *        "beepEventId": "5553eebe-fb8d-446a-8c46-40e5b033a905",
+ *        "handled": false,
+ *        "handledByUser": {
+ *            "first": "Banks",
+ *            "id": "22192b90-54f8-49b5-9dcf-26049454716b",
+ *            "last": "Nussman",
+ *            "photoUrl": "https://ridebeepapp.s3.amazonaws.com/images/22192b90-54f8-49b5-9dcf-26049454716b-1610644210939.jpg",
+ *            "username": "banks"
+ *        },
+ *        "id": "bd8158e2-5a62-482f-866e-5a29c0adac4a",
+ *        "reason": "He tried to kill me AGAIN!!!!!",
+ *        "reported": {
+ *            "first": "Banks",
+ *            "id": "22192b90-54f8-49b5-9dcf-26049454716b",
+ *            "last": "Nussman",
+ *            "photoUrl": "https://ridebeepapp.s3.amazonaws.com/images/22192b90-54f8-49b5-9dcf-26049454716b-1610644210939.jpg",
+ *            "username": "banks"
+ *        },
+ *        "reporter": {
+ *            "first": "William",
+ *            "id": "911e0810-cfaf-4b7c-a707-74c3bd1d48c2",
+ *            "last": "Nussman",
+ *            "photoUrl": "https://ridebeepapp.s3.amazonaws.com/images/911e0810-cfaf-4b7c-a707-74c3bd1d48c2-1609649054314.jpg",
+ *            "username": "william"
+ *        },
+ *        "timestamp": 1610657263989
+ *    }
  */
 export interface Report {
     id?: string;
     reason: string;
-    reportedId: string;
-    reporterId: string;
-    timestamp: number;
-    adminNotes: string | null;
+    reported: LimitedUser;
+    reporter: LimitedUser;
+    handledByUser: LimitedUser;
     handled: boolean;
-    handledBy: string | null;
+    adminNotes: string | null;
     beepEventId?: string;
+    timestamp: number;
 }
 
 /**

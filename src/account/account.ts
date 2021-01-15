@@ -1,4 +1,5 @@
-import { BeepEntry, MinimalUser } from "../beeps/beeps";
+import {LimitedUser} from "src/users/users";
+import { BeepEntry } from "../beeps/beeps";
 import { APIStatus } from "../utils/Error";
 
 /**
@@ -144,7 +145,7 @@ export interface RiderHistoryResult {
  */
 export interface RiderHistoryWithBeeperData {
     beep: BeepEntry;
-    beeper: MinimalUser;
+    beeper: LimitedUser;
 }
 
 /**
@@ -205,5 +206,5 @@ export interface BeeperHistoryResult {
  */
 export interface BeepEntryWithRiderData {
     beep: BeepEntry;
-    rider: MinimalUser;
+    rider: LimitedUser;
 }

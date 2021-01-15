@@ -16,6 +16,8 @@ export const withouts = {
     venmo: true
 };
 
+export const withoutsArr = Object.keys(withouts);
+
 export const defaultBeeperInfo = ['id', 'first', 'last', 'singlesRate', 'groupRate', 'queueSize', 'userLevel', 'isStudent', 'capacity', 'masksRequired', 'photoUrl', 'isBeeping'];
 
 export const acceptedBeeperInfo = [...defaultBeeperInfo, 'phone', 'venmo'];

@@ -198,6 +198,7 @@ declare module "rethinkdb" {
         replace(obj: Object, options?: UpdateOptions): Operation<WriteResult>;
         replace(expr: ExpressionFunction<any>): Operation<WriteResult>;
         delete(options?: UpdateOptions): Operation<WriteResult>;
+        merge(a:any): Operation<WriteResult>;
     }
 
     /**
@@ -275,7 +276,6 @@ declare module "rethinkdb" {
         insert(obj: any, options?: InsertOptions): Operation<WriteResult>;
 
         get<TObjectType extends object>(key: string): Operation<TObjectType | null> & Writeable;
-
         /**
          * Get all documents matching one or more keys on a simple index; defaults to primary key if no index provided.
          * See [getAll](https://www.rethinkdb.com/api/javascript/get_all/)
@@ -555,6 +555,8 @@ declare module "rethinkdb" {
 
         add(n: number): Expression<number>;
         add(n: Expression<number>): Expression<number>;
+
+        coerceTo(n: any): Sequence<any>;
 
         /**
          * Subtract two numbers.

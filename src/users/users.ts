@@ -4,6 +4,7 @@ import { APIStatus } from "../utils/Error";
  * Public User Result
  *
  * @example {
+ *   "id": "5553eebe-fb8d-446a-8c46-40e5b033a905",
  *   "capacity": 4,
  *   "first": "Test",
  *   "groupRate": "2",
@@ -28,6 +29,25 @@ export interface PublicUser {
     venmo: string;
     isBeeping: boolean;
     photoUrl: string | null;
+}
+
+/**
+ * Limited User
+ *
+ * @example {
+ *   "id": "5553eebe-fb8d-446a-8c46-40e5b033a905",
+ *   "first": "Test",
+ *   "last": "User",
+ *   "photoUrl": "https://ridebeepapp.s3.amazonaws.com/images/22192b90-54f8-49b5-9dcf-26049454716b-1610644210939.jpg",
+ *   "username": "banks"
+ * }
+*/
+export interface LimitedUser {
+    id: string;
+    username: string;
+    first: string;
+    last: string;
+    photoUrl: string;
 }
 
 /**

@@ -7,7 +7,7 @@ import { Response, Controller, Request, Post, Body, Route, Example, Security, Ta
 import { APIStatus, APIResponse } from "../utils/Error";
 import { Report, ReportResponse, ReportsResponse, ReportUserParams, UpdateReportParams } from "../reports/reports";
 import { getNumReports } from "./helpers";
-import { withouts } from '../utils/config';
+import { withouts, withoutsArr } from '../utils/config';
 
 @Tags("Reports")
 @Route("reports")
@@ -40,7 +40,7 @@ export class ReportsController extends Controller {
             return new APIResponse(APIStatus.Error, v.errors);
         }
 
-        const document: Report = {
+        const document = {
             reporterId: request.user.id,
             reportedId: requestBody.id,
             reason: requestBody.reason,
@@ -87,30 +87,33 @@ export class ReportsController extends Controller {
         total: 18,
         reports: [
             {
-                report: {
-                    adminNotes: null,
-                    handled: false,
-                    handledBy: null,
-                    id: "540ad73c-875a-4ac9-b067-b9d7b02eccf9",
-                    reason: "This is a test report after lots of changes recently!!",
-                    reportedId: "22192b90-54f8-49b5-9dcf-26049454716b",
-                    reporterId: "ca34cc7b-de97-40b7-a1ab-148f6c43d073",
-                    timestamp: 1608178391732
+                adminNotes: null,
+                beepEventId: '5553eebe-fb8d-446a-8c46-40e5b033a905',
+                handled: false,
+                handledByUser: {
+                    first: 'Banks',
+                    id: '22192b90-54f8-49b5-9dcf-26049454716b',
+                    last: 'Nussman',
+                    photoUrl: 'https://ridebeepapp.s3.amazonaws.com/images/22192b90-54f8-49b5-9dcf-26049454716b-1610644210939.jpg',
+                    username: 'banks'
                 },
+                id: 'bd8158e2-5a62-482f-866e-5a29c0adac4a',
+                reason: 'He tried to kill me AGAIN!!!!!',
                 reported: {
-                    first: "Banks",
-                    id: "22192b90-54f8-49b5-9dcf-26049454716b",
-                    last: "Nussman",
-                    photoUrl: "https://ridebeepapp.s3.amazonaws.com/images/22192b90-54f8-49b5-9dcf-26049454716b-1608086704764.jpg",
-                    username: "banks"
+                    first: 'Banks',
+                    id: '22192b90-54f8-49b5-9dcf-26049454716b',
+                    last: 'Nussman',
+                    photoUrl: 'https://ridebeepapp.s3.amazonaws.com/images/22192b90-54f8-49b5-9dcf-26049454716b-1610644210939.jpg',
+                    username: 'banks'
                 },
                 reporter: {
-                    first: "Test",
-                    id: "ca34cc7b-de97-40b7-a1ab-148f6c43d073",
-                    last: "User",
-                    photoUrl: "https://ridebeepapp.s3.amazonaws.com/images/ca34cc7b-de97-40b7-a1ab-148f6c43d073-1607039319321.jpg",
-                    username: "test"
-                }
+                    first: 'William',
+                    id: '911e0810-cfaf-4b7c-a707-74c3bd1d48c2',
+                    last: 'Nussman',
+                    photoUrl: 'https://ridebeepapp.s3.amazonaws.com/images/911e0810-cfaf-4b7c-a707-74c3bd1d48c2-1609649054314.jpg',
+                    username: 'william'
+                },
+                timestamp: 1610657263989
             }
         ]
     })
@@ -235,7 +238,7 @@ export class ReportsController extends Controller {
                 toUpdateData = { ...requestBody, handledBy: request.user.id};
             }
             else {
-                toUpdateData = requestBody;
+                toUpdateData = { ...requestBody, handledBy: null };
             }
 
             const result: r.WriteResult = await r.table("userReports").get(id).update(toUpdateData).run((await database.getConn()));
@@ -264,14 +267,33 @@ export class ReportsController extends Controller {
     @Example<ReportResponse>({
         status: APIStatus.Success,
         report: {
-            adminNotes: "I called the guy and took care of it. ",
-            handled: true,
-            handledBy: "22192b90-54f8-49b5-9dcf-26049454716b",
-            id: "c5008c11-d7ea-4f69-9b42-6698237d15bb",
-            reason: "hhgfh",
-            reportedId: "22192b90-54f8-49b5-9dcf-26049454716b",
-            reporterId: "ca34cc7b-de97-40b7-a1ab-148f6c43d073",
-            timestamp: 1607803770171
+            adminNotes: null,
+            beepEventId: '5553eebe-fb8d-446a-8c46-40e5b033a905',
+            handled: false,
+            handledByUser: {
+                first: 'Banks',
+                id: '22192b90-54f8-49b5-9dcf-26049454716b',
+                last: 'Nussman',
+                photoUrl: 'https://ridebeepapp.s3.amazonaws.com/images/22192b90-54f8-49b5-9dcf-26049454716b-1610644210939.jpg',
+                username: 'banks'
+            },
+            id: 'bd8158e2-5a62-482f-866e-5a29c0adac4a',
+            reason: 'He tried to kill me AGAIN!!!!!',
+            reported: {
+                first: 'Banks',
+                id: '22192b90-54f8-49b5-9dcf-26049454716b',
+                last: 'Nussman',
+                photoUrl: 'https://ridebeepapp.s3.amazonaws.com/images/22192b90-54f8-49b5-9dcf-26049454716b-1610644210939.jpg',
+                username: 'banks'
+            },
+            reporter: {
+                first: 'William',
+                id: '911e0810-cfaf-4b7c-a707-74c3bd1d48c2',
+                last: 'Nussman',
+                photoUrl: 'https://ridebeepapp.s3.amazonaws.com/images/911e0810-cfaf-4b7c-a707-74c3bd1d48c2-1609649054314.jpg',
+                username: 'william'
+            },
+            timestamp: 1610657263989
         }
     })
     @Response<APIResponse>(404, "Not found", {
@@ -286,7 +308,14 @@ export class ReportsController extends Controller {
     @Get("{id}")
     public async getReport(@Path() id: string): Promise<ReportResponse | APIResponse> {
         try {
-            const result = await r.table("userReports").get(id).run((await database.getConn())) as Report;
+            const result = await r.table("userReports").get(id).merge(function(doc: any) {
+                return {
+                    reporter: r.table('users').get(doc('reporterId')).without(...withoutsArr),
+                    reported: r.table('users').get(doc('reportedId')).without(...withoutsArr),
+                    handledByUser: r.table('users').get(doc('handledBy')).without(...withoutsArr)
+                };
+            }).without('reportedId', 'reporterId', 'handledBy').run((await database.getConn()));
+            console.log(result);
 
             if (!result) {
                 this.setStatus(404);

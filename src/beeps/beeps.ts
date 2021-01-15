@@ -1,3 +1,4 @@
+import {LimitedUser} from 'src/users/users';
 import { APIStatus } from '../utils/Error';
 
 /**
@@ -46,16 +47,8 @@ export interface BeepsResponse {
 
 export interface BeepEntryWithUsers {
     beep: BeepEntry;
-    beeper: MinimalUser;
-    rider: MinimalUser;
-}
-
-export interface MinimalUser {
-    id: string;
-    first: string;
-    last: string;
-    photoUrl: string;
-    username: string;
+    beeper: LimitedUser;
+    rider: LimitedUser;
 }
 
 export interface BeepResponse {

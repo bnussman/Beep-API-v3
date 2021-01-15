@@ -187,25 +187,20 @@ export class UsersController extends Controller {
             if (search) {
                 if (offset) {
                     if (show) {
-                        //@ts-ignore
                         cursor = await r.table("users").without('password').filter(function(doc) { return doc.coerceTo('string').match(search); }).slice(offset, offset + show).run((await database.getConn()));
                     }
                     else {
-                        //@ts-ignore
                         cursor = await r.table("users").without('password').filter(function(doc) { return doc.coerceTo('string').match(search); }).slice(offset).run((await database.getConn()));
                     }
                 }
                 else {
                     if (show) {
-                        //@ts-ignore
                         cursor = await r.table("users").without('password').filter(function(doc) { return doc.coerceTo('string').match(search); }).limit(show).run((await database.getConn()));
                     }
                     else {
-                        //@ts-ignore
                         cursor = await r.table("users").without('password').filter(function(doc) { return doc.coerceTo('string').match(search); }).run((await database.getConn()));
                     }
                 }
-                //@ts-ignore
                 numberOfUsers =  await r.table("users").filter(function(doc) { return doc.coerceTo('string').match(search); }).count().run((await database.getConn()));
             }
             else {
