@@ -5,7 +5,7 @@ import { Validator } from "node-input-validator";
 import * as Sentry from "@sentry/node";
 import { Response, Controller, Request, Post, Body, Route, Example, Security, Tags, Get, Query, Patch, Path, Delete } from 'tsoa';
 import { APIStatus, APIResponse } from "../utils/Error";
-import { Report, ReportResponse, ReportsResponse, ReportUserParams, UpdateReportParams } from "../reports/reports";
+import { ReportResponse, ReportsResponse, ReportUserParams, UpdateReportParams } from "../reports/reports";
 import { getNumReports } from "./helpers";
 import { withouts, withoutsArr } from '../utils/config';
 
@@ -312,7 +312,7 @@ export class ReportsController extends Controller {
                 return {
                     reporter: r.table('users').get(doc('reporterId')).without(...withoutsArr),
                     reported: r.table('users').get(doc('reportedId')).without(...withoutsArr),
-                    handledByUser: r.table('users').get(doc('handledBy')).without(...withoutsArr)
+                    handledByUser: !(doc('handledBy').isEmpty()) ? r.table('users').get(doc('handledBy')).without(...withoutsArr) : null
                 };
             }).without('reportedId', 'reporterId', 'handledBy').run((await database.getConn()));
             console.log(result);
