@@ -51,9 +51,79 @@ export interface BeepEntryWithUsers {
     rider: LimitedUser;
 }
 
+/**
+ * Single Beep Event
+ * @example {
+ *    "status": "success",
+ *    "beep": {
+ *        "beeper": {
+ *            "first": "William",
+ *            "id": "911e0810-cfaf-4b7c-a707-74c3bd1d48c2",
+ *            "last": "Nussman",
+ *            "photoUrl": "https://ridebeepapp.s3.amazonaws.com/images/911e0810-cfaf-4b7c-a707-74c3bd1d48c2-1609649054314.jpg",
+ *            "username": "william"
+ *        },
+ *        "destination": "Espresso News ☕️",
+ *        "doneTime": 1610760397020,
+ *        "groupSize": 1,
+ *        "id": "60232b79-c594-4a2f-9245-7c4a6bc81f81",
+ *        "isAccepted": true,
+ *        "origin": "5617 Camelot Dr Camelot Dr Charlotte, NC 28270",
+ *        "rider": {
+ *            "first": "Banks",
+ *            "id": "22192b90-54f8-49b5-9dcf-26049454716b",
+ *            "last": "Nussman",
+ *            "photoUrl": "https://ridebeepapp.s3.amazonaws.com/images/22192b90-54f8-49b5-9dcf-26049454716b-1610644210939.jpg",
+ *            "username": "banks"
+ *        },
+ *        "state": 3,
+ *        "timeEnteredQueue": 1610760349070
+ *    }
+ * }
+ */
 export interface BeepResponse {
     status: APIStatus;
-    beep: BeepEntry;
+    beep: NewBeepEntryWithUserInfo;
+}
+
+/**
+ * Single Beep Event
+ * @example {
+ *        "beeper": {
+ *            "first": "William",
+ *            "id": "911e0810-cfaf-4b7c-a707-74c3bd1d48c2",
+ *            "last": "Nussman",
+ *            "photoUrl": "https://ridebeepapp.s3.amazonaws.com/images/911e0810-cfaf-4b7c-a707-74c3bd1d48c2-1609649054314.jpg",
+ *            "username": "william"
+ *        },
+ *        "destination": "Espresso News ☕️",
+ *        "doneTime": 1610760397020,
+ *        "groupSize": 1,
+ *        "id": "60232b79-c594-4a2f-9245-7c4a6bc81f81",
+ *        "isAccepted": true,
+ *        "origin": "5617 Camelot Dr Camelot Dr Charlotte, NC 28270",
+ *        "rider": {
+ *            "first": "Banks",
+ *            "id": "22192b90-54f8-49b5-9dcf-26049454716b",
+ *            "last": "Nussman",
+ *            "photoUrl": "https://ridebeepapp.s3.amazonaws.com/images/22192b90-54f8-49b5-9dcf-26049454716b-1610644210939.jpg",
+ *            "username": "banks"
+ *        },
+ *        "state": 3,
+ *        "timeEnteredQueue": 1610760349070
+ *  }
+ */
+export interface NewBeepEntryWithUserInfo {
+    beeper: LimitedUser;
+    rider: LimitedUser;
+    id: string;
+    origin: string;
+    destination: string;
+    groupSize: number;
+    isAccepted: boolean;
+    state: number;
+    timeEnteredQueue: number;
+    doneTime: number;
 }
 
 /**

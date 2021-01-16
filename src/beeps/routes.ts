@@ -5,7 +5,7 @@ import * as Sentry from "@sentry/node";
 import * as r from 'rethinkdb';
 import { BeepEntry, BeepResponse, BeepsResponse } from './beeps';
 import database from '../utils/db';
-import { withouts } from '../utils/config';
+import { withouts, withoutsArr } from '../utils/config';
 
 @Tags("Beeps")
 @Route("beeps")
@@ -158,13 +158,33 @@ export class BeepsController extends Controller {
      *
      * @returns {BeepResponse | APIResponse}
      */
-    /*
     @Example<BeepResponse>({
         status: APIStatus.Success,
         beep: {
+            beeper: {
+                first: "William",
+                id: "911e0810-cfaf-4b7c-a707-74c3bd1d48c2",
+                last: "Nussman",
+                photoUrl: "https://ridebeepapp.s3.amazonaws.com/images/911e0810-cfaf-4b7c-a707-74c3bd1d48c2-1609649054314.jpg",
+                username: "william"
+            },
+            destination: "Espresso News ☕️",
+            doneTime: 1610760397020,
+            groupSize: 1,
+            id: "60232b79-c594-4a2f-9245-7c4a6bc81f81",
+            isAccepted: true,
+            origin: "5617 Camelot Dr Camelot Dr Charlotte, NC 28270",
+            rider: {
+                first: "Banks",
+                id: "22192b90-54f8-49b5-9dcf-26049454716b",
+                last: "Nussman",
+                photoUrl: "https://ridebeepapp.s3.amazonaws.com/images/22192b90-54f8-49b5-9dcf-26049454716b-1610644210939.jpg",
+                username: "banks"
+            },
+            state: 3,
+            timeEnteredQueue: 1610760349070
         }
     })
-    */
     @Response<APIResponse>(404, "Not found", {
         status: APIStatus.Error,
         message: "This beep entry does not exist"
@@ -177,7 +197,12 @@ export class BeepsController extends Controller {
     @Get("{id}")
     public async getBeep(@Path() id: string): Promise<BeepResponse | APIResponse> {
         try {
-            const result = await r.table("beeps").get(id).run((await database.getConn())) as BeepEntry;
+            const result = await r.table("beeps").get(id).merge(function(doc: any) {
+                return {
+                    beeper: r.table('users').get(doc('beepersid')).without(...withoutsArr).default(null),
+                    rider: r.table('users').get(doc('riderid')).without(...withoutsArr).default(null)
+                };
+            }).without('beepersid', 'riderid').run((await database.getConn()));
 
             if (!result) {
                 this.setStatus(404);
