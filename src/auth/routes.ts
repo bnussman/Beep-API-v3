@@ -13,8 +13,6 @@ import { APIResponse, APIStatus } from '../utils/Error';
 import { wrap } from '@mikro-orm/core';
 import { BeepORM } from '../app';
 import { User } from '../entities/User';
-import { ObjectId } from '@mikro-orm/mongodb';
-import { TokenEntry } from '../entities/TokenEntry';
 
 @Tags("Auth")
 @Route("auth")
@@ -26,31 +24,6 @@ export class AuthController extends Controller {
      * @param {LoginParams} requestBody - Conatins a username and password and optional Expo push token
      */
     @Post("login")
-    @Example<LoginResponse>({
-        status: APIStatus.Success,
-        user: {
-            capacity: 4,
-            email: "nussmanwb@appstate.edu",
-            first: "Banks",
-            groupRate: 2,
-            id: new ObjectId(),
-            isBeeping: false,
-            isEmailVerified: true,
-            isStudent: true,
-            last: "Nussman",
-            masksRequired: true,
-            phone: "7049968597",
-            singlesRate: 3,
-            userLevel: 0,
-            username: "banks",
-            venmo: "banksnussman",
-            queueSize: 0
-        },
-        tokens: {
-            token: new ObjectId(),
-            tokenid: new ObjectId(),
-        }
-    })
     @Response<APIResponse>(422, "Invalid Input", {
         status: APIStatus.Error, 
         message: {
@@ -83,7 +56,8 @@ export class AuthController extends Controller {
 
         const user = await BeepORM.userRepository.findOne({ username: requestBody.username });
 
-        if (user?.password == sha256(requestBody.password)) {
+        //if (user?.password == sha256(requestBody.password)) {
+        if (user?.password == requestBody.password) {
             //if authenticated, get new auth tokens
             const tokenData = await getToken(user);
 
@@ -110,31 +84,6 @@ export class AuthController extends Controller {
      * @param {SignUpParams} requestBody - Conatins a signup params and optional Expo push token
      */
     @Post("signup")
-    @Example<LoginResponse>({
-        status: APIStatus.Success,
-        user: {
-            capacity: 4,
-            email: "nussmanwb@appstate.edu",
-            first: "Banks",
-            groupRate: 2,
-            id: new ObjectId(),
-            isBeeping: false,
-            isEmailVerified: true,
-            isStudent: true,
-            last: "Nussman",
-            masksRequired: true,
-            phone: "7049968597",
-            singlesRate: 3,
-            userLevel: 0,
-            username: "banks",
-            venmo: "banksnussman",
-            queueSize: 0
-        },
-        tokens: {
-            token: new ObjectId(),
-            tokenid: new ObjectId(),
-        }
-    })
     @Response<APIResponse>(422, "Invalid Input", {
         status: APIStatus.Error, 
         message: {
