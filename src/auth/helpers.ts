@@ -1,11 +1,12 @@
 import * as r from 'rethinkdb';
 import { WriteResult, Cursor } from 'rethinkdb';
-import { TokenData, UserPluckResult } from '../types/beep';
+import { UserPluckResult } from '../types/beep';
 import database from'../utils/db';
 import * as nodemailer from "nodemailer";
 import { transporter } from "../utils/mailer";
 import * as Sentry from "@sentry/node";
 import { v4 as uuidv4 } from "uuid";
+import { TokenEntry } from './auth';
 
 /**
  * Generates an authentication token and a token for that token (for offline logouts), stores
@@ -14,7 +15,7 @@ import { v4 as uuidv4 } from "uuid";
  * @param userid a user's ID which is used to associate a token with a userid in our tokens table
  * @return user's id, auth token, and auth token's token to be used by login and sign up
  */
-export async function getToken(userid: string): Promise<TokenData> {
+export async function getToken(userid: string): Promise<TokenEntry> {
     //this information will be inserted into the tokens table and returned by this function
     const document = {
         userid: userid,
@@ -111,25 +112,6 @@ export async function hasUserLevel(userid: string, level: number): Promise<boole
 }
 
 /**
- * works exactly like isTokenValid, but only returns a userid if user has userLevel == 1 (meaning they are an admin)
- *
- * @param token a user's auth token
- * @returns promice that resolves to null or a user's id
- */
-export async function isAdmin(token: string): Promise<string | null> {
-    const id: string | null = await isTokenValid(token);
-
-    if (id) {
-        const hasCorrectLevel = await hasUserLevel(id, 1);
-        
-        if(hasCorrectLevel) {
-            return id;
-        }
-    }
-    return null;
-}
-
-/**
  * get user data given an email
  *
  * @param email string of user's email
@@ -142,11 +124,11 @@ export async function getUserFromEmail(email: string, ...pluckItems: string[]): 
 
         //if no pluck items were passed in, don't pluck anything
         if (pluckItems.length == 0) {
-            cursor = await r.table("users").filter({ 'email': email }).limit(1).run((await database.getConn()));
+            cursor = await r.table("users").filter({ email: email }).limit(1).run((await database.getConn()));
         }
         else {
             //expand all the pluck paramaters and rethinkdb query to get them
-            cursor = await r.table("users").filter({ 'email': email }).pluck(...pluckItems).limit(1).run((await database.getConn()));
+            cursor = await r.table("users").filter({ email: email }).pluck(...pluckItems).limit(1).run((await database.getConn()));
         }
         
         try {
@@ -289,9 +271,9 @@ export async function createVerifyEmailEntryAndSendEmail(id: string, email: stri
 
     //this is what will be inserted into the verifyEmail table
     const document = {
-        "time": Date.now(),
-        "userid": id,
-        "email": email
+        time: Date.now(),
+        userid: id,
+        email: email
     };
 
     try {

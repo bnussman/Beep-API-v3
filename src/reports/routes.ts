@@ -309,14 +309,12 @@ export class ReportsController extends Controller {
     public async getReport(@Path() id: string): Promise<ReportResponse | APIResponse> {
         try {
             const result = await r.table("userReports").get(id).merge(function(doc: any) {
-                console.log(doc('handledBy').args);
                 return {
                     reporter: r.table('users').get(doc('reporterId')).without(...withoutsArr),
                     reported: r.table('users').get(doc('reportedId')).without(...withoutsArr),
                     handledByUser: r.table('users').get(doc('handledBy')).without(...withoutsArr).default(null)
                 };
             }).without('reportedId', 'reporterId', 'handledBy').run((await database.getConn()));
-            console.log(result);
 
             if (!result) {
                 this.setStatus(404);

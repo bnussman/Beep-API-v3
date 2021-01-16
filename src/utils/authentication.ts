@@ -1,5 +1,5 @@
 import * as express from "express";
-import { TokenEntry } from "../types/beep";
+import { TokenEntry, TokenEntryWithUser } from "../auth/auth";
 import database from"./db";
 import * as r from "rethinkdb";
 import * as Sentry from "@sentry/node";
@@ -16,19 +16,35 @@ export async function expressAuthentication(request: express.Request, securityNa
         }
 
         try {
-            const result: TokenEntry | null = await r.table("tokens").get(token).run((await database.getConn())) as TokenEntry;
-
-            if (result) {
-                if (scopes && (scopes[0] == "admin")) {
-                    const hasPermission: boolean = await hasUserLevel(result.userid, 1);
-                    if (!hasPermission) {
+            if (scopes && (scopes[0] == "admin")) {
+                const result: TokenEntryWithUser | null = await r.table("tokens").get(token).merge(function (doc: any) {
+                    return {
+                        user: r.table("users").get(doc('userid')).pluck('userLevel')
+                    };
+                }).run((await database.getConn())) as unknown as TokenEntryWithUser;
+                
+                if (result) {
+                    const hasPermission: boolean = result.user.userLevel > 0;
+                    if (hasPermission) {
+                        return Promise.resolve({ token: token, id: result.userid });
+                    }
+                    else {
                         return Promise.reject(new APIAuthResponse(APIStatus.Error, "You must be an admin to use this endpoint"));
                     }
                 }
-                return Promise.resolve({ token: token, id: result.userid });
+                else {
+                    return Promise.reject(new APIAuthResponse(APIStatus.Error, "Your token is not valid"));
+                }
             }
             else {
-                return Promise.reject(new APIAuthResponse(APIStatus.Error, "Your token is not valid"));
+                const result: TokenEntry | null = await r.table("tokens").get(token).run((await database.getConn())) as TokenEntry;
+
+                if (result) {
+                    return Promise.resolve({ token: token, id: result.userid });
+                }
+                else {
+                    return Promise.reject(new APIAuthResponse(APIStatus.Error, "Your token is not valid"));
+                }
             }
         }
         catch (error) {
@@ -44,10 +60,14 @@ export async function expressAuthentication(request: express.Request, securityNa
         }
 
         try {
-            const result: TokenEntry | null = await r.table("tokens").get(token).run((await database.getConn())) as TokenEntry;
+            const result: TokenEntryWithUser | null = await r.table("tokens").get(token).merge(function (doc: any) {
+                return {
+                    user: r.table("users").get(doc('userid')).pluck('userLevel')
+                };
+            }).run((await database.getConn())) as unknown as TokenEntryWithUser;
 
             if (result) {
-                const isAdmin: boolean = await hasUserLevel(result.userid, 1);
+                const isAdmin: boolean = result.user.userLevel > 0;
 
                 if (isAdmin) {
                     return Promise.resolve({ token: token, id: result.userid });

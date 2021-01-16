@@ -143,6 +143,7 @@ export class UsersController extends Controller {
      *
      * @param {number} [offset] where to start in the DB
      * @param {number} [show] how many to show from start
+     * @param {string} [search] search the entire users table by string
      * @returns {UsersResponse | APIResponse} [result]
      */
     @Example<UsersResult>({
@@ -416,7 +417,7 @@ export class UsersController extends Controller {
         if (request.user.id != id) {
             const isAdmin = await hasUserLevel(request.user.id, 1);
 
-            if (!isAdmin) return new APIResponse(APIStatus.Error, "You must be an admin to view other peoples history");
+            if (!isAdmin) return new APIResponse(APIStatus.Error, "You must be an admin to view other peoples queue");
         }
 
         try {

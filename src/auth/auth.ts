@@ -131,3 +131,15 @@ export interface LoginResponse {
     masksRequired: boolean;
     photoUrl: string | null;
 }
+
+export interface TokenEntry {
+    token: string;
+    tokenid: string;
+    userid: string;
+}
+
+export type TokenEntryWithUser = TokenEntry & {
+    user: {
+        userLevel: number;
+    }
+}

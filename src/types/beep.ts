@@ -1,14 +1,3 @@
-export interface TokenData {
-    userid: string,
-    token: string,
-    tokenid: string
-}
-
-export interface BeepError {
-    status: string;
-    message: string;
-}
-
 export interface User {
     id: string;
     first: string;
@@ -53,21 +42,9 @@ export interface UserPluckResult {
     isStudent?: boolean;
 }
 
-export interface TokenEntry {
-    id: string,
-    tokenid: string,
-    userid: string
-}
-
-export interface TokenPluckResult {
-    id?: string,
-    tokenid?: string,
-    userid?: string
-}
-
 export interface AuthUser {
-    id: string,
-    token: string
+    id: string;
+    token: string;
 }
 
 export interface BeepTableResult {
