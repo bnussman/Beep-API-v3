@@ -13,6 +13,6 @@ export function initializeSentry(app: Application): void {
             new Tracing.Integrations.Express({ app })
         ],
         tracesSampleRate: 1.0,
-        debug: true
+        debug: false
     });
 }

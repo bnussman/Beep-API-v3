@@ -62,7 +62,8 @@ export default class BeepAPIServer {
             entitiesTs: ['./src/entities/*.ts'],
             dbName: 'beep',
             type: 'mongo',
-            clientUrl: url
+            clientUrl: url,
+            debug: true
         });
 
         BeepORM.em = BeepORM.orm.em;
