@@ -237,7 +237,7 @@ export class UsersController extends Controller {
     @Security("token")
     @Get("{id}/history/rider")
     public async getRideHistory(@Request() request: express.Request, @Path() id: string): Promise<APIResponse | RiderHistoryResult> {
-        if (request.user.user.id != new ObjectId(id)) {
+        if (request.user.user._id != new ObjectId(id)) {
             const isAdmin = await hasUserLevel(request.user.user, 1);
 
             if (!isAdmin) return new APIResponse(APIStatus.Error, "You must be an admin to view other peoples history");
@@ -310,7 +310,7 @@ export class UsersController extends Controller {
     @Security("token")
     @Get("{id}/history/beeper")
     public async getBeepHistory(@Request() request: express.Request, @Path() id: string): Promise<APIResponse | BeeperHistoryResult> {
-        if (request.user.user.id != new ObjectId(id)) {
+        if (request.user.user._id != new ObjectId(id)) {
             const isAdmin = await hasUserLevel(request.user.user, 1);
 
             if (!isAdmin) return new APIResponse(APIStatus.Error, "You must be an admin to view other peoples history");

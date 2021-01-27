@@ -21,13 +21,15 @@ import { wrap } from '@mikro-orm/core';
  */
 export async function getToken(user: User): Promise<TokenData> {
     const t = new TokenEntry(user);
-    //await BeepORM.tokenRepository.persistAndFlush(t);
-    BeepORM.tokenRepository.nativeInsert(t);
+
+    user.tokens.add(t);
+
+    await BeepORM.em.persistAndFlush(user);
 
     return {
-        userid: user.id,
+        userid: user._id,
         tokenid: t.tokenid,
-        token: t.id
+        token: t._id
     };
 }
 

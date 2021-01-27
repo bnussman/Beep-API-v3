@@ -37,6 +37,7 @@
         "authenticationModule": "src/utils/authentication.ts"
     },
     "ignore": [
-        "**/node_modules/@sentry/**"
+        "**/node_modules/@sentry/**",
+        "**/node_modules/@types/express-serve-static-core/**"
     ] 
 }

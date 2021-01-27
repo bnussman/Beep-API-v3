@@ -6,7 +6,7 @@ import { User } from "./User";
 export class TokenEntry {
 
     @PrimaryKey()
-    id!: ObjectId;
+    _id!: ObjectId;
 
     @Property() 
     tokenid = new ObjectId();

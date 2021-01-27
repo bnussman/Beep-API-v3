@@ -6,13 +6,7 @@ import { User } from "./User";
 export class QueueEntry {
 
     @PrimaryKey()
-    id!: ObjectId;
-
-    @ManyToOne()
-    beeper!: User;
-
-    @ManyToOne()
-    rider!: User;
+    _id!: ObjectId;
     
     @Property()
     origin!: string;
@@ -31,4 +25,7 @@ export class QueueEntry {
 
     @Property({ default: Date.now() })
     timeEnteredQueue!: number;
+
+    @ManyToOne(() => User)
+    beeper!: User
 }

@@ -1,12 +1,13 @@
-import { Collection, Entity, OneToMany, PrimaryKey, Property } from "@mikro-orm/core";
+import { Collection, Entity, OneToMany, OneToOne, PrimaryKey, Property } from "@mikro-orm/core";
 import { ObjectId } from "@mikro-orm/mongodb";
 import { QueueEntry } from './QueueEntry';
+import { TokenEntry } from './TokenEntry';
 
 @Entity()
 export class User {
 
     @PrimaryKey()
-    id!: ObjectId;
+    _id!: ObjectId;
 
     @Property()
     first!: string;
@@ -62,8 +63,9 @@ export class User {
     @Property({ nullable: true })
     photoUrl?: string;
 
-    /*
+    @OneToMany(() => TokenEntry, t => t.user)
+    tokens = new Collection<TokenEntry>(this);
+
     @OneToMany(() => QueueEntry, q => q.beeper)
     queue = new Collection<QueueEntry>(this);
-    */
 }

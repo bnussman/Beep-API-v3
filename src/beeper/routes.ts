@@ -89,6 +89,7 @@ export class BeeperController extends Controller {
      * a call to this endpoint to get the queue and data
      * @returns {GetBeeperQueueResult} 
      */
+    /*
     @Example<GetBeeperQueueResult>({
         status: APIStatus.Success,
         queue: [
@@ -105,6 +106,7 @@ export class BeeperController extends Controller {
             }
         ]
     })
+    */
     @Response<APIResponse>(500, "Server Error", {
         status: APIStatus.Error, 
         message: "Unable to get beeper queue"

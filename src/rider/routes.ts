@@ -71,8 +71,6 @@ export class RiderController extends Controller {
         }
 
         const entry = {
-            rider: request.user.user,
-            beeper: beeper,
             timeEnteredQueue: Date.now(),
             isAccepted: false,
             groupSize: requestBody.groupSize,
@@ -85,7 +83,7 @@ export class RiderController extends Controller {
 
         wrap(q).assign(entry, { em: BeepORM.em });
 
-        await BeepORM.em.persistAndFlush(q);
+        beeper.queue.add(q);
 
         beeper.queueSize++;
         await BeepORM.userRepository.persistAndFlush(beeper);

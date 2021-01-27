@@ -54,7 +54,7 @@ export class AuthController extends Controller {
             return new APIResponse(APIStatus.Error, v.errors);
         }
 
-        const user = await BeepORM.userRepository.findOne({ username: requestBody.username });
+        const user: User | null = await BeepORM.userRepository.findOne({ username: requestBody.username });
 
         //if (user?.password == sha256(requestBody.password)) {
         if (user?.password == requestBody.password) {
