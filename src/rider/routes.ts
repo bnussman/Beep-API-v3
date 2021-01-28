@@ -289,39 +289,29 @@ export class RiderController extends Controller {
      * Provides client with a list of all people currently beeping
      * @returns {APIResponse | BeeperListResult}
      */
+    /*
     @Example<BeeperListResult>({
         status: APIStatus.Success,
         beeperList: [{
             capacity: 4,
             first: "Banks",
-            groupRate: "2",
+            groupRate: 2,
             id: "22192b90-54f8-49b5-9dcf-26049454716b",
             isStudent: true,
             last: "Nussman",
             masksRequired: true,
             queueSize: 0,
-            singlesRate: "3",
+            singlesRate: 3,
             userLevel: 0,
             photoUrl: "https://ridebeepapp.s3.amazonaws.com/images/22192b90-54f8-49b5-9dcf-26049454716b-1604517623067.jpg"
         }]
     })
+    */
     @Get("list")
     public async getBeeperList(): Promise<APIResponse | BeeperListResult> {
-        try {
-            const cursor: Cursor = await r.table("users").filter({ isBeeping: true }).pluck('first', 'last', 'queueSize', 'id', 'singlesRate', 'groupRate', 'capacity', 'userLevel', 'isStudent', 'masksRequired', 'photoUrl').run((await database.getConn()));
-
-            const list: BeeperListItem[] = await cursor.toArray();
-
-            this.setStatus(200);
-            return {
-                "status": APIStatus.Success,
-                "beeperList": list
-            };
-        }
-        catch (error) {
-            Sentry.captureException(error);
-            this.setStatus(500);
-            return new APIResponse(APIStatus.Error, "Unable to get beeper list");
-        }
+        return {
+            status: APIStatus.Success,
+            beeperList: await BeepORM.userRepository.find({ isBeeping: true })
+        };
     }
 }

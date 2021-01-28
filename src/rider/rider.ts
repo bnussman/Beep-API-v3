@@ -16,7 +16,7 @@ export interface ChooseBeepParams {
     groupSize: number;
     origin: string;
     destination: string;
-    beepersID: ObjectId;
+    beepersID: string;
 }
 
 /**
@@ -146,7 +146,7 @@ export interface LeaveQueueParams {
  */
 export interface BeeperListResult {
     status: APIStatus,
-    beeperList: BeeperListItem[];
+    beeperList: User[];
 }
 
 /**
