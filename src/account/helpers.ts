@@ -1,9 +1,5 @@
-import { UserPluckResult } from "../types/beep";
-import * as r from 'rethinkdb';
-import database from "../utils/db";
 import { deactivateTokens } from "../auth/helpers";
-import * as Sentry from "@sentry/node";
-import {BeepORM} from "../app";
+import { BeepORM } from "../app";
 import { User } from '../entities/User';
 
 /**
@@ -13,23 +9,6 @@ import { User } from '../entities/User';
  */
 export function isEduEmail(email: string): boolean {
     return (email.substr(email.length - 3) === "edu");
-}
-
-/**
- * takes userid and gives you their email
- * @param userid is a user's id
- * @returns promise of user's email
- */
-export async function getEmail(id: string): Promise<string | undefined> {
-    try {
-        const result: UserPluckResult = await r.table("users").get(id).pluck("email").run((await database.getConn()));
-        return result.email;
-    }
-    catch (error) {
-        //error getting user with id from users table and plucking email
-        Sentry.captureException(error);
-        return undefined;
-    }
 }
 
 /**

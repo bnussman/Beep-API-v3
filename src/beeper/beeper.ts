@@ -97,6 +97,6 @@ export interface BeepQueueTableEntry {
  */
 export interface SetBeeperQueueParams {
     value: string;
-    riderID: ObjectId;
-    queueID: ObjectId;
+    riderID: string;
+    queueID: string;
 }

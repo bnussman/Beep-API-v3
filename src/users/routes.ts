@@ -344,4 +344,28 @@ export class UsersController extends Controller {
             return new APIResponse(APIStatus.Error, "Unable to get beeper history");
         }
     }
+
+
+    /**
+     * User calls this to get there queue when beeping.
+     * Our Socket server is responcible for telling a client a change occoured, it will prompt
+     * a call to this endpoint to get the queue and data
+     * @returns {GetBeeperQueueResult} 
+     */
+    @Security("token")
+    @Get("{id}/queue")
+    public async getQueue(@Request() request: express.Request, @Path() id: string): Promise<APIResponse | any> {
+        if (request.user.user._id != id) {
+            const isAdmin = await hasUserLevel(request.user.user._id, 1);
+
+            if (!isAdmin) return new APIResponse(APIStatus.Error, "You must be an admin to view other peoples queue");
+        }
+
+        const r = await BeepORM.queueEntryRepository.find({ beeper: request.user.user }, { populate: true });
+
+        return {
+            status: APIStatus.Success,
+            queue: r
+        };
+    }
 }

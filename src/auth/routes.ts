@@ -56,8 +56,8 @@ export class AuthController extends Controller {
 
         const user: User | null = await BeepORM.userRepository.findOne({ username: requestBody.username });
 
-        //if (user?.password == sha256(requestBody.password)) {
-        if (user?.password == requestBody.password) {
+        if (user?.password == sha256(requestBody.password)) {
+        //if (user?.password == requestBody.password) {
             //if authenticated, get new auth tokens
             const tokenData = await getToken(user);
 
@@ -131,7 +131,11 @@ export class AuthController extends Controller {
         }
 
         const user = new User();
+    
+        requestBody.password = sha256(requestBody.password);
+
         wrap(user).assign(requestBody);
+
         await BeepORM.userRepository.persistAndFlush(user);
     
         const tokenData = await getToken(user);

@@ -28,4 +28,7 @@ export class QueueEntry {
 
     @ManyToOne(() => User)
     beeper!: User
+
+    @OneToOne(() => User)
+    rider!: User;
 }

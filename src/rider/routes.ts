@@ -76,7 +76,8 @@ export class RiderController extends Controller {
             groupSize: requestBody.groupSize,
             origin: requestBody.origin,
             destination: requestBody.destination,
-            state: 0
+            state: 0,
+            rider: request.user.user
         };
 
         const q = new QueueEntry();
@@ -106,23 +107,6 @@ export class RiderController extends Controller {
      * This will NOT initiate a beep, but will simplily give the client data of an avalible beeper
      * @returns {ChooseBeepResponse | APIResponse}
      */
-    /*
-    @Example<ChooseBeepResponse>({
-        status: APIStatus.Success,
-        beeper: {
-            capacity: 4,
-            first: "Banks",
-            groupRate: "2",
-            id: "22192b90-54f8-49b5-9dcf-26049454716b",
-            isStudent: true,
-            last: "Nussman",
-            masksRequired: true,
-            queueSize: 1,
-            singlesRate: "3",
-            userLevel: 0,
-            photoUrl: "https://ridebeepapp.s3.amazonaws.com/images/22192b90-54f8-49b5-9dcf-26049454716b-1604517623067.jpg"
-        }
-    })
     @Response<APIResponse>(200, "No body is beeping", {
         status: APIStatus.Error,
         message: "Nobody is beeping at the moment! Try to find a ride later."
@@ -130,57 +114,13 @@ export class RiderController extends Controller {
     @Security("token")
     @Get("find")
     public async findBeep (@Request() request: express.Request): Promise<APIResponse | ChooseBeepResponse> {
-        //rethinkdb query to search users table (in acending order by queueSize) for users where isBeeping is true
-        //and id is not equal to requester's, and limit by 1 to decide a riders beeper
-        try {
-            const cursor: Cursor = await r.table('users').orderBy({'index': 'queueSize'}).filter(r.row('isBeeping').eq(true).and(r.row('id').ne(request.user.id))).limit(1).run((await database.getConn()));
+        const r = await BeepORM.userRepository.findOneOrFail({ isBeeping: true });
 
-            try {
-                const result = await cursor.next();
-
-                //if we made it to this point, user has found a beep and it has been
-                //registered in our db. Send output with nessesary data to rider.
-                return {
-                    'status': APIStatus.Success,
-                    'beeper': {
-                        'id': result.id,
-                        'first': result.first,
-                        'last': result.last,
-                        'queueSize': result.queueSize,
-                        'singlesRate': result.singlesRate,
-                        'groupRate': result.groupRate,
-                        'capacity': result.capacity,
-                        'userLevel': result.userLevel,
-                        'isStudent': result.isStudent,
-                        'masksRequired': result.masksRequired,
-                        'photoUrl': result.photoUrl
-                    }
-                };
-            }
-            catch (error) {
-                cursor.close();
-                //If rethinkdb says there are not more rows, no one is beeping!
-                if (error.msg == "No more rows in the cursor.") {
-                    //close the RethinkDB cursor to prevent leak
-                    //Return error to REST API
-                    this.setStatus(200);
-                    return new APIResponse(APIStatus.Error, "Nobody is beeping at the moment! Try to find a ride later.");
-                }
-                else {
-                    //the error was proabably serious, log it
-                    Sentry.captureException(error);
-                    this.setStatus(500);
-                    return new APIResponse(APIStatus.Error, "Unable to find beep");
-                }
-            }
-        }
-        catch (error) {
-            Sentry.captureException(error);
-            this.setStatus(500);
-            return new APIResponse(APIStatus.Error, "Unable to find beep");
-        }
+        return {
+            status: APIStatus.Success,
+            beeper: r
+        };
     }
-    */
 
     /**
      * Gets the current status as a rider at any given time. This is how they know anything about their current beep
@@ -204,13 +144,7 @@ export class RiderController extends Controller {
     @Security("token")
     @Get("status")
     public async getRiderStatus (@Request() request: express.Request): Promise<APIResponse | RiderStatusResult> {
-        let r;
-        try {
-            r = await BeepORM.queueEntryRepository.findOne({ rider: request.user.user });
-        }
-        catch (e) {
-            console.log("here", e);
-        }
+        const r = await BeepORM.queueEntryRepository.findOne({ rider: request.user.user }, {populate: true});
 
         if (!r) {
             this.setStatus(200);

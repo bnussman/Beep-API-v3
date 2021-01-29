@@ -1,20 +1,15 @@
 import express from 'express';
-import { WriteResult } from "rethinkdb";
-import * as r from 'rethinkdb';
 import { sha256 } from 'js-sha256';
-import { createVerifyEmailEntryAndSendEmail, getUserFromId } from "../auth/helpers";
-import database from '../utils/db';
-import { isEduEmail, getEmail, deleteUser } from './helpers';
+import { createVerifyEmailEntryAndSendEmail } from "../auth/helpers";
+import { isEduEmail, deleteUser } from './helpers';
 import { Validator } from "node-input-validator";
-import { UserPluckResult } from '../types/beep';
 import * as Sentry from "@sentry/node";
 import { APIStatus, APIResponse } from "../utils/Error";
-import { Response, Body, Controller, Post, Route, Security, Tags, Request, Delete, Example, Get, Put, Patch } from 'tsoa';
-import { BeeperHistoryResult, ChangePasswordParams, EditAccountParams, RiderHistoryResult, RiderHistoryWithBeeperData, UpdatePushTokenParams, VerifyAccountParams, VerifyAccountResult } from "./account";
-import { withouts } from '../utils/config';
+import { Response, Body, Controller, Post, Route, Security, Tags, Request, Delete, Example, Put, Patch } from 'tsoa';
 import {BeepORM} from '../app';
 import {wrap} from '@mikro-orm/core';
 import {ObjectId} from '@mikro-orm/mongodb';
+import {ChangePasswordParams, EditAccountParams, UpdatePushTokenParams, VerifyAccountParams, VerifyAccountResult} from './account';
 
 @Tags("Account")
 @Route("account")
@@ -66,7 +61,6 @@ export class AccountController extends Controller {
         }
 
         const oldEmail = request.user.user.email;
-
 
         try {
             wrap(request.user.user).assign(requestBody);
