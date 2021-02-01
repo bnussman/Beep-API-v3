@@ -15,6 +15,7 @@ import {User} from "./entities/User";
 import {VerifyEmail} from "./entities/VerifyEmail";
 import {QueueEntry} from "./entities/QueueEntry";
 import {Beep} from "./entities/Beep";
+import {ForgotPassword} from "./entities/ForgotPassword";
 
 const url = `mongodb+srv://banks:${process.env.MONGODB_PASSWORD}@beep.5zzlx.mongodb.net/test?retryWrites=true&w=majority`;
 
@@ -26,6 +27,7 @@ export const BeepORM = {} as {
     tokenRepository: EntityRepository<TokenEntry>,
     verifyEmailRepository: EntityRepository<VerifyEmail>,
     beepRepository: EntityRepository<Beep>,
+    forgotPassword: EntityRepository<ForgotPassword>,
 };
 
 export default class BeepAPIServer {
@@ -74,6 +76,7 @@ export default class BeepAPIServer {
         BeepORM.verifyEmailRepository = BeepORM.orm.em.getRepository(VerifyEmail);
         BeepORM.queueEntryRepository = BeepORM.orm.em.getRepository(QueueEntry);
         BeepORM.beepRepository = BeepORM.orm.em.getRepository(Beep);
+        BeepORM.forgotPassword = BeepORM.orm.em.getRepository(ForgotPassword);
 
         this.app.use(cors());
         this.app.use(express.json());

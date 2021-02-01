@@ -1,11 +1,7 @@
 import { Response, Request, Controller, Route, Example, Post, Security, Body, Tags }  from 'tsoa';
-import * as r from 'rethinkdb';
 import express from 'express';
-import { Cursor, WriteResult } from 'rethinkdb';
-import database from '../utils/db';
 import { sha256 } from 'js-sha256';
 import { getToken, setPushToken, getUserFromEmail, sendResetEmail, deactivateTokens, createVerifyEmailEntryAndSendEmail, doesUserExist } from './helpers';
-import { UserPluckResult } from "../types/beep";
 import { Validator } from "node-input-validator";
 import * as Sentry from "@sentry/node";
 import { ForgotPasswordParams, LoginParams, LoginResponse, LogoutParams, RemoveTokenParams, ResetPasswordParams, SignUpParams } from "./auth";
@@ -13,6 +9,7 @@ import { APIResponse, APIStatus } from '../utils/Error';
 import { wrap } from '@mikro-orm/core';
 import { BeepORM } from '../app';
 import { User } from '../entities/User';
+import {ForgotPassword} from '../entities/ForgotPassword';
 
 @Tags("Auth")
 @Route("auth")
@@ -242,72 +239,34 @@ export class AuthController extends Controller {
             return new APIResponse(APIStatus.Error, v.errors);
         }
 
-        //we want to try to get a user's doc, if null, there is no user
-        //call our helper function. getUserFromEmail takes an email and will pluck evey other param from their user table
-        const user: UserPluckResult | null = await getUserFromEmail(requestBody.email, "id", "first");
+        const user: User | null = await getUserFromEmail(requestBody.email);
 
-        if (user) {
-            //we were able to find a user and get their details
-            //everything in this try-catch is to handle if a request has already been made for forgot password
-            try {
-                //query the db for any password reset entries with the same userid
-                const cursor: Cursor = await r.table("passwordReset").filter({ userid: user.id }).run((await database.getConn()));
-
-                try { 
-                    //we try to take the cursor and get the next item
-                    const entry = await cursor.next();
-
-                    //there is a entry where userid is the same as the incoming request, this means the user already has an active db entry,
-                    //so we will just resend an email with the same db id
-                    if (entry) {
-                        sendResetEmail(requestBody.email, entry.id, user.first);
-                        
-                        this.setStatus(409);
-                        return new APIResponse(APIStatus.Error, "You have already requested to reset your password. We have re-sent your email. Check your email and follow the instructions.");
-                    }
-                }
-                catch (error) {
-                    //the next function is throwing an error, it is basiclly saying there is no next, so we can say 
-                    //there is no entry for the user currenly in the table, which means we can procede to give them a forgot password token
-                }
-            }
-            catch (error) {
-                //there was an error establishing the cursor used for looking in passwordReset
-                Sentry.captureException(error);
-                this.setStatus(500);
-                return new APIResponse(APIStatus.Error, "Unable to process a forgot password request");
-            }
-
-            //this is what will be inserted when making a new forgot password entry
-            const doccument = {
-                "userid": user.id,
-                "time": Date.now()
-            }; 
-
-            try {
-                //insert the new entry
-                const result: WriteResult = await r.table("passwordReset").insert(doccument).run((await database.getConn()));
-
-                //use the RethinkDB write result as the forgot password token
-                const id: string = result.generated_keys[0];
-
-                //now send an email with some link inside like https://ridebeep.app/password/reset/ba386adf-743a-434e-acfe-98bdce47d484	
-                sendResetEmail(requestBody.email, id, user.first);
-                
-                this.setStatus(200);
-                return new APIResponse(APIStatus.Success, "Successfully sent email");
-            }
-            catch (error) {
-                //There was an error inserting a forgot password entry
-                Sentry.captureException(error);
-                this.setStatus(500);
-                return new APIResponse(APIStatus.Error, "Unable to process a forgot password request");
-            }
+        if (!user) {
+            return new APIResponse(APIStatus.Error, "That user account does not exist");
         }
-        else {
-            this.setStatus(404);
-            return new APIResponse(APIStatus.Error, "User not found");
+
+        const existing = await BeepORM.forgotPassword.findOne({ user: user });
+
+        if (existing) {
+            sendResetEmail(requestBody.email, existing.id, user.first);
+
+            this.setStatus(409);
+            return new APIResponse(APIStatus.Error, "You have already requested to reset your password. We have re-sent your email. Check your email and follow the instructions.");
         }
+
+
+        const entry = new ForgotPassword(user);
+
+        const write = await BeepORM.forgotPassword.persistAndFlush(entry);
+        console.log("Write result", write);
+        console.log("entry", entry);
+
+        if (!entry.id) console.error("NO ID RETURNED!!");
+
+        sendResetEmail(requestBody.email, entry.id, user.first);
+
+        this.setStatus(200);
+        return new APIResponse(APIStatus.Success, "Successfully sent email");
     }
 
     /**
@@ -353,47 +312,29 @@ export class AuthController extends Controller {
             this.setStatus(422);
             return new APIResponse(APIStatus.Error, v.errors);
         }
+        
+        //does requestBody.id need to be changed into a ObjectId for query to work?
+        //TODO: do we need to { populate: true } to be able to alter user?
+        const entry = await BeepORM.forgotPassword.findOne(requestBody.id);
 
-        try {
-            //this seems odd, but we delete the forgot password entry but use RethinkDB returnChanges to invalidate the entry and complete this 
-            //new password request
-            const result: WriteResult = await r.table("passwordReset").get(requestBody.id).delete({ returnChanges: true }).run((await database.getConn()));
-
-            //get the db entry from the RethinkDB changes
-            const entry = result.changes[0].old_val;
-
-            //check if request time was made over an hour ago
-            if ((entry.time + (3600 * 1000)) < Date.now()) {
-                this.setStatus(410);
-                return new APIResponse(APIStatus.Error, "Your verification token has expired. You must re-request to reset your password.");
-            }
-
-            try {
-                //update user's password in their db entry
-                await r.table("users").get(entry.userid).update({ password: sha256(requestBody.password) }).run((await database.getConn()));
-
-                //incase user's password was in the hands of bad person, invalidate user's tokens after they successfully reset their password
-                deactivateTokens(entry.userid);
-    
-                this.setStatus(200);
-                return new APIResponse(APIStatus.Success, "Successfully reset your password!");
-            }
-            catch (error) {
-                //RethinkDB unable to update user's password
-                Sentry.captureException(error);
-                this.setStatus(500);
-                return new APIResponse(APIStatus.Error, "Unable to reset your password");
-            }
+        if (!entry) {
+            this.setStatus(404);
+            return new APIResponse(APIStatus.Error, "This reset password request does not exist");
         }
-        catch (error) {
-            if (error.name == "ReqlNonExistenceError") {
-                //the entry with the user's specifed token does not exists in the passwordReset table
-                this.setStatus(404);
-                return new APIResponse(APIStatus.Error, "This reset password request does not exist");
-            }
-            Sentry.captureException(error);
-            this.setStatus(500);
-            return new APIResponse(APIStatus.Error, "Unable to reset your password");
+
+        if ((entry.time + (3600 * 1000)) < Date.now()) {
+            this.setStatus(410);
+            return new APIResponse(APIStatus.Error, "Your verification token has expired. You must re-request to reset your password.");
         }
+
+        entry.user.password = sha256(requestBody.password);
+
+        //incase user's password was in the hands of bad person, invalidate user's tokens after they successfully reset their password
+        deactivateTokens(entry.user);
+
+        BeepORM.userRepository.persist(entry.user);
+
+        this.setStatus(200);
+        return new APIResponse(APIStatus.Success, "Successfully reset your password!");
     }
 }

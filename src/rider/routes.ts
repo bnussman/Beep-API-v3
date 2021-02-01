@@ -1,18 +1,14 @@
 import express from 'express';
-import * as r from 'rethinkdb';
-import { Cursor } from 'rethinkdb';
-import database from '../utils/db';
 import { sendNotification } from '../utils/notifications';
 import { Validator } from "node-input-validator";
 import * as Sentry from "@sentry/node";
-import { Response, Controller, Post, Route, Security, Tags, Request, Body, Get, Example, Patch, Delete } from 'tsoa';
-import { BeeperListItem, BeeperListResult, ChooseBeepParams, ChooseBeepResponse, LeaveQueueParams, RiderStatusResult } from "./rider";
+import { Response, Controller, Route, Security, Tags, Request, Body, Get, Example, Patch, Delete } from 'tsoa';
+import { BeeperListResult, ChooseBeepParams, ChooseBeepResponse, LeaveQueueParams, RiderStatusResult } from "./rider";
 import { APIResponse, APIStatus } from '../utils/Error';
 import { BeepORM } from '../app';
 import { wrap } from '@mikro-orm/core';
 import { User } from '../entities/User';
 import { QueueEntry } from '../entities/QueueEntry';
-import {ObjectId} from '@mikro-orm/mongodb';
     
 @Tags("Rider")
 @Route("rider")

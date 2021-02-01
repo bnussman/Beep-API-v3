@@ -1,11 +1,9 @@
 import { APIStatus, APIResponse } from '../utils/Error';
 import { Get, Response, Tags, Route, Controller, Security, Query, Example, Path } from 'tsoa';
-import { getNumBeeps } from './helpers';
 import * as Sentry from "@sentry/node";
-import * as r from 'rethinkdb';
 import { BeepEntry, BeepResponse, BeepsResponse } from './beeps';
-import database from '../utils/db';
-import { withouts } from '../utils/config';
+import {BeepORM} from '../app';
+import {Beep} from '../entities/Beep';
 
 @Tags("Beeps")
 @Route("beeps")
@@ -22,6 +20,7 @@ export class BeepsController extends Controller {
      * @param {number} [show] how many to show from start
      * @returns {BeepsResponse | APIResponse} [result]
      */
+    /*
     @Example<BeepsResponse>({
         status: APIStatus.Success,
         total: 1,
@@ -56,6 +55,7 @@ export class BeepsController extends Controller {
             }
         ]
     })
+    */
     @Response<APIResponse>(500, "Server error", {
         status: APIStatus.Error,
         message: "Unable to get beeps"
@@ -63,113 +63,13 @@ export class BeepsController extends Controller {
     @Security("token", ["admin"])
     @Get()
     public async getBeeps(@Query() offset?: number, @Query() show?: number): Promise<BeepsResponse | APIResponse> {
-        const numberOfBeeps: number = await getNumBeeps();
+        const [beeps, count] = await BeepORM.em.findAndCount(Beep, {}, { limit: show, offset: offset });
 
-        try {
-            let cursor
-
-            if (offset) {
-                if (show) {
-                    cursor = await r.table("beeps")
-                        //@ts-ignore
-                        .eqJoin("riderid", r.table("users")).without({ right: { ...withouts } })
-                        //@ts-ignore
-                        .map((doc) => ({
-                            beep: doc("left"),
-                            rider: doc("right")
-                        }))
-                        //@ts-ignore
-                        .eqJoin(r.row("beep")("beepersid"), r.table("users")).without({ right: { ...withouts } })
-                        //@ts-ignore
-                        .map((doc) => ({
-                            beep: doc("left")("beep"),
-                            rider: doc("left")("rider"),
-                            beeper: doc("right")
-                        }))
-                        //@ts-ignore
-                        .orderBy(r.desc(r.row('beep')('timeEnteredQueue'))).slice(offset, offset + show).run((await database.getConn()));
-                }
-                else {
-                    cursor = await r.table("beeps")
-                        //@ts-ignore
-                        .eqJoin("riderid", r.table("users")).without({ right: { ...withouts } })
-                        //@ts-ignore
-                        .map((doc) => ({
-                            beep: doc("left"),
-                            rider: doc("right")
-                        }))
-                        //@ts-ignore
-                        .eqJoin(r.row("beep")("beepersid"), r.table("users")).without({ right: { ...withouts } })
-                        //@ts-ignore
-                        .map((doc) => ({
-                            beep: doc("left")("beep"),
-                            rider: doc("left")("rider"),
-                            beeper: doc("right")
-                        }))
-                        //@ts-ignore
-                        .orderBy(r.desc(r.row('beep')('timeEnteredQueue'))).slice(offset).run((await database.getConn()));
-                }
-            }
-            else {
-                if (show) {
-                    cursor = await r.table("beeps")
-                        //@ts-ignore
-                        .eqJoin("riderid", r.table("users")).without({ right: {password: true}})
-                        //@ts-ignore
-                        .map((doc) => ({
-                            beep: doc("left"),
-                            rider: doc("right")
-                        }))
-                        //@ts-ignore
-                        .eqJoin(r.row("beep")("beepersid"), r.table("users")).without({ right: { ...withouts } })
-                        //@ts-ignore
-                        .map((doc) => ({
-                            beep: doc("left")("beep"),
-                            rider: doc("left")("rider"),
-                            beeper: doc("right")
-                        }))
-                        //@ts-ignore
-                        .orderBy(r.desc(r.row('beep')('timeEnteredQueue'))).limit(show).run((await database.getConn()));
-                }
-                else {
-                    cursor = await r.table("beeps")
-                        //@ts-ignore
-                        .eqJoin("riderid", r.table("users")).without({ right: { ...withouts} })
-                        //@ts-ignore
-                        .map((doc) => ({
-                            beep: doc("left"),
-                            rider: doc("right")
-                        }))
-                        //@ts-ignore
-                        .eqJoin(r.row("beep")("beepersid"), r.table("users")).without({ right: { ...withouts } })
-                        //@ts-ignore
-                        .map((doc) => ({
-                            beep: doc("left")("beep"),
-                            rider: doc("left")("rider"),
-                            beeper: doc("right")
-                        }))
-
-                        //@ts-ignore
-                        .orderBy(r.desc(r.row('beep')('timeEnteredQueue'))).run((await database.getConn()));
-                }
-            }
-
-            const result = await cursor.toArray();
-
-            this.setStatus(200);
-
-            return {
-                status: APIStatus.Success,
-                total: numberOfBeeps,
-                beeps: result
-            };
-        }
-        catch (error) {
-            console.log(error);
-            Sentry.captureException(error);
-            this.setStatus(500);
-            return new APIResponse(APIStatus.Error, "Unable to get reports list");
-        }
+        return {
+            status: APIStatus.Success,
+            total: count,
+            beeps: beeps
+        };
     }
 
     /**

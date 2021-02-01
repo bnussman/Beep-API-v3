@@ -1,15 +1,11 @@
-import * as r from 'rethinkdb';
 import express from 'express';
-import database from'../utils/db';
 import * as Sentry from "@sentry/node";
 import { Response, Controller, Request, Route, Get, Example, Security, Tags, Query, Path, Delete, Patch, Body } from 'tsoa';
 import { APIStatus, APIResponse } from "../utils/Error";
-import { DetailedUser, EditUserParams, UserResult, UsersResult } from "../users/users";
+import { EditUserParams, UserResult, UsersResult } from "../users/users";
 import { deleteUser } from '../account/helpers';
-import { getNumUsers } from './helpers';
-import { BeeperHistoryResult, RiderHistoryResult, RiderHistoryWithBeeperData } from '../account/account';
+import { BeeperHistoryResult, RiderHistoryResult } from '../account/account';
 import { hasUserLevel } from '../auth/helpers';
-import { withouts } from '../utils/config';
 import {BeepORM} from '../app';
 import {ObjectId} from '@mikro-orm/mongodb';
 import {wrap} from '@mikro-orm/core';
@@ -127,6 +123,7 @@ export class UsersController extends Controller {
      * @param {number} [show] how many to show from start
      * @returns {UsersResponse | APIResponse} [result]
      */
+    /*
     @Example<UsersResult>({
         status: APIStatus.Success,
         total: 128,
@@ -154,6 +151,7 @@ export class UsersController extends Controller {
             }
         ]
     })
+    */
     @Response<APIResponse>(500, "Server Error", {
         status: APIStatus.Error,
         message: "Unable to get users"
@@ -161,49 +159,20 @@ export class UsersController extends Controller {
     @Security("token", ["admin"])
     @Get()
     public async getUsers(@Query() offset?: number, @Query() show?: number): Promise<UsersResult | APIResponse> {
-        const numberOfUsers: number = await getNumUsers();
+        const [users, count] = await BeepORM.em.findAndCount(User, {}, { limit: show, offset: offset });
 
-        try {
-            let cursor;
-
-            if (offset) {
-                if (show) {
-                    cursor = await r.table("users").without('password').slice(offset, offset + show).run((await database.getConn()));
-                }
-                else {
-                    cursor = await r.table("users").without('password').slice(offset).run((await database.getConn()));
-                }
-            }
-            else {
-                if (show) {
-                    cursor = await r.table("users").without('password').limit(show).run((await database.getConn()));
-                }
-                else {
-                    cursor = await r.table("users").without('password').run((await database.getConn()));
-                }
-            }
-
-            const data: DetailedUser[] = await cursor.toArray();
-
-            this.setStatus(200);
-
-            return {
-                status: APIStatus.Success,
-                total: numberOfUsers,
-                users: data
-            };
-        }
-        catch (error) {
-            Sentry.captureException(error);
-            this.setStatus(500);
-            return new APIResponse(APIStatus.Error, "Unable to get users list");
-        }
+        return {
+            status: APIStatus.Success,
+            total: count,
+            users: users
+        };
     }
 
     /**
      * Get all of the rides of this user in the history table
      * @returns {RiderHistoryResult | APIResponse}
      */
+    /*
     @Example<RiderHistoryResult>({
         status: APIStatus.Success,
         data: [
@@ -230,6 +199,7 @@ export class UsersController extends Controller {
             }
         ]
     })
+    */
     @Response<APIResponse>(500, "Server Error", {
         status: APIStatus.Error,
         message: "Unable to get rider history"
@@ -237,46 +207,28 @@ export class UsersController extends Controller {
     @Security("token")
     @Get("{id}/history/rider")
     public async getRideHistory(@Request() request: express.Request, @Path() id: string): Promise<APIResponse | RiderHistoryResult> {
-        if (request.user.user._id != new ObjectId(id)) {
+        /*
+        if (request.user.user._id != id) {
             const isAdmin = await hasUserLevel(request.user.user, 1);
+            console.log(isAdmin);
 
             if (!isAdmin) return new APIResponse(APIStatus.Error, "You must be an admin to view other peoples history");
         }
+        */
+        
+        const r = await BeepORM.beepRepository.find({ rider: new ObjectId(id) }, { populate: true });
 
-        try {
-            const cursor: r.Cursor = await r.table("beeps")
-                .filter({ riderid: id })
-                //@ts-ignore
-                .eqJoin('beepersid', r.table("users")).without({ right: { ...withouts } })
-                //@ts-ignore
-                .map((doc) => ({
-                    beep: doc("left"),
-                    beeper: doc("right")
-                }))
-                //@ts-ignore
-                .orderBy(r.desc(r.row('beep')('timeEnteredQueue')))
-                .run((await database.getConn()));
-
-            const result: RiderHistoryWithBeeperData[] = await cursor.toArray();
-            
-            this.setStatus(200);
-            return {
-                status: APIStatus.Success, 
-                data: result
-            };
-        }
-        catch (error) {
-            console.log(error);
-            Sentry.captureException(error);
-            this.setStatus(500);
-            return new APIResponse(APIStatus.Error, "Unable to get rider history");
-        }
+        return {
+            status: APIStatus.Success,
+            data: r
+        };
     }
 
     /**
      * Get all of the beeps of this user in the history table
      * @returns {BeeperHistoryResult | APIResponse}
      */
+    /*
     @Example<BeeperHistoryResult>({
         status: APIStatus.Success,
         data: [
@@ -303,6 +255,7 @@ export class UsersController extends Controller {
             }
         ]
     })
+    */
     @Response<APIResponse>(500, "Server Error", {
         status: APIStatus.Error,
         message: "Unable to get beeper history"
@@ -310,39 +263,20 @@ export class UsersController extends Controller {
     @Security("token")
     @Get("{id}/history/beeper")
     public async getBeepHistory(@Request() request: express.Request, @Path() id: string): Promise<APIResponse | BeeperHistoryResult> {
+        /*
         if (request.user.user._id != new ObjectId(id)) {
             const isAdmin = await hasUserLevel(request.user.user, 1);
 
             if (!isAdmin) return new APIResponse(APIStatus.Error, "You must be an admin to view other peoples history");
         }
+        */
 
-        try {
-            const cursor: r.Cursor = await r.table("beeps")
-                .filter({ beepersid: id })
-                //@ts-ignore
-                .eqJoin('riderid', r.table("users")).without({ right: { ...withouts } })
-                //@ts-ignore
-                .map((doc) => ({
-                    beep: doc("left"),
-                    rider: doc("right")
-                }))
-                //@ts-ignore
-                .orderBy(r.desc(r.row('beep')('timeEnteredQueue')))
-                .run((await database.getConn()));
+        const r = await BeepORM.beepRepository.find({ beeper: new ObjectId(id) }, { populate: true });
 
-            const result = await cursor.toArray();
-            
-            this.setStatus(200);
-            return {
-                status: APIStatus.Success, 
-                data: result
-            };
-        }
-        catch (error) {
-            Sentry.captureException(error);
-            this.setStatus(500);
-            return new APIResponse(APIStatus.Error, "Unable to get beeper history");
-        }
+        return {
+            status: APIStatus.Success,
+            data: r
+        };
     }
 
 

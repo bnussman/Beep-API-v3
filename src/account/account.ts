@@ -1,4 +1,5 @@
 import {ObjectId} from "@mikro-orm/mongodb";
+import {Beep} from "../entities/Beep";
 import { BeepEntry, MinimalUser } from "../beeps/beeps";
 import { BeepTableResult } from "../types/beep";
 import { APIStatus } from "../utils/Error";
@@ -118,7 +119,7 @@ interface EmailData {
  */
 export interface RiderHistoryResult {
     status: APIStatus;
-    data: RiderHistoryWithBeeperData[];
+    data: Beep[];
 }
 
 /**
@@ -179,7 +180,7 @@ export interface RiderHistoryWithBeeperData {
  */
 export interface BeeperHistoryResult {
     status: APIStatus;
-    data: BeepEntryWithRiderData[];
+    data: Beep[];
 }
 
 /**

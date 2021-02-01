@@ -1,7 +1,4 @@
-import * as r from 'rethinkdb';
-import { WriteResult, Cursor } from 'rethinkdb';
 import { TokenData, UserPluckResult } from '../types/beep';
-import database from'../utils/db';
 import * as nodemailer from "nodemailer";
 import { transporter } from "../utils/mailer";
 import * as Sentry from "@sentry/node";
@@ -49,32 +46,6 @@ export async function setPushToken(user: User, token: string | null): Promise<vo
 }
 
 /**
- * Retuns user's id if their token is valid, null otherwise
- *
- * @param token takes a user's auth token as input
- * @return userid if token is valid, null otherwise
- */
-export async function isTokenValid(token: string): Promise<string | null> {
-    //get (only) user's id from tokens db where the token is the token passed to this function
-    //NOTE: filter must be used over get here because token is not a primary (or secondary) key
-    try {
-        const result: any = await r.table("tokens").get(token).run((await database.getConn()));
-
-        if (result) {
-            return result.userid;
-        }
-
-        //we did not find this token in the tokens table, so it is not valid,
-        //rather then returning a userid, return null to signify that token is not valid.
-    }
-    catch (error) {
-        Sentry.captureException(error);
-    }
-
-    return null;
-}
-
-/**
  * function to tell if user has a specific user level
  *
  * @param userid is the user's id
@@ -110,36 +81,15 @@ export async function isAdmin(token: string): Promise<string | null> {
  * get user data given an email
  *
  * @param email string of user's email
- * @param pluckItems are items we want to pluck in the db query 
  * @returns Promise<UserPluckResult>
  */
-export async function getUserFromEmail(email: string, ...pluckItems: string[]): Promise<UserPluckResult | null> {
-    try {
-        let cursor: Cursor;
+export async function getUserFromEmail(email: string): Promise<User | null> {
+    const user = await BeepORM.userRepository.findOne({ email: email });
 
-        //if no pluck items were passed in, don't pluck anything
-        if (pluckItems.length == 0) {
-            cursor = await r.table("users").filter({ 'email': email }).limit(1).run((await database.getConn()));
-        }
-        else {
-            //expand all the pluck paramaters and rethinkdb query to get them
-            cursor = await r.table("users").filter({ 'email': email }).pluck(...pluckItems).limit(1).run((await database.getConn()));
-        }
-        
-        try {
-            //call the next item in the table
-            const result: UserPluckResult = await cursor.next();
-            //return the user's pluck data
-            return result;
-        } catch (error) {
-            //error is telling us there is no row result from the db, not really an error
-            //return null because there is no user.
-            return null;
-        }
+    if (user) {
+        return user;
     }
-    catch (error) {
-        Sentry.captureException(error);
-    }
+
     return null;
 }
 
@@ -151,26 +101,16 @@ export async function getUserFromEmail(email: string, ...pluckItems: string[]): 
  * @returns Promise<UserPluckResult>
  */
 export async function getUserFromId(id: string, ...pluckItems: string[]): Promise<UserPluckResult | null> {
-    let result = null;
+    //TODO is id ok? or do i need to make it a ObjectId
+    const user = await BeepORM.userRepository.findOne(id, { fields: pluckItems });
 
-    try {
-        //if no pluck items were passed in, don't pluck anything
-        if (pluckItems.length == 0) {
-            result = await r.table("users").get(id).run((await database.getConn()));
-        }
-        else {
-            //expand all the pluck paramaters and rethinkdb query to get them
-            result = await r.table("users").get(id).pluck(...pluckItems).run((await database.getConn()));
-        }
-        
-    }
-    catch (error) {
-        //this probabaly means that the user identified by id no longer exists
+    if (user) {
+        return user;
     }
 
-    if (result != null) result = {...result, id: id}
+    console.log("oh no, user was null in getUserFromId");
 
-    return result;
+    return null;
 }
 
 /**

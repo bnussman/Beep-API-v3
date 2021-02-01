@@ -1,3 +1,4 @@
+import {Beep} from '../entities/Beep';
 import { APIStatus } from '../utils/Error';
 
 /**
@@ -41,7 +42,7 @@ import { APIStatus } from '../utils/Error';
 export interface BeepsResponse {
     status: APIStatus,
     total: number;
-    beeps: BeepEntryWithUsers[]
+    beeps: Beep[]
 }
 
 export interface BeepEntryWithUsers {

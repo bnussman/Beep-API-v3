@@ -82,7 +82,7 @@ export interface DetailedUser {
 export interface UsersResult {
     status: APIStatus;
     total: number,
-    users: DetailedUser[];
+    users: User[];
 }
 
 /**
