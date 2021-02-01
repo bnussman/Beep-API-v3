@@ -146,8 +146,14 @@ export class RiderController extends Controller {
     public async getRiderStatus (@Request() request: express.Request): Promise<APIResponse | RiderStatusResult> {
         const r = await BeepORM.queueEntryRepository.findOne({ rider: request.user.user }, {populate: true});
 
+
         if (!r) {
             this.setStatus(200);
+            return new APIResponse(APIStatus.Error, "Currently, user is not getting a beep.");
+        }
+
+        if (r.state == -1) {
+            BeepORM.queueEntryRepository.remove(r);
             return new APIResponse(APIStatus.Error, "Currently, user is not getting a beep.");
         }
 
@@ -183,6 +189,7 @@ export class RiderController extends Controller {
                 beeper: r.beeper
             };
         }
+        BeepORM.em.flush();
         //respond with appropriate output
         return output;
     }
@@ -211,7 +218,9 @@ export class RiderController extends Controller {
         entry.beeper.queueSize--;
         await BeepORM.userRepository.persistAndFlush(entry.beeper);
 
-        await BeepORM.queueEntryRepository.removeAndFlush(entry);
+        entry.state = -1;
+
+        await BeepORM.queueEntryRepository.persistAndFlush(entry);
 
 
         //if we made it to this point, we successfully removed a user from the queue.

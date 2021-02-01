@@ -174,19 +174,22 @@ export class BeeperController extends Controller {
         }
         else if (requestBody.value == 'deny' || requestBody.value == 'complete') {
             const finishedBeep = new Beep();
+
             wrap(finishedBeep).assign(queueEntry, { em: BeepORM.em });
 
             finishedBeep.doneTime = Date.now();
 
-            await BeepORM.beepRepository.persistAndFlush(finishedBeep);
-            await BeepORM.queueEntryRepository.removeAndFlush(queueEntry);
+            BeepORM.beepRepository.persist(finishedBeep);
 
             request.user.user.queueSize--;
 
             BeepORM.userRepository.persist(request.user.user);
 
+            queueEntry.state = -1;
+
+            BeepORM.queueEntryRepository.persistAndFlush(queueEntry);
+
             if (requestBody.value == "deny") {
-                console.log("deny riderID is", requestBody.riderID);
                 sendNotification(queueEntry.rider, "A beeper has denied your beep request", "Open your app to find a diffrent beeper.");
             }
 

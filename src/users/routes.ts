@@ -362,10 +362,19 @@ export class UsersController extends Controller {
         }
 
         const r = await BeepORM.queueEntryRepository.find({ beeper: request.user.user }, { populate: true });
+        console.log(r);
+        
+        for (let i = 0; i < r.length; i++) {
+           if (r[i].state == -1) {
+               BeepORM.queueEntryRepository.remove(r[i]);
+           }
+        }
+
+        BeepORM.em.flush();
 
         return {
             status: APIStatus.Success,
-            queue: r
+            queue: r.filter(entry => entry.state != -1)
         };
     }
 }
