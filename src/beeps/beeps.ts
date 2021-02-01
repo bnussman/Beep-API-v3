@@ -61,7 +61,7 @@ export interface MinimalUser {
 
 export interface BeepResponse {
     status: APIStatus;
-    beep: BeepEntry;
+    beep: Beep;
 }
 
 /**

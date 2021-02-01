@@ -1,7 +1,7 @@
 import { APIStatus, APIResponse } from '../utils/Error';
 import { Get, Response, Tags, Route, Controller, Security, Query, Example, Path } from 'tsoa';
 import * as Sentry from "@sentry/node";
-import { BeepEntry, BeepResponse, BeepsResponse } from './beeps';
+import { BeepResponse, BeepsResponse } from './beeps';
 import {BeepORM} from '../app';
 import {Beep} from '../entities/Beep';
 
@@ -97,23 +97,16 @@ export class BeepsController extends Controller {
     @Security("token", ["admin"])
     @Get("{id}")
     public async getBeep(@Path() id: string): Promise<BeepResponse | APIResponse> {
-        try {
-            const result = await r.table("beeps").get(id).run((await database.getConn())) as BeepEntry;
+        const result = await BeepORM.beepRepository.findOne(id);
 
-            if (!result) {
-                this.setStatus(404);
-                return new APIResponse(APIStatus.Error, "This beep entry does not exist");
-            }
+        if (!result) {
+            this.setStatus(404);
+            return new APIResponse(APIStatus.Error, "This beep entry does not exist");
+        }
 
-            return {
-                status: APIStatus.Success, 
-                beep: result
-            };
-        }
-        catch (error) {
-            Sentry.captureException(error);
-            this.setStatus(500);
-            return new APIResponse(APIStatus.Error, error);
-        }
+        return {
+            status: APIStatus.Success, 
+            beep: result
+        };
     }
 }
