@@ -1,13 +1,8 @@
 import * as express from "express";
-import { TokenEntry } from "../types/beep";
-import database from"./db";
-import * as r from "rethinkdb";
 import * as Sentry from "@sentry/node";
 import { APIStatus, APIAuthResponse } from "./Error";
-import { hasUserLevel } from '../auth/helpers';
-import {BeepORM} from "../app";
-import {ObjectId} from "@mikro-orm/mongodb";
-import { User } from "../entities/User";
+import { BeepORM } from "../app";
+import { ObjectId } from "@mikro-orm/mongodb";
 
 export async function expressAuthentication(request: express.Request, securityName: string, scopes?: string[]): Promise<any> {
     if (securityName === "token") {
@@ -19,23 +14,21 @@ export async function expressAuthentication(request: express.Request, securityNa
         }
 
 
-        const tokenEntryResult = await BeepORM.tokenRepository.findOne(new ObjectId(token));
+        const tokenEntryResult = await BeepORM.tokenRepository.findOne(new ObjectId(token), { populate: true });
 
 
         if (!tokenEntryResult) {
             return Promise.reject(new APIAuthResponse(APIStatus.Error, "Your token is not valid"));
         }
 
-        const user: User = tokenEntryResult.user;
-
         if (scopes && (scopes[0] == "admin")) {
-            const hasPermission: boolean = await hasUserLevel(user, 1);
+            const hasPermission: boolean = tokenEntryResult.user.userLevel > 0;
             if (!hasPermission) {
                 return Promise.reject(new APIAuthResponse(APIStatus.Error, "You must be an admin to use this endpoint"));
             }
         }
 
-        return Promise.resolve({ token: tokenEntryResult, user: user });
+        return Promise.resolve({ token: tokenEntryResult, user: tokenEntryResult.user });
     }
     else if (securityName == "optionalAdmin") {
         const token: ObjectId | undefined = request.get("Authorization")?.split(" ")[1] as ObjectId | undefined;
@@ -47,9 +40,9 @@ export async function expressAuthentication(request: express.Request, securityNa
         const tokenEntryResult = await BeepORM.tokenRepository.findOne(token);
 
         if (tokenEntryResult) {
-            const isAdmin: boolean = await hasUserLevel(tokenEntryResult.user, 1);
+            const hasPermission: boolean = tokenEntryResult.user.userLevel > 0;
 
-            if (isAdmin) {
+            if (hasPermission) {
                 return Promise.resolve({ token: token, user: tokenEntryResult.user });
             }
             return Promise.resolve();

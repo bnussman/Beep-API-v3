@@ -1,4 +1,4 @@
-import { Entity, ManyToOne, OneToOne, PrimaryKey, Property } from "@mikro-orm/core";
+import { Entity, ManyToOne, OneToOne, PrimaryKey, Property, SerializedPrimaryKey } from "@mikro-orm/core";
 import { ObjectId } from "@mikro-orm/mongodb";
 import { User } from "./User";
 
@@ -6,12 +6,15 @@ import { User } from "./User";
 export class Beep {
 
     @PrimaryKey()
-    id!: ObjectId;
+    _id: ObjectId;
 
-    @OneToOne()
+    @SerializedPrimaryKey()
+    id!: string;
+
+    @ManyToOne(() => User)
     beeper!: User;
 
-    @OneToOne()
+    @ManyToOne(() => User)
     rider!: User;
     
     @Property()

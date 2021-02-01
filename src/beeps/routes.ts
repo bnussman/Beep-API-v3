@@ -63,7 +63,7 @@ export class BeepsController extends Controller {
     @Security("token", ["admin"])
     @Get()
     public async getBeeps(@Query() offset?: number, @Query() show?: number): Promise<BeepsResponse | APIResponse> {
-        const [beeps, count] = await BeepORM.em.findAndCount(Beep, {}, { limit: show, offset: offset });
+        const [beeps, count] = await BeepORM.em.findAndCount(Beep, {}, { limit: show, offset: offset, populate: true });
 
         return {
             status: APIStatus.Success,

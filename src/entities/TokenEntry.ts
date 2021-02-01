@@ -1,4 +1,4 @@
-import { Entity, ManyToOne, OneToOne, PrimaryKey, Property } from "@mikro-orm/core";
+import { Entity, ManyToOne, PrimaryKey, Property, SerializedPrimaryKey } from "@mikro-orm/core";
 import { ObjectId } from "@mikro-orm/mongodb";
 import { User } from "./User";
 
@@ -6,7 +6,10 @@ import { User } from "./User";
 export class TokenEntry {
 
     @PrimaryKey()
-    _id!: ObjectId;
+    _id: ObjectId;
+
+    @SerializedPrimaryKey()
+    id!: string;
 
     @Property() 
     tokenid = new ObjectId();

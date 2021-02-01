@@ -6,7 +6,6 @@ import { errorHandler } from "./utils/Error";
 import { handleNotFound } from "./utils/404";
 import * as Sentry from "@sentry/node";
 import { initializeSentry } from "./utils/sentry";
-import database from "./utils/db";
 import { Server } from "http";
 import cors from "cors";
 import {EntityManager, EntityRepository, MikroORM} from "@mikro-orm/core";
@@ -16,6 +15,7 @@ import {VerifyEmail} from "./entities/VerifyEmail";
 import {QueueEntry} from "./entities/QueueEntry";
 import {Beep} from "./entities/Beep";
 import {ForgotPassword} from "./entities/ForgotPassword";
+import {Report} from "./entities/Report";
 
 const url = `mongodb+srv://banks:${process.env.MONGODB_PASSWORD}@beep.5zzlx.mongodb.net/test?retryWrites=true&w=majority`;
 
@@ -27,7 +27,8 @@ export const BeepORM = {} as {
     tokenRepository: EntityRepository<TokenEntry>,
     verifyEmailRepository: EntityRepository<VerifyEmail>,
     beepRepository: EntityRepository<Beep>,
-    forgotPassword: EntityRepository<ForgotPassword>,
+    forgotPasswordRepository: EntityRepository<ForgotPassword>,
+    reportRepository: EntityRepository<Report>,
 };
 
 export default class BeepAPIServer {
@@ -47,15 +48,12 @@ export default class BeepAPIServer {
     public async start(): Promise<void> {
         const port = process.env.PORT || 3001;
 
-        await database.connect();
-
         this.server = this.app.listen(port, () => {
             console.log(`Beep API listening at http://0.0.0.0:${port}`);
         });
     }
 
     public async close(): Promise<void> {
-        await database.close();
         this.server?.close();
     }
 
@@ -76,7 +74,8 @@ export default class BeepAPIServer {
         BeepORM.verifyEmailRepository = BeepORM.orm.em.getRepository(VerifyEmail);
         BeepORM.queueEntryRepository = BeepORM.orm.em.getRepository(QueueEntry);
         BeepORM.beepRepository = BeepORM.orm.em.getRepository(Beep);
-        BeepORM.forgotPassword = BeepORM.orm.em.getRepository(ForgotPassword);
+        BeepORM.forgotPasswordRepository = BeepORM.orm.em.getRepository(ForgotPassword);
+        BeepORM.reportRepository = BeepORM.orm.em.getRepository(Report);
 
         this.app.use(cors());
         this.app.use(express.json());

@@ -245,7 +245,7 @@ export class AuthController extends Controller {
             return new APIResponse(APIStatus.Error, "That user account does not exist");
         }
 
-        const existing = await BeepORM.forgotPassword.findOne({ user: user });
+        const existing = await BeepORM.forgotPasswordRepository.findOne({ user: user });
 
         if (existing) {
             sendResetEmail(requestBody.email, existing.id, user.first);
@@ -257,7 +257,7 @@ export class AuthController extends Controller {
 
         const entry = new ForgotPassword(user);
 
-        const write = await BeepORM.forgotPassword.persistAndFlush(entry);
+        const write = await BeepORM.forgotPasswordRepository.persistAndFlush(entry);
         console.log("Write result", write);
         console.log("entry", entry);
 
@@ -315,7 +315,7 @@ export class AuthController extends Controller {
         
         //does requestBody.id need to be changed into a ObjectId for query to work?
         //TODO: do we need to { populate: true } to be able to alter user?
-        const entry = await BeepORM.forgotPassword.findOne(requestBody.id);
+        const entry = await BeepORM.forgotPasswordRepository.findOne(requestBody.id);
 
         if (!entry) {
             this.setStatus(404);

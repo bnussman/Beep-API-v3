@@ -1,5 +1,5 @@
 import { APIStatus } from '../utils/Error';
-import { MinimalUser } from '../beeps/beeps';
+import {Report} from '../entities/Report';
 
 /**
  * Example of a submitted report
@@ -12,6 +12,7 @@ import { MinimalUser } from '../beeps/beeps';
 export interface ReportUserParams {
     id: string;
     reason: string;
+    beep?: string;
 }
 
 /**
@@ -47,13 +48,7 @@ export interface ReportUserParams {
 export interface ReportsResponse {
     status: APIStatus, 
     total: number,
-    reports: ReportWithUserData[]
-}
-
-interface ReportWithUserData {
-    report: Report;
-    reporter: MinimalUser;
-    reported: MinimalUser;
+    reports: Report[]
 }
 
 /**
@@ -79,31 +74,6 @@ export interface ReportResponse {
 }
 
 /**
- * Single Report
- *
- * @example {
- *   "id": "c5008c11-d7ea-4f69-9b42-6698237d15bb",
- *   "reason": "hhgfh",
- *   "reportedId": "22192b90-54f8-49b5-9dcf-26049454716b",
- *   "reporterId": "ca34cc7b-de97-40b7-a1ab-148f6c43d073",
- *   "timestamp": 1607803770171,
- *   "adminNotes": "Guy was mad at other guy for smoking weed in his Prius",
- *   "handled": false,
- *   "handledBy": null
- * }
- */
-export interface Report {
-    id?: string;
-    reason: string;
-    reportedId: string;
-    reporterId: string;
-    timestamp: number;
-    adminNotes: string | null;
-    handled: boolean;
-    handledBy: string | null;
-}
-
-/**
  * Update a Report
  *
  * @example {
@@ -112,6 +82,6 @@ export interface Report {
  * }
  */
 export interface UpdateReportParams {
-    adminNotes?: string;
+    notes?: string;
     handled?: boolean;
 }

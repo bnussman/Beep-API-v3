@@ -1,6 +1,4 @@
-import * as r from 'rethinkdb';
 import { request } from "https";
-import database from"../utils/db";
 import * as Sentry from "@sentry/node";
 import { User } from '../entities/User';
 
@@ -32,21 +30,4 @@ export async function sendNotification(user: User, title: string, message: strin
     }));
 
     req.end();
-}
-
-/**
- * Given a user's id, query the db and return their Expo push token
- * @param userid a user's id
- * @return string of users Expo push token or null if error
- */
-async function getPushToken(userid: string): Promise<string | null> {
-    try {
-        const output = await r.table("users").get(userid).pluck('pushToken').run((await database.getConn()));
-
-        return output.pushToken;
-    }
-    catch(error) {
-       Sentry.captureException(error); 
-    }
-    return null;
 }

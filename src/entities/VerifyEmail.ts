@@ -1,4 +1,4 @@
-import { Entity, IdentifiedReference, ManyToOne, PrimaryKey, Property, Reference } from "@mikro-orm/core";
+import { Entity, IdentifiedReference, ManyToOne, PrimaryKey, Property, Reference, SerializedPrimaryKey } from "@mikro-orm/core";
 import { ObjectId } from "@mikro-orm/mongodb";
 import { User } from "./User";
 
@@ -6,7 +6,10 @@ import { User } from "./User";
 export class VerifyEmail {
 
     @PrimaryKey()
-    id!: ObjectId;
+    _id: ObjectId;
+
+    @SerializedPrimaryKey()
+    id!: string;
 
     @ManyToOne(() => User, { wrappedReference: true })
     user!: IdentifiedReference<User>;
