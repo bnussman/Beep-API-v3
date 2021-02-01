@@ -289,13 +289,16 @@ export class UsersController extends Controller {
     @Security("token")
     @Get("{id}/queue")
     public async getQueue(@Request() request: express.Request, @Path() id: string): Promise<APIResponse | any> {
+        //TODO: figure this out
+        /*
         if (request.user.user._id != id) {
             const isAdmin = await hasUserLevel(request.user.user._id, 1);
 
             if (!isAdmin) return new APIResponse(APIStatus.Error, "You must be an admin to view other peoples queue");
         }
+        */
 
-        const r = await BeepORM.queueEntryRepository.find({ beeper: request.user.user }, { populate: true });
+        const r = await BeepORM.queueEntryRepository.find({ beeper: id }, { populate: true });
         console.log(r);
         
         for (let i = 0; i < r.length; i++) {
