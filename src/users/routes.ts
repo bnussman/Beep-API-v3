@@ -5,10 +5,9 @@ import { APIStatus, APIResponse } from "../utils/Error";
 import { EditUserParams, UserResult, UsersResult } from "../users/users";
 import { deleteUser } from '../account/helpers';
 import { BeeperHistoryResult, RiderHistoryResult } from '../account/account';
-import { hasUserLevel } from '../auth/helpers';
-import {BeepORM} from '../app';
-import {ObjectId} from '@mikro-orm/mongodb';
-import {wrap} from '@mikro-orm/core';
+import { BeepORM } from '../app';
+import { ObjectId } from '@mikro-orm/mongodb';
+import { wrap } from '@mikro-orm/core';
 import { User } from '../entities/User';
 
 @Tags("Users")
@@ -35,7 +34,6 @@ export class UsersController extends Controller {
     @Security("optionalAdmin")
     @Get("{id}")
     public async getUser(@Request() request: express.Request, @Path() id: string): Promise<UserResult | APIResponse> {
-
         const user = await BeepORM.userRepository.findOne(new ObjectId(id));
 
         if (!user) {
@@ -65,18 +63,18 @@ export class UsersController extends Controller {
     @Security("token", ["admin"])
     @Delete("{id}")
     public async removeUser(@Path() id: string): Promise<APIResponse> {
-        const user = await BeepORM.userRepository.findOne(new ObjectId(id));
+        const user = BeepORM.em.getReference(User, new ObjectId(id));
 
         if (!user) {
             this.setStatus(404);
             return new APIResponse(APIStatus.Error, "User not found");
         }
 
-
         if (await deleteUser(user)) {
             this.setStatus(200);
             return new APIResponse(APIStatus.Success, "Successfully deleted user");
         }
+
         this.setStatus(500);
         return new APIResponse(APIStatus.Error, "Unable to delete user");
     }

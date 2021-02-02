@@ -66,9 +66,9 @@ export class User {
     @Property({ nullable: true })
     photoUrl?: string;
 
-    @OneToMany(() => TokenEntry, t => t.user)
+    @OneToMany(() => TokenEntry, t => t.user, { lazy: true })
     tokens = new Collection<TokenEntry>(this);
 
-    @OneToMany(() => QueueEntry, q => q.beeper)
+    @OneToMany(() => QueueEntry, q => q.beeper, { lazy: true })
     queue = new Collection<QueueEntry>(this);
 }

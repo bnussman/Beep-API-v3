@@ -38,6 +38,7 @@
     },
     "ignore": [
         "**/node_modules/@sentry/**",
-        "**/node_modules/@types/express-serve-static-core/**"
+        "**/node_modules/@types/express-serve-static-core/**",
+        "**/node_modules/@types/mongodb/**"
     ] 
 }

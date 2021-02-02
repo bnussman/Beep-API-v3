@@ -62,28 +62,22 @@ export class AccountController extends Controller {
 
         const oldEmail = request.user.user.email;
 
-        try {
-            wrap(request.user.user).assign(requestBody);
+        wrap(request.user.user).assign(requestBody);
+
+        await BeepORM.userRepository.persistAndFlush(request.user.user); 
+
+        if (oldEmail !== request.user.user.email) {
+            await BeepORM.verifyEmailRepository.removeAndFlush({ user: request.user.user });
+
+            //if user made a change to their email, we need set their status to not verified and make them re-verify
+            wrap(request.user.user).assign({ isEmailVerified: false, isStudent: false });
 
             await BeepORM.userRepository.persistAndFlush(request.user.user); 
-           
-            if (oldEmail !== request.user.user.email) {
-                await BeepORM.verifyEmailRepository.removeAndFlush({user: request.user.user});
-
-                //if user made a change to their email, we need set their status to not verified and make them re-verify
-                wrap(request.user.user).assign({isEmailVerified: false, isStudent: false});
-                await BeepORM.userRepository.persistAndFlush(request.user.user); 
-                //calles helper function that will create a db entry for email varification and also send the email
-                createVerifyEmailEntryAndSendEmail(request.user.user, requestBody.email, requestBody.first);
-            }
-
-            return new APIResponse(APIStatus.Success, "Successfully edited profile.");
+            //calles helper function that will create a db entry for email varification and also send the email
+            createVerifyEmailEntryAndSendEmail(request.user.user, requestBody.email, requestBody.first);
         }
-        catch (error) {
-            Sentry.captureException(error);
-            this.setStatus(500);
-            return new APIResponse(APIStatus.Error, "Unable to edit account");
-        }
+
+        return new APIResponse(APIStatus.Success, "Successfully edited profile.");
     }
 
     /**

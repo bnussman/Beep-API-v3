@@ -41,6 +41,7 @@ export function errorHandler(error: unknown, request: Request, response: Respons
         return response.status(401).json(error);
     }
     if (error instanceof Error) {
+        console.error(error);
         return response.status(500).json(new APIResponse(APIStatus.Error, error.message));
     }
     next();

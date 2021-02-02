@@ -13,9 +13,7 @@ export async function expressAuthentication(request: express.Request, securityNa
             return Promise.reject(new APIAuthResponse(APIStatus.Error, "You must provide an authentication token"));
         }
 
-
         const tokenEntryResult = await BeepORM.tokenRepository.findOne(new ObjectId(token), { populate: true });
-
 
         if (!tokenEntryResult) {
             return Promise.reject(new APIAuthResponse(APIStatus.Error, "Your token is not valid"));
