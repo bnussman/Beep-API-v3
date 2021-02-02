@@ -160,7 +160,7 @@ export async function deactivateTokens(user: User): Promise<void> {
  * @param first string is the user's first name to make the email more personalized
  * @returns void
  */
-export function sendVerifyEmailEmail(email: string, id: ObjectId, first: string | undefined): void {
+export function sendVerifyEmailEmail(email: string, verifyEntry: VerifyEmail, first: string | undefined): void {
 
     const url: string = process.env.NODE_ENV === "development" ? "https://dev.ridebeep.app" : "https://ridebeep.app";
  
@@ -169,7 +169,7 @@ export function sendVerifyEmailEmail(email: string, id: ObjectId, first: string 
         to : email, 
         subject : 'Verify your Beep App Email!', 
         html: `Hey ${first}, <br><br>
-            Head to ${url}/account/verify/${id} to verify your email. This link will expire in an hour. <br><br>
+            Head to ${url}/account/verify/${verifyEntry.id} to verify your email. This link will expire in an hour. <br><br>
             Roll Neers, <br>
             -Banks Nussman
         ` 
@@ -201,7 +201,7 @@ export async function createVerifyEmailEntryAndSendEmail(user: User, email: stri
     await BeepORM.verifyEmailRepository.persistAndFlush(entry);
 
     //send the email
-    sendVerifyEmailEmail(email, entry.id, first);
+    sendVerifyEmailEmail(email, entry, first);
 }
 
 /**

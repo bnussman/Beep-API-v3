@@ -8,6 +8,8 @@ import { Report } from '../entities/Report';
 import {ObjectId} from '@mikro-orm/mongodb';
 import {BeepORM} from '../app';
 import {wrap} from '@mikro-orm/core';
+import { User } from '../entities/User';
+import {Beep} from '../entities/Beep';
 
 @Tags("Reports")
 @Route("reports")
@@ -40,9 +42,20 @@ export class ReportsController extends Controller {
             return new APIResponse(APIStatus.Error, v.errors);
         }
 
-        const report = new Report(request.user.user, new ObjectId(requestBody.id), requestBody.reason, requestBody.beep ? new ObjectId(requestBody.beep) : null);
-        
-        await BeepORM.reportRepository.persistAndFlush(report);
+        const user = BeepORM.em.getReference(User, requestBody.id);
+
+        if (requestBody.beep) {
+            const beep = BeepORM.em.getReference(Beep, requestBody.beep);
+
+            const report = new Report(request.user.user, user , requestBody.reason, beep);
+
+            await BeepORM.reportRepository.persistAndFlush(report);
+        }
+        else {
+            const report = new Report(request.user.user, user, requestBody.reason);
+
+            await BeepORM.reportRepository.persistAndFlush(report);
+        }
 
         return new APIResponse(APIStatus.Success, "Successfully reported user");
     }

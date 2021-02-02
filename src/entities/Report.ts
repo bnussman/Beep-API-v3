@@ -7,7 +7,7 @@ import {User} from "./User";
 export class Report {
 
     @PrimaryKey()
-    _id: ObjectId;
+    _id!: ObjectId;
 
     @SerializedPrimaryKey()
     id!: string;
@@ -36,10 +36,12 @@ export class Report {
     @ManyToOne(() => Beep)
     beep!: Beep;
 
-    constructor(reporter: User, reported: User, reason: string, beep: Beep) {
+    constructor(reporter: User, reported: User, reason: string, beep?: Beep) {
         this.reporter = reporter;
         this.reported = reported;
         this.reason = reason;
-        this.beep = beep;
+        if (beep) {
+            this.beep = beep;
+        }
     }
 }

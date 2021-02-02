@@ -5,7 +5,7 @@ import express from "express";
 import multer from "multer";
 import { APIResponse, APIStatus } from "../utils/Error";
 import { ProfilePhotoResponse } from "./files";
-import {BeepORM} from "../app";
+import { BeepORM } from "../app";
 
 @Tags("Files")
 @Route("files")
@@ -56,7 +56,9 @@ export class FilesController {
 
                 request.user.user.photoUrl = result.Location;
 
-                BeepORM.userRepository.persistAndFlush(request.user.user);
+                console.log(request.user.user.photoUrl);
+
+                await BeepORM.userRepository.persistAndFlush(request.user.user);
 
                 return {
                     status: APIStatus.Success,

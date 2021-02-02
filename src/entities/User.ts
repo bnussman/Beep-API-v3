@@ -7,7 +7,7 @@ import { TokenEntry } from './TokenEntry';
 export class User {
 
     @PrimaryKey()
-    _id: ObjectId;
+    _id!: ObjectId;
 
     @SerializedPrimaryKey()
     id!: string;

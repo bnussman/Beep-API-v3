@@ -6,7 +6,7 @@ import { User } from "./User";
 export class Beep {
 
     @PrimaryKey()
-    _id: ObjectId;
+    _id!: ObjectId;
 
     @SerializedPrimaryKey()
     id!: string;
