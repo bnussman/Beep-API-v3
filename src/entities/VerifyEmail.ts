@@ -11,8 +11,11 @@ export class VerifyEmail {
     @SerializedPrimaryKey()
     id!: string;
 
-    @ManyToOne(() => User, { wrappedReference: true })
-    user!: IdentifiedReference<User>;
+    //@ManyToOne(() => User, { wrappedReference: true })
+    //user!: IdentifiedReference<User>;
+
+    @ManyToOne()
+    user!: User;
 
     @Property() 
     time = Date.now();
@@ -21,7 +24,7 @@ export class VerifyEmail {
     email!: string;
     
     constructor(u: User, e: string) {
-        this.user = Reference.create(u);
+        this.user = u;
         this.email = e;
     }
 }

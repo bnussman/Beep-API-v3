@@ -32,6 +32,6 @@ export class QueueEntry {
     @ManyToOne(() => User)
     beeper!: User
 
-    @OneToOne(() => User)
+    @ManyToOne(() => User)
     rider!: User;
 }

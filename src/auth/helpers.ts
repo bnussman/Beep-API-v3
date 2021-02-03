@@ -6,7 +6,6 @@ import { TokenEntry } from '../entities/TokenEntry';
 import { BeepORM } from '../app';
 import { User } from '../entities/User';
 import { VerifyEmail } from '../entities/VerifyEmail';
-import { ObjectId } from '@mikro-orm/mongodb';
 import { wrap } from '@mikro-orm/core';
 
 /**
@@ -19,9 +18,7 @@ import { wrap } from '@mikro-orm/core';
 export async function getToken(user: User): Promise<TokenData> {
     const t = new TokenEntry(user);
 
-    user.tokens.add(t);
-
-    await BeepORM.em.persistAndFlush(user);
+    await BeepORM.tokenRepository.persistAndFlush(t);
 
     return {
         userid: user._id,

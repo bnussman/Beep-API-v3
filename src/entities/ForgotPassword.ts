@@ -11,13 +11,16 @@ export class ForgotPassword {
     @SerializedPrimaryKey()
     id!: string;
 
-    @ManyToOne(() => User, { wrappedReference: true })
-    user!: IdentifiedReference<User>;
+    @ManyToOne()
+    user!: User;
+
+    //@ManyToOne(() => User, { wrappedReference: true })
+    //user!: IdentifiedReference<User>;
 
     @Property() 
     time = Date.now();
 
     constructor(u: User) {
-        this.user = Reference.create(u);
+        this.user = u;
     }
 }

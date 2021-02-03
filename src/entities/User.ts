@@ -1,7 +1,6 @@
 import { Collection, Entity, OneToMany, PrimaryKey, Property, SerializedPrimaryKey } from "@mikro-orm/core";
 import { ObjectId } from "@mikro-orm/mongodb";
 import { QueueEntry } from './QueueEntry';
-import { TokenEntry } from './TokenEntry';
 
 @Entity()
 export class User {
@@ -66,9 +65,11 @@ export class User {
     @Property({ nullable: true })
     photoUrl?: string;
 
-    @OneToMany(() => TokenEntry, t => t.user, { lazy: true })
-    tokens = new Collection<TokenEntry>(this);
+    //TODO: do we need this here, or just on the token side, we dont need to access these from the user
+    //@OneToMany(() => TokenEntry, t => t.user, { lazy: true })
+    //tokens = new Collection<TokenEntry>(this);
 
+    //Lets keep this so we can get a users queue very easily
     @OneToMany(() => QueueEntry, q => q.beeper, { lazy: true })
     queue = new Collection<QueueEntry>(this);
 }

@@ -1,7 +1,7 @@
-import { Entity, ManyToOne, OneToOne, PrimaryKey, Property, SerializedPrimaryKey } from "@mikro-orm/core";
-import {ObjectId} from "@mikro-orm/mongodb";
-import {Beep} from "./Beep";
-import {User} from "./User";
+import { Entity, ManyToOne, PrimaryKey, Property, SerializedPrimaryKey } from "@mikro-orm/core";
+import { ObjectId } from "@mikro-orm/mongodb";
+import { Beep } from "./Beep";
+import { User } from "./User";
 
 @Entity()
 export class Report {
@@ -12,10 +12,10 @@ export class Report {
     @SerializedPrimaryKey()
     id!: string;
 
-    @ManyToOne(() => User)
+    @ManyToOne()
     reporter!: User;
 
-    @ManyToOne(() => User)
+    @ManyToOne()
     reported!: User;
 
     @ManyToOne({ nullable: true })
@@ -33,7 +33,7 @@ export class Report {
     @Property({ default: false })
     handled!: boolean
 
-    @ManyToOne(() => Beep)
+    @ManyToOne()
     beep!: Beep;
 
     constructor(reporter: User, reported: User, reason: string, beep?: Beep) {
