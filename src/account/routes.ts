@@ -6,10 +6,9 @@ import { Validator } from "node-input-validator";
 import * as Sentry from "@sentry/node";
 import { APIStatus, APIResponse } from "../utils/Error";
 import { Response, Body, Controller, Post, Route, Security, Tags, Request, Delete, Example, Put, Patch } from 'tsoa';
-import {BeepORM} from '../app';
-import {wrap} from '@mikro-orm/core';
-import {ObjectId} from '@mikro-orm/mongodb';
-import {ChangePasswordParams, EditAccountParams, UpdatePushTokenParams, VerifyAccountParams, VerifyAccountResult} from './account';
+import { BeepORM } from '../app';
+import { wrap } from '@mikro-orm/core';
+import { ChangePasswordParams, EditAccountParams, UpdatePushTokenParams, VerifyAccountParams, VerifyAccountResult } from './account';
 
 @Tags("Account")
 @Route("account")
@@ -65,11 +64,12 @@ export class AccountController extends Controller {
         wrap(request.user.user).assign(requestBody);
 
         await BeepORM.userRepository.persistAndFlush(request.user.user); 
-
-        if (oldEmail !== request.user.user.email) {
-            await BeepORM.verifyEmailRepository.removeAndFlush({ user: request.user.user });
+        console.log(oldEmail);
+        if (oldEmail !== requestBody.email) {
+            await BeepORM.verifyEmailRepository.nativeDelete({ user: request.user.user });
 
             //if user made a change to their email, we need set their status to not verified and make them re-verify
+            console.log("User's email was changed, setting isEmailVerified to false");
             wrap(request.user.user).assign({ isEmailVerified: false, isStudent: false });
 
             await BeepORM.userRepository.persistAndFlush(request.user.user); 
@@ -183,7 +183,7 @@ export class AccountController extends Controller {
     })
     @Post("verify")
     public async verifyAccount (@Body() requestBody: VerifyAccountParams): Promise<VerifyAccountResult | APIResponse> {
-        const entry = await BeepORM.verifyEmailRepository.findOne(new ObjectId(requestBody.id));
+        const entry = await BeepORM.verifyEmailRepository.findOne(requestBody.id, { populate: true });
 
         if (!entry) {
             this.setStatus(404);
@@ -194,37 +194,35 @@ export class AccountController extends Controller {
         //3600 seconds in an hour, multiplied by 1000 because javascripts handles Unix time in ms
         if ((entry.time + (3600 * 1000)) < Date.now()) {
             this.setStatus(410);
+            await BeepORM.verifyEmailRepository.removeAndFlush(entry);
             return new APIResponse(APIStatus.Error, "Your verification token has expired");
         }
 
-        //use the helper function getEmail to get user's email address from their id
-        /*
-        console.log(entry);
-        console.log(entry.user);
         const usersEmail: string | undefined = entry.user.email;
 
         //this case should not happen because of validation, but just in case
         if(!usersEmail) {
             this.setStatus(400);
+            await BeepORM.verifyEmailRepository.removeAndFlush(entry);
             return new APIResponse(APIStatus.Error, "Please ensure you have a valid email set in your profile. Visit your app or our website to re-send a varification email.");
         }
 
         //if the user's current email is not the same as the email they are trying to verify dont prcede with the request
         if (entry.email !== usersEmail) {
             this.setStatus(400);
+            await BeepORM.verifyEmailRepository.removeAndFlush(entry);
             return new APIResponse(APIStatus.Error, "You tried to verify an email address that is not the same as your current email.");
         }
-        */
 
         let update;
 
         //use the helper function isEduEmail to check if user is a student
         if (isEduEmail(entry.email)) {
             //if user is a student ensure we update isStudent
-            update = {isEmailVerified: true, isStudent: true};
+            update = { isEmailVerified: true, isStudent: true };
         }
         else {
-            update = {isEmailVerified: true};
+            update = { isEmailVerified: true };
         }
 
         const user = await BeepORM.userRepository.findOne(entry.user);
@@ -238,9 +236,9 @@ export class AccountController extends Controller {
         await BeepORM.verifyEmailRepository.removeAndFlush(entry);
 
         return ({
-            "status": APIStatus.Success,
-            "message": "Successfully verified email",
-            "data": {...update, "email": entry.email}
+            status: APIStatus.Success,
+            message: "Successfully verified email",
+            data: {...update, email: entry.email}
         });
     }
 
