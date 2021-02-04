@@ -1,7 +1,5 @@
-import { UserPluckResult } from "../types/beep";
 import { APIStatus } from "../utils/Error";
 import { QueueEntry } from '../entities/QueueEntry';
-import {ObjectId} from "@mikro-orm/mongodb";
 
 /**
  * Set Beeprs Status Paramaters
@@ -22,68 +20,9 @@ export interface SetBeeperStatusParams {
     masksRequired: boolean;
 }
 
-/**
- * Beepers Queue Response
- *
- * @example {
- *   "status": "success",
- *   "queue": [
- *     {
- *       "destination": "Tasty",
- *       "groupSize": 1,
- *       "id": "b500bb45-094e-437c-887b-e6b6d815ba12",
- *       "isAccepted": true,
- *       "origin": "241 Marich Ln Marich Ln Boone, NC 28607",
- *       "riderid": "22192b90-54f8-49b5-9dcf-26049454716b",
- *       "state": 0,
- *       "timeEnteredQueue": 1603318791872,
- *       "personalInfo": {
- *         "first": "Banks",
- *         "isStudent": true,
- *         "last": "Nussman",
- *         "phone": "7049968597",
- *         "venmo": "banksnussman"
- *       }
- *     }
- *   ]
- * }
- */
 export interface GetBeeperQueueResult {
     status: APIStatus,
     queue: QueueEntry[]; 
-}
-
-/**
- * Beeper Queue Entry
- *
- * @example {
- *   "destination": "Hoey",
- *   "groupSize": 1,
- *   "id": "b500bb45-094e-437c-887b-e6b6d815ba12",
- *   "isAccepted": true,
- *   "origin": "241 Marich Ln Marich Ln Boone, NC 28607",
- *   "riderid": "22192b90-54f8-49b5-9dcf-26049454716b",
- *   "state": 0,
- *   "timeEnteredQueue": 1603318791872,
- *   "personalInfo": {
- *     "first": "Banks",
- *     "isStudent": true,
- *     "last": "Nussman",
- *     "phone": "7049968597",
- *     "venmo": "banksnussman"
- *   }
- * }
- */
-export interface BeepQueueTableEntry {
-    id: string;
-    destination: string;
-    origin: string;
-    groupSize: number;
-    isAccepted: boolean;
-    riderid: string;
-    state: number;
-    timeEnteredQueue: number;
-    personalInfo?: UserPluckResult;
 }
 
 /**

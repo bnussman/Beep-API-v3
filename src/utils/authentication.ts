@@ -3,10 +3,10 @@ import * as Sentry from "@sentry/node";
 import { APIStatus, APIAuthResponse } from "./Error";
 import { BeepORM } from "../app";
 import { ObjectId } from "@mikro-orm/mongodb";
+import { UserRole } from "../entities/User";
 
 export async function expressAuthentication(request: express.Request, securityName: string, scopes?: string[]): Promise<any> {
     if (securityName === "token") {
-        //get the Authorization header and split after the first space because it will say Bearer first
         const token: string | undefined = request.get("Authorization")?.split(" ")[1];
 
         if (!token) {
@@ -20,8 +20,7 @@ export async function expressAuthentication(request: express.Request, securityNa
         }
 
         if (scopes && (scopes[0] == "admin")) {
-            const hasPermission: boolean = tokenEntryResult.user.userLevel > 0;
-            if (!hasPermission) {
+            if (tokenEntryResult.user.role != UserRole.ADMIN) {
                 return Promise.reject(new APIAuthResponse(APIStatus.Error, "You must be an admin to use this endpoint"));
             }
         }
@@ -35,12 +34,10 @@ export async function expressAuthentication(request: express.Request, securityNa
             return Promise.resolve();
         }
 
-        const tokenEntryResult = await BeepORM.tokenRepository.findOne(token);
+        const tokenEntryResult = await BeepORM.tokenRepository.findOne(token, { populate: true });
 
         if (tokenEntryResult) {
-            const hasPermission: boolean = tokenEntryResult.user.userLevel > 0;
-
-            if (hasPermission) {
+            if (tokenEntryResult.user.role != UserRole.ADMIN) {
                 return Promise.resolve({ token: token, user: tokenEntryResult.user });
             }
             return Promise.resolve();

@@ -9,7 +9,7 @@ import { APIResponse, APIStatus } from '../utils/Error';
 import { wrap } from '@mikro-orm/core';
 import { BeepORM } from '../app';
 import { User } from '../entities/User';
-import {ForgotPassword} from '../entities/ForgotPassword';
+import { ForgotPassword } from '../entities/ForgotPassword';
 
 @Tags("Auth")
 @Route("auth")

@@ -5,9 +5,9 @@ import * as Sentry from "@sentry/node";
 import { Response, Controller, Request, Body, Tags, Security, Route, Example, Get, Patch } from 'tsoa';
 import { APIResponse, APIStatus } from '../utils/Error';
 import { GetBeeperQueueResult, SetBeeperQueueParams, SetBeeperStatusParams } from './beeper';
-import {wrap} from '@mikro-orm/core';
-import {BeepORM} from '../app';
-import {Beep} from '../entities/Beep';
+import { wrap } from '@mikro-orm/core';
+import { BeepORM } from '../app';
+import { Beep } from '../entities/Beep';
 
 @Tags("Beeper")
 @Route("beeper")

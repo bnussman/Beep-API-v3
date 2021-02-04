@@ -8,14 +8,14 @@ import * as Sentry from "@sentry/node";
 import { initializeSentry } from "./utils/sentry";
 import { Server } from "http";
 import cors from "cors";
-import {EntityManager, EntityRepository, MikroORM} from "@mikro-orm/core";
-import {TokenEntry} from "./entities/TokenEntry";
-import {User} from "./entities/User";
-import {VerifyEmail} from "./entities/VerifyEmail";
-import {QueueEntry} from "./entities/QueueEntry";
-import {Beep} from "./entities/Beep";
-import {ForgotPassword} from "./entities/ForgotPassword";
-import {Report} from "./entities/Report";
+import { EntityManager, EntityRepository, MikroORM } from "@mikro-orm/core";
+import { TokenEntry } from "./entities/TokenEntry";
+import { User } from "./entities/User";
+import { VerifyEmail } from "./entities/VerifyEmail";
+import { QueueEntry } from "./entities/QueueEntry";
+import { Beep } from "./entities/Beep";
+import { ForgotPassword } from "./entities/ForgotPassword";
+import { Report } from "./entities/Report";
 
 const url = `mongodb+srv://banks:${process.env.MONGODB_PASSWORD}@beep.5zzlx.mongodb.net/test?retryWrites=true&w=majority`;
 

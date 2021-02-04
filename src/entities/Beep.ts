@@ -11,11 +11,9 @@ export class Beep {
     @SerializedPrimaryKey()
     id!: string;
 
-    //@ManyToOne(() => User)
     @ManyToOne()
     beeper!: User;
 
-    //@ManyToOne(() => User)
     @ManyToOne()
     rider!: User;
     

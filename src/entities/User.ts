@@ -1,4 +1,4 @@
-import { Collection, Entity, OneToMany, PrimaryKey, Property, SerializedPrimaryKey } from "@mikro-orm/core";
+import { Collection, Entity, Enum, OneToMany, PrimaryKey, Property, SerializedPrimaryKey, Unique } from "@mikro-orm/core";
 import { ObjectId } from "@mikro-orm/mongodb";
 import { QueueEntry } from './QueueEntry';
 
@@ -18,9 +18,11 @@ export class User {
     last!: string;
 
     @Property()
+    @Unique()
     username!: string;
 
     @Property()
+    @Unique()
     email!: string;
 
     @Property()
@@ -56,8 +58,8 @@ export class User {
     @Property()
     queueSize = 0;
 
-    @Property()
-    userLevel = 0;
+    @Enum()
+    role: UserRole = UserRole.USER;
 
     @Property({ nullable: true })
     pushToken?: string;
@@ -72,4 +74,9 @@ export class User {
     //Lets keep this so we can get a users queue very easily
     @OneToMany(() => QueueEntry, q => q.beeper, { lazy: true })
     queue = new Collection<QueueEntry>(this);
+}
+
+export enum UserRole {
+    ADMIN = 'admin',
+    USER = 'user'
 }

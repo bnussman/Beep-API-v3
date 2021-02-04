@@ -185,6 +185,7 @@ export class RiderController extends Controller {
                 beeper: r.beeper
             };
         }
+
         BeepORM.em.flush();
         //respond with appropriate output
         return output;

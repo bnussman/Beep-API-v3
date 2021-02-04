@@ -43,17 +43,6 @@ export async function setPushToken(user: User, token: string | null): Promise<vo
 }
 
 /**
- * function to tell if user has a specific user level
- *
- * @param userid is the user's id
- * @prarm level is the desired user level
- * @returns a promice that is a boolean. True if user has level, false otherwise
- */
-export async function hasUserLevel(user: User, level: number): Promise<boolean> {
-    return level == user.userLevel;
-}
-
-/**
  * works exactly like isTokenValid, but only returns a userid if user has userLevel == 1 (meaning they are an admin)
  *
  * @param token a user's auth token
