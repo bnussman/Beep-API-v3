@@ -17,8 +17,8 @@ export class QueueEntry {
     @Property()
     destination!: string;
 
-    @Property({ default: 0 })
-    state!: number;
+    @Property()
+    state = 0;
 
     @Property({ default: false })
     isAccepted!: boolean;

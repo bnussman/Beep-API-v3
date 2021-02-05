@@ -305,7 +305,7 @@ export class UsersController extends Controller {
            }
         }
 
-        BeepORM.em.flush();
+        await BeepORM.em.flush();
 
         return {
             status: APIStatus.Success,

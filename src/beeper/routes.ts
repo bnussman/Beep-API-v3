@@ -143,7 +143,7 @@ export class BeeperController extends Controller {
         const queueEntry = await BeepORM.queueEntryRepository.findOneOrFail(requestBody.queueID, { populate: true });
 
         if (requestBody.value == 'accept' || requestBody.value == 'deny') {
-            const numRidersBefore = await BeepORM.queueEntryRepository.count({ timeEnteredQueue: { $gt: queueEntry.timeEnteredQueue }, isAccepted: false });
+            const numRidersBefore = await BeepORM.queueEntryRepository.count({ timeEnteredQueue: { $lt: queueEntry.timeEnteredQueue }, isAccepted: false });
 
             console.log("numRidersBefore:", numRidersBefore);
 
@@ -153,7 +153,7 @@ export class BeeperController extends Controller {
             }
         }
         else {
-            const numRidersBefore = await BeepORM.queueEntryRepository.count({ timeEnteredQueue: { $gt: queueEntry.timeEnteredQueue }, isAccepted: true });
+            const numRidersBefore = await BeepORM.queueEntryRepository.count({ timeEnteredQueue: { $lt: queueEntry.timeEnteredQueue }, isAccepted: true });
 
             console.log("numRidersBefore:", numRidersBefore);
 

@@ -149,7 +149,7 @@ export class RiderController extends Controller {
         }
 
         if (r.state == -1) {
-            BeepORM.queueEntryRepository.remove(r);
+            //BeepORM.queueEntryRepository.remove(r);
             return new APIResponse(APIStatus.Error, "Currently, user is not getting a beep.");
         }
 
@@ -157,7 +157,7 @@ export class RiderController extends Controller {
         //get rider's position in the queue by using a count query where we count entries where they entered the queue earlier
         //(they have an earlier timestamp)
         //const ridersQueuePosition = await r.table(beepersID).filter(r.row('timeEnteredQueue').lt(queueEntry.timeEnteredQueue).and(r.row('isAccepted').eq(true))).count().run((await database.getConnQueues()));
-        const ridersQueuePosition = 0;
+        const ridersQueuePosition = await BeepORM.queueEntryRepository.count({ rider: request.user.user, timeEnteredQueue: { $lt: r.timeEnteredQueue } });
 
         let output: RiderStatusResult;
 
