@@ -6,7 +6,7 @@ import { Response, Controller, Route, Security, Tags, Request, Body, Get, Exampl
 import { BeeperListResult, ChooseBeepParams, ChooseBeepResponse, LeaveQueueParams, RiderStatusResult } from "./rider";
 import { APIResponse, APIStatus } from '../utils/Error';
 import { BeepORM } from '../app';
-import { wrap } from '@mikro-orm/core';
+import { QueryOrder, wrap } from '@mikro-orm/core';
 import { User } from '../entities/User';
 import { QueueEntry } from '../entities/QueueEntry';
     
@@ -82,7 +82,6 @@ export class RiderController extends Controller {
 
         beeper.queue.add(q);
 
-        beeper.queueSize++;
         await BeepORM.userRepository.persistAndFlush(beeper);
 
         //Tell Beeper someone entered their queue asyncronously
@@ -157,36 +156,22 @@ export class RiderController extends Controller {
         //get rider's position in the queue by using a count query where we count entries where they entered the queue earlier
         //(they have an earlier timestamp)
         //const ridersQueuePosition = await r.table(beepersID).filter(r.row('timeEnteredQueue').lt(queueEntry.timeEnteredQueue).and(r.row('isAccepted').eq(true))).count().run((await database.getConnQueues()));
-        const ridersQueuePosition = await BeepORM.queueEntryRepository.count({ rider: request.user.user, timeEnteredQueue: { $lt: r.timeEnteredQueue } });
+        const ridersQueuePosition = await BeepORM.queueEntryRepository.count({ beeper: r.beeper, timeEnteredQueue: { $lt: r.timeEnteredQueue } });
 
-        let output: RiderStatusResult;
+        const output = {
+            status: APIStatus.Success,
+            ridersQueuePosition: ridersQueuePosition,
+            ...r
+        };
 
-        if (r.isAccepted) {
-            //if rider is accepted by beeper, give them data along with more personal info like full name and phone number
-            output = {
-                status: APIStatus.Success,
-                groupSize: r.groupSize,
-                isAccepted: r.isAccepted,
-                ridersQueuePosition: ridersQueuePosition,
-                state: r.state,
-                origin: r.origin,
-                destination: r.destination,
-                beeper: r.beeper
-            };
-        }
-        else {
-            //rider is not yet accepted, give them info, but exclude less personal info
-            output = {
-                status: APIStatus.Success,
-                groupSize: r.groupSize,
-                isAccepted: r.isAccepted,
-                origin: r.origin,
-                destination: r.destination,
-                beeper: r.beeper
-            };
+        if (r.state == 1) {
+            const location = await BeepORM.locationRepository.findOne({ user: r.beeper }, {}, { timestamp: QueryOrder.DESC });
+            if (location) {
+                //@ts-ignore
+                output['beeper']['location'] = location;
+            }
         }
 
-        BeepORM.em.flush();
         //respond with appropriate output
         return output;
     }
@@ -211,14 +196,14 @@ export class RiderController extends Controller {
             this.setStatus(500);
             return new APIResponse(APIStatus.Error, "Unable to leave queue");
         }
-        
-        entry.beeper.queueSize--;
+
+        if (entry.isAccepted) entry.beeper.queueSize--;
+
         await BeepORM.userRepository.persistAndFlush(entry.beeper);
 
         entry.state = -1;
 
         await BeepORM.queueEntryRepository.persistAndFlush(entry);
-
 
         //if we made it to this point, we successfully removed a user from the queue.
         this.setStatus(200);

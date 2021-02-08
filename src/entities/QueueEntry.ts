@@ -26,7 +26,7 @@ export class QueueEntry {
     @Property()
     groupSize!: number;
 
-    @Property({ default: Date.now() })
+    @Property()
     timeEnteredQueue!: number;
 
     @ManyToOne(() => User)

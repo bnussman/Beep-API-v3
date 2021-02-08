@@ -145,8 +145,6 @@ export class BeeperController extends Controller {
         if (requestBody.value == 'accept' || requestBody.value == 'deny') {
             const numRidersBefore = await BeepORM.queueEntryRepository.count({ timeEnteredQueue: { $lt: queueEntry.timeEnteredQueue }, isAccepted: false });
 
-            console.log("numRidersBefore:", numRidersBefore);
-
             if (numRidersBefore != 0) {
                 this.setStatus(400);
                 return new APIResponse(APIStatus.Error, "You must respond to the rider who first joined your queue.");
@@ -154,8 +152,6 @@ export class BeeperController extends Controller {
         }
         else {
             const numRidersBefore = await BeepORM.queueEntryRepository.count({ timeEnteredQueue: { $lt: queueEntry.timeEnteredQueue }, isAccepted: true });
-
-            console.log("numRidersBefore:", numRidersBefore);
 
             if (numRidersBefore != 0) {
                 this.setStatus(400);
@@ -166,9 +162,12 @@ export class BeeperController extends Controller {
         if (requestBody.value == 'accept') {
             queueEntry.isAccepted = true;
 
+            request.user.user.queueSize++;
+
             sendNotification(queueEntry.rider, "A beeper has accepted your beep request", "You will recieve another notification when they are on their way to pick you up.");
 
-            BeepORM.queueEntryRepository.persistAndFlush(queueEntry);
+            await BeepORM.queueEntryRepository.persistAndFlush(queueEntry);
+            await BeepORM.userRepository.persistAndFlush(request.user.user);
 
             return new APIResponse(APIStatus.Success, "Successfully accepted rider in queue.");
         }
@@ -181,13 +180,13 @@ export class BeeperController extends Controller {
 
             BeepORM.beepRepository.persist(finishedBeep);
 
-            request.user.user.queueSize--;
+            if (queueEntry.isAccepted) request.user.user.queueSize--;
 
-            BeepORM.userRepository.persist(request.user.user);
+            await BeepORM.userRepository.persistAndFlush(request.user.user);
 
             queueEntry.state = -1;
 
-            BeepORM.queueEntryRepository.persistAndFlush(queueEntry);
+            await BeepORM.queueEntryRepository.persistAndFlush(queueEntry);
 
             if (requestBody.value == "deny") {
                 sendNotification(queueEntry.rider, "A beeper has denied your beep request", "Open your app to find a diffrent beeper.");
@@ -213,7 +212,7 @@ export class BeeperController extends Controller {
                     Sentry.captureException("Our beeper's state notification switch statement reached a point that is should not have");
             }
 
-            BeepORM.queueEntryRepository.persistAndFlush(queueEntry);
+            await BeepORM.queueEntryRepository.persistAndFlush(queueEntry);
 
             this.setStatus(200);
             return new APIResponse(APIStatus.Success, "Successfully changed ride state.");
