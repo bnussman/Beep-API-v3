@@ -178,6 +178,8 @@ export class BeeperController extends Controller {
 
             finishedBeep.doneTime = Date.now();
 
+            finishedBeep._id = queueEntry._id;
+
             BeepORM.beepRepository.persist(finishedBeep);
 
             if (queueEntry.isAccepted) request.user.user.queueSize--;
