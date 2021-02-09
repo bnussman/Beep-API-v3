@@ -1,7 +1,7 @@
 import { request } from "https";
 import * as Sentry from "@sentry/node";
 import { User } from '../entities/User';
-import {BeepORM} from "src/app";
+import {BeepORM} from "../app";
 
 /**
  * Use Expo's API to send a push notification
