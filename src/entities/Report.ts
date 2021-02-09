@@ -34,7 +34,7 @@ export class Report {
     handled!: boolean
 
     @ManyToOne()
-    beep!: Beep;
+    beep?: Beep;
 
     constructor(reporter: User, reported: User, reason: string, beep?: Beep) {
         this.reporter = reporter;

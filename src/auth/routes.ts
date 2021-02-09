@@ -51,22 +51,20 @@ export class AuthController extends Controller {
             return new APIResponse(APIStatus.Error, v.errors);
         }
 
-        const user: User | null = await BeepORM.userRepository.findOne({ username: requestBody.username });
+        const user: User | null = await BeepORM.userRepository.findOne({ username: requestBody.username }, ['password']);
 
         if (user?.password == sha256(requestBody.password)) {
-        //if (user?.password == requestBody.password) {
-            //if authenticated, get new auth tokens
             const tokenData = await getToken(user);
 
             if (requestBody.expoPushToken) {
                 setPushToken(user, requestBody.expoPushToken);
             }
 
-            return ({
+            return {
                 status: APIStatus.Success,
                 user: user,
                 tokens: { ...tokenData }
-            });
+            };
         }
         else {
             this.setStatus(401);

@@ -45,9 +45,13 @@ export class ReportsController extends Controller {
         const user = BeepORM.em.getReference(User, requestBody.id);
 
         if (requestBody.beep) {
+            //TODO: this does not work, when a report is made, the beep event
+            //may not be stored if the beep is in progress, therefore 
+            //getReference will insert a refrence that is gonna not be there
+            //This is causing beep to be a string, but it kinda works
             const beep = BeepORM.em.getReference(Beep, requestBody.beep);
 
-            const report = new Report(request.user.user, user , requestBody.reason, beep);
+            const report = new Report(request.user.user, user, requestBody.reason, beep);
 
             await BeepORM.reportRepository.persistAndFlush(report);
         }
@@ -213,7 +217,7 @@ export class ReportsController extends Controller {
     @Security("token", ["admin"])
     @Get("{id}")
     public async getReport(@Path() id: string): Promise<ReportResponse | APIResponse> {
-        const report = await BeepORM.reportRepository.findOne(id);
+        const report = await BeepORM.reportRepository.findOne(id, { populate: true });
 
         if (!report) {
             this.setStatus(404);
