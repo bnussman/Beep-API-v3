@@ -31,7 +31,7 @@ export class User {
     @Property()
     venmo!: string;
 
-    @Property()
+    @Property({ lazy: true })
     password?: string;
 
     @Property()
@@ -61,7 +61,7 @@ export class User {
     @Enum()
     role: UserRole = UserRole.USER;
 
-    @Property({ nullable: true })
+    @Property({ nullable: true, lazy: true })
     pushToken?: string;
 
     @Property({ nullable: true })
