@@ -181,15 +181,17 @@ export class BeeperController extends Controller {
             finishedBeep._id = queueEntry._id;
             finishedBeep.id = queueEntry.id;
 
-            await BeepORM.beepRepository.persistAndFlush(finishedBeep);
+            BeepORM.beepRepository.persist(finishedBeep);
 
             if (queueEntry.isAccepted) request.user.user.queueSize--;
 
-            await BeepORM.userRepository.persistAndFlush(request.user.user);
+            BeepORM.userRepository.persist(request.user.user);
 
             queueEntry.state = -1;
 
-            await BeepORM.queueEntryRepository.persistAndFlush(queueEntry);
+            BeepORM.queueEntryRepository.persist(queueEntry);
+
+            await BeepORM.em.flush();
 
             if (requestBody.value == "deny") {
                 sendNotification(queueEntry.rider, "A beeper has denied your beep request", "Open your app to find a diffrent beeper.");

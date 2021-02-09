@@ -1,4 +1,4 @@
-import { Entity, ManyToOne, PrimaryKey, Property, SerializedPrimaryKey } from "@mikro-orm/core";
+import { Entity, IdentifiedReference, ManyToOne, PrimaryKey, Property, Reference, SerializedPrimaryKey } from "@mikro-orm/core";
 import { ObjectId } from "@mikro-orm/mongodb";
 import { Beep } from "./Beep";
 import { User } from "./User";
@@ -33,15 +33,15 @@ export class Report {
     @Property({ default: false })
     handled!: boolean
 
-    @ManyToOne()
+    @ManyToOne(() => Beep)
     beep?: Beep;
 
-    constructor(reporter: User, reported: User, reason: string, beep?: Beep) {
+    constructor(reporter: User, reported: User, reason: string, beep?: ObjectId) {
         this.reporter = reporter;
         this.reported = reported;
         this.reason = reason;
         if (beep) {
-            this.beep = beep;
+            this.beep = beep as unknown as Beep;
         }
     }
 }
