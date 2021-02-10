@@ -32,8 +32,8 @@ export class Beep {
     @Property()
     groupSize!: number;
 
-    @Property({ default: Date.now() })
-    timeEnteredQueue!: number;
+    @Property()
+    timeEnteredQueue = Date.now();
 
     @Property()
     doneTime!: number;

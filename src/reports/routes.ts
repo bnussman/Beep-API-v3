@@ -7,7 +7,7 @@ import { ReportResponse, ReportsResponse, ReportUserParams, UpdateReportParams }
 import { Report } from '../entities/Report';
 import {ObjectId} from '@mikro-orm/mongodb';
 import {BeepORM} from '../app';
-import {Reference, wrap} from '@mikro-orm/core';
+import {QueryOrder, Reference, wrap} from '@mikro-orm/core';
 import { User } from '../entities/User';
 import {Beep} from '../entities/Beep';
 
@@ -112,7 +112,7 @@ export class ReportsController extends Controller {
     @Security("token", ["admin"])
     @Get()
     public async getReports(@Query() offset?: number, @Query() show?: number): Promise<ReportsResponse | APIResponse> {
-        const [reports, count] = await BeepORM.em.findAndCount(Report, {}, { limit: show, offset: offset, populate: true });
+        const [reports, count] = await BeepORM.reportRepository.findAndCount({}, { orderBy: { timestamp: QueryOrder.DESC }, limit: show, offset: offset, populate: ['reporter', 'reported'] });
 
         return {
             status: APIStatus.Success,
@@ -210,7 +210,7 @@ export class ReportsController extends Controller {
     @Security("token", ["admin"])
     @Get("{id}")
     public async getReport(@Path() id: string): Promise<ReportResponse | APIResponse> {
-        const report = await BeepORM.reportRepository.findOne(id, { populate: true });
+        const report = await BeepORM.reportRepository.findOne(id, { populate: true, refresh: true });
 
         if (!report) {
             this.setStatus(404);

@@ -8,7 +8,7 @@ import { BeeperHistoryResult, RiderHistoryResult } from '../account/account';
 import { BeepORM } from '../app';
 import { ObjectId } from '@mikro-orm/mongodb';
 import { wrap } from '@mikro-orm/core';
-import { User } from '../entities/User';
+import { User, UserRole } from '../entities/User';
 
 @Tags("Users")
 @Route("users")
@@ -34,7 +34,7 @@ export class UsersController extends Controller {
     @Security("optionalAdmin")
     @Get("{id}")
     public async getUser(@Request() request: express.Request, @Path() id: string): Promise<UserResult | APIResponse> {
-        const user = await BeepORM.userRepository.findOne(new ObjectId(id));
+        const user = await BeepORM.userRepository.findOne(id);
 
         if (!user) {
             this.setStatus(404);

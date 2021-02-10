@@ -4,6 +4,7 @@ import { User } from "./User";
 
 @Entity()
 export class Location {
+
     @PrimaryKey()
     _id!: ObjectId;
 
@@ -34,6 +35,6 @@ export class Location {
     @Property()
     speed!: number;
 
-    @Property({ default: Date.now() })
-    timestamp!: number;
+    @Property()
+    timestamp = Date.now();
 }

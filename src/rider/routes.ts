@@ -3,7 +3,7 @@ import { sendNotification } from '../utils/notifications';
 import { Validator } from "node-input-validator";
 import * as Sentry from "@sentry/node";
 import { Response, Controller, Route, Security, Tags, Request, Body, Get, Example, Patch, Delete } from 'tsoa';
-import { BeeperListResult, ChooseBeepParams, ChooseBeepResponse, LeaveQueueParams, RiderStatusResult } from "./rider";
+import { BeeperListResult, ChooseBeepParams, ChooseBeepResponse, RiderStatusResult } from "./rider";
 import { APIResponse, APIStatus } from '../utils/Error';
 import { BeepORM } from '../app';
 import { QueryOrder, wrap } from '@mikro-orm/core';
@@ -39,7 +39,7 @@ export class RiderController extends Controller {
     })
     @Security("token")
     @Patch("choose")
-    public async chooseBeep (@Request() request: express.Request, @Body() requestBody: ChooseBeepParams): Promise<ChooseBeepResponse | APIResponse> {
+    public async chooseBeep(@Request() request: express.Request, @Body() requestBody: ChooseBeepParams): Promise<ChooseBeepResponse | APIResponse> {
         const v = new Validator(requestBody, {
             groupSize: "required|numeric",
             origin: "required",
@@ -60,7 +60,6 @@ export class RiderController extends Controller {
             return new APIResponse(APIStatus.Error, "Yikes");
         }
 
-        //make sure beeper is still beeping. This case WILL happen because a beeper may turn off isBeeping and rider's client may have not updated
         if (!beeper.isBeeping) {
             this.setStatus(410);
             return new APIResponse(APIStatus.Error, "The user you have chosen is no longer beeping at this time.");
@@ -84,12 +83,8 @@ export class RiderController extends Controller {
 
         await BeepORM.userRepository.persistAndFlush(beeper);
 
-        //Tell Beeper someone entered their queue asyncronously
-        sendNotification(beeper, "A rider has entered your queue", "Please open your app to accept or deny them.", "enteredBeeperQueue");
+        sendNotification(beeper, `${request.user.user.name} has entered your queue`, "Please open your app to accept or deny this rider.", "enteredBeeperQueue");
 
-        //if we made it to this point, user has found a beep and it has been
-        //registered in our db. Send output with nessesary data to rider.
-        //Notice no need to send beeper's venmo of phone number because rider is not accepted as they just now joined the queue
         this.setStatus(200);
         return {
             status: APIStatus.Success,
@@ -108,7 +103,7 @@ export class RiderController extends Controller {
     })
     @Security("token")
     @Get("find")
-    public async findBeep (@Request() request: express.Request): Promise<APIResponse | ChooseBeepResponse> {
+    public async findBeep(): Promise<APIResponse | ChooseBeepResponse> {
         const r = await BeepORM.userRepository.findOneOrFail({ isBeeping: true });
 
         return {
@@ -138,41 +133,35 @@ export class RiderController extends Controller {
     })
     @Security("token")
     @Get("status")
-    public async getRiderStatus (@Request() request: express.Request): Promise<APIResponse | RiderStatusResult> {
-        const r = await BeepORM.queueEntryRepository.findOne({ rider: request.user.user }, {populate: true});
+    public async getRiderStatus(@Request() request: express.Request): Promise<APIResponse | RiderStatusResult> {
+        const entry = await BeepORM.queueEntryRepository.findOne({ rider: request.user.user }, { populate: true });
 
-
-        if (!r) {
+        if (!entry) {
             this.setStatus(200);
             return new APIResponse(APIStatus.Error, "Currently, user is not getting a beep.");
         }
 
-        if (r.state == -1) {
-            //BeepORM.queueEntryRepository.remove(r);
+        if (entry.state == -1) {
             return new APIResponse(APIStatus.Error, "Currently, user is not getting a beep.");
         }
 
 
-        //get rider's position in the queue by using a count query where we count entries where they entered the queue earlier
-        //(they have an earlier timestamp)
-        //const ridersQueuePosition = await r.table(beepersID).filter(r.row('timeEnteredQueue').lt(queueEntry.timeEnteredQueue).and(r.row('isAccepted').eq(true))).count().run((await database.getConnQueues()));
-        const ridersQueuePosition = await BeepORM.queueEntryRepository.count({ beeper: r.beeper, timeEnteredQueue: { $lt: r.timeEnteredQueue } });
+        const ridersQueuePosition = await BeepORM.queueEntryRepository.count({ beeper: entry.beeper, timeEnteredQueue: { $lt: entry.timeEnteredQueue } });
 
         const output = {
             status: APIStatus.Success,
             ridersQueuePosition: ridersQueuePosition,
-            ...r
+            ...entry
         };
 
-        if (r.state == 1) {
-            const location = await BeepORM.locationRepository.findOne({ user: r.beeper }, {}, { timestamp: QueryOrder.DESC });
+        if (entry.state == 1) {
+            const location = await BeepORM.locationRepository.findOne({ user: entry.beeper }, {}, { timestamp: QueryOrder.DESC });
             if (location) {
                 //@ts-ignore
                 output['beeper']['location'] = location;
             }
         }
 
-        //respond with appropriate output
         return output;
     }
 
@@ -188,7 +177,7 @@ export class RiderController extends Controller {
     })
     @Security("token")
     @Delete("leave")
-    public async riderLeaveQueue (@Request() request: express.Request, @Body() requestBody: LeaveQueueParams): Promise<APIResponse> {
+    public async riderLeaveQueue(@Request() request: express.Request): Promise<APIResponse> {
 
         const entry = await BeepORM.queueEntryRepository.findOne({ rider: request.user.user });
 
@@ -205,6 +194,8 @@ export class RiderController extends Controller {
 
         await BeepORM.queueEntryRepository.persistAndFlush(entry);
 
+        sendNotification(entry.beeper, `${request.user.user.name} left your queue`, "They decided they did not want a beep from you! :(");
+
         //if we made it to this point, we successfully removed a user from the queue.
         this.setStatus(200);
         return new APIResponse(APIStatus.Success, "Successfully removed user from queue");
@@ -212,31 +203,13 @@ export class RiderController extends Controller {
     
     /**
      * Provides client with a list of all people currently beeping
-     * @returns {APIResponse | BeeperListResult}
+     * @returns {BeeperListResult | APIResponse}
      */
-    /*
-    @Example<BeeperListResult>({
-        status: APIStatus.Success,
-        beeperList: [{
-            capacity: 4,
-            first: "Banks",
-            groupRate: 2,
-            id: "22192b90-54f8-49b5-9dcf-26049454716b",
-            isStudent: true,
-            last: "Nussman",
-            masksRequired: true,
-            queueSize: 0,
-            singlesRate: 3,
-            userLevel: 0,
-            photoUrl: "https://ridebeepapp.s3.amazonaws.com/images/22192b90-54f8-49b5-9dcf-26049454716b-1604517623067.jpg"
-        }]
-    })
-    */
     @Get("list")
     public async getBeeperList(): Promise<APIResponse | BeeperListResult> {
         return {
             status: APIStatus.Success,
-            beeperList: await BeepORM.userRepository.find({ isBeeping: true })
+            beepers: await BeepORM.userRepository.find({ isBeeping: true })
         };
     }
 }

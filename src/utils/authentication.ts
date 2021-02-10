@@ -28,7 +28,7 @@ export async function expressAuthentication(request: express.Request, securityNa
         return Promise.resolve({ token: tokenEntryResult, user: tokenEntryResult.user });
     }
     else if (securityName == "optionalAdmin") {
-        const token: ObjectId | undefined = request.get("Authorization")?.split(" ")[1] as ObjectId | undefined;
+        const token: string | undefined = request.get("Authorization")?.split(" ")[1];
 
         if (!token) {
             return Promise.resolve();
@@ -37,7 +37,7 @@ export async function expressAuthentication(request: express.Request, securityNa
         const tokenEntryResult = await BeepORM.tokenRepository.findOne(token, { populate: true });
 
         if (tokenEntryResult) {
-            if (tokenEntryResult.user.role != UserRole.ADMIN) {
+            if (tokenEntryResult.user.role == UserRole.ADMIN) {
                 return Promise.resolve({ token: token, user: tokenEntryResult.user });
             }
             return Promise.resolve();

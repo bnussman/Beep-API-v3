@@ -59,18 +59,7 @@ export interface RiderStatusResult {
     destination: string;
 }
 
-/**
- * Leave Queue Paramaters
- *
- * @example {
- *   "beepersID": "22192b90-54f8-49b5-9dcf-26049454716b"
- * }
- */
-export interface LeaveQueueParams {
-    beepersID: string;
-}
-
 export interface BeeperListResult {
     status: APIStatus,
-    beeperList: User[];
+    beepers: User[];
 }

@@ -67,12 +67,12 @@ export class User {
     @Property({ nullable: true })
     photoUrl?: string;
 
-    //TODO: do we need this here, or just on the token side, we dont need to access these from the user
-    //@OneToMany(() => TokenEntry, t => t.user, { lazy: true })
-    //tokens = new Collection<TokenEntry>(this);
+    @Property({ persist: false })
+    get name(): string {
+        return `${this.first} ${this.last}`;
+    }
 
-    //Lets keep this so we can get a users queue very easily
-    @OneToMany(() => QueueEntry, q => q.beeper, { lazy: true })
+    @OneToMany(() => QueueEntry, q => q.beeper, { lazy: true, eager: false })
     queue = new Collection<QueueEntry>(this);
 }
 

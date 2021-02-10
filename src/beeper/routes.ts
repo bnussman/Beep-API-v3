@@ -42,7 +42,7 @@ export class BeeperController extends Controller {
     })
     @Security("token")
     @Patch("status")
-    public async setBeeperStatus (@Request() request: express.Request, @Body() requestBody: SetBeeperStatusParams): Promise<APIResponse> {
+    public async setBeeperStatus(@Request() request: express.Request, @Body() requestBody: SetBeeperStatusParams): Promise<APIResponse> {
         const v = new Validator(requestBody, {
             singlesRate: "required|numeric",
             groupRate: "required|numeric",
@@ -58,11 +58,10 @@ export class BeeperController extends Controller {
             return new APIResponse(APIStatus.Error, v.errors);
         }
 
-        //if beeper is setting isBeeping to false
         if (requestBody.isBeeping == false) {
-            //get beepers queue size
+
             const queueSize = request.user.user.queueSize;
-            //we must make sure their queue is empty before they stop beeping
+
             if (queueSize > 0) {
                 this.setStatus(400);
                 return new APIResponse(APIStatus.Error, "You can't stop beeping when you still have beeps to complete or riders in your queue");
@@ -82,7 +81,7 @@ export class BeeperController extends Controller {
      * User calls this to get there queue when beeping.
      * Our Socket server is responcible for telling a client a change occoured, it will prompt
      * a call to this endpoint to get the queue and data
-     * @returns {GetBeeperQueueResult} 
+     * @returns {GetBeeperQueueResult | APIResponse} 
      */
     /*
     @Example<GetBeeperQueueResult>({
@@ -109,11 +108,8 @@ export class BeeperController extends Controller {
     @Security("token")
     @Get("queue")
     public async getBeeperQueue(@Request() request: express.Request): Promise<APIResponse | GetBeeperQueueResult> {
-
         const result = await BeepORM.queueEntryRepository.find({ beeper: request.user.user });
 
-        //after processing, send data.
-        this.setStatus(200);
         return {
             status: APIStatus.Success,
             queue: result
@@ -139,7 +135,7 @@ export class BeeperController extends Controller {
     })
     @Security("token")
     @Patch("queue/status")
-    public async setBeeperQueue (@Request() request: express.Request, @Body() requestBody: SetBeeperQueueParams): Promise<APIResponse> {
+    public async setBeeperQueue(@Request() request: express.Request, @Body() requestBody: SetBeeperQueueParams): Promise<APIResponse> {
         const queueEntry = await BeepORM.queueEntryRepository.findOneOrFail(requestBody.queueID, { populate: true });
 
         if (requestBody.value == 'accept' || requestBody.value == 'deny') {
@@ -164,10 +160,12 @@ export class BeeperController extends Controller {
 
             request.user.user.queueSize++;
 
-            sendNotification(queueEntry.rider, "A beeper has accepted your beep request", "You will recieve another notification when they are on their way to pick you up.");
+            sendNotification(queueEntry.rider, `${request.user.user.name} has accepted your beep request`, "You will recieve another notification when they are on their way to pick you up.");
 
-            await BeepORM.queueEntryRepository.persistAndFlush(queueEntry);
-            await BeepORM.userRepository.persistAndFlush(request.user.user);
+            BeepORM.queueEntryRepository.persist(queueEntry);
+            BeepORM.userRepository.persist(request.user.user);
+
+            await BeepORM.em.flush();
 
             return new APIResponse(APIStatus.Success, "Successfully accepted rider in queue.");
         }
@@ -194,7 +192,7 @@ export class BeeperController extends Controller {
             await BeepORM.em.flush();
 
             if (requestBody.value == "deny") {
-                sendNotification(queueEntry.rider, "A beeper has denied your beep request", "Open your app to find a diffrent beeper.");
+                sendNotification(queueEntry.rider, `${request.user.user.name} has denied your beep request`, "Open your app to find a diffrent beeper.");
             }
 
             //if we reached this point, operation was successful
@@ -206,10 +204,10 @@ export class BeeperController extends Controller {
 
             switch(queueEntry.state) {
                 case 1:
-                    sendNotification(queueEntry.rider, "Your beeper is on their way!", "Your beeper is on their way to pick you up.");
+                    sendNotification(queueEntry.rider, `${request.user.user.name} is on their way!`, "Your beeper is on their way to pick you up.");
                 break;
                 case 2:
-                    sendNotification(queueEntry.rider, "Your beeper is here!", "Your beeper is here to pick you up.");
+                    sendNotification(queueEntry.rider, `${request.user.user.name} is here!`, "Your beeper is here to pick you up.");
                 break;
                 case 3:
                     break;
