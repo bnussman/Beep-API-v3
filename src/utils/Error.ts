@@ -1,5 +1,6 @@
 import { Response, Request, NextFunction} from "express";
 import { ValidateError } from "tsoa";
+import * as Sentry from "@sentry/node";
 
 export enum APIStatus {
     Success = "success",
@@ -44,5 +45,8 @@ export function errorHandler(error: unknown, request: Request, response: Respons
         console.error(error);
         return response.status(500).json(new APIResponse(APIStatus.Error, error.message));
     }
+
+    Sentry.captureException(error);
+
     next();
 }
