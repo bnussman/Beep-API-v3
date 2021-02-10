@@ -1,6 +1,6 @@
 import express from 'express';
 import * as Sentry from "@sentry/node";
-import { Response, Controller, Request, Route, Get, Example, Security, Tags, Query, Path, Delete, Patch, Body } from 'tsoa';
+import { Controller, Request, Route, Get, Security, Tags, Query, Path, Delete, Patch, Body } from 'tsoa';
 import { APIStatus, APIResponse } from "../utils/Error";
 import { EditUserParams, UserResult, UsersResult } from "../users/users";
 import { deleteUser } from '../account/helpers';
@@ -19,18 +19,6 @@ export class UsersController extends Controller {
      * if user has admin permission (auth is OPTIONAL), they will get more personal information about the user
      * @returns {UserResult | APIResponse}
      */
-    @Example<UserResult>({
-        status: APIStatus.Success, 
-        user: new User()
-    })
-    @Response<APIResponse>(404, "User not found", {
-        status: APIStatus.Error, 
-        message: "That user does not exist"
-    })
-    @Response<APIResponse>(500, "Server Error", {
-        status: APIStatus.Error, 
-        message: "Unable to get user profile"
-    })
     @Security("optionalAdmin")
     @Get("{id}")
     public async getUser(@Request() request: express.Request, @Path() id: string): Promise<UserResult | APIResponse> {
@@ -41,7 +29,6 @@ export class UsersController extends Controller {
             return new APIResponse(APIStatus.Error, "User not found");
         }
 
-        this.setStatus(200);
         return {
             status: APIStatus.Success,
             user: user
@@ -52,14 +39,6 @@ export class UsersController extends Controller {
      * Delete an account by user id
      * @returns {APIResponse}
      */
-    @Example<APIResponse>({
-        status: APIStatus.Success,
-        message: "Successfully deleted user"
-    })
-    @Response<APIResponse>(500, "Server Error", {
-        status: APIStatus.Error,
-        message: "Unable to delete user"
-    })
     @Security("token", ["admin"])
     @Delete("{id}")
     public async removeUser(@Path() id: string): Promise<APIResponse> {
@@ -71,7 +50,6 @@ export class UsersController extends Controller {
         }
 
         if (await deleteUser(user)) {
-            this.setStatus(200);
             return new APIResponse(APIStatus.Success, "Successfully deleted user");
         }
 
@@ -84,19 +62,11 @@ export class UsersController extends Controller {
      * @param {EditUserParams} requestBody - user can send any or all account params
      * @returns {APIResponse}
      */
-    @Example<APIResponse>({
-        status: APIStatus.Success,
-        message: "Successfully edited profile."
-    })
-    @Response<APIResponse>(500, "Server Error", {
-        status: APIStatus.Error,
-        message: "Unable to edit account"
-    })
     @Security("token", ["admin"])
     @Patch("{id}")
     public async editUser(@Path() id: string, @Body() requestBody: EditUserParams): Promise<APIResponse> {
 
-        const user = await BeepORM.userRepository.findOne(new ObjectId(id));
+        const user = await BeepORM.userRepository.findOne(id);
 
         if (!user) {
             this.setStatus(404);
@@ -121,39 +91,6 @@ export class UsersController extends Controller {
      * @param {number} [show] how many to show from start
      * @returns {UsersResponse | APIResponse} [result]
      */
-    /*
-    @Example<UsersResult>({
-        status: APIStatus.Success,
-        total: 128,
-        users: [
-            {
-                capacity: 4,
-                email: "Johnsonna4@appstate.edu",
-                first: "Noah",
-                groupRate: 2,
-                id: "084b0675-16d3-44cb-ba45-37bfb1af629f",
-                inQueueOfUserID: null,
-                isBeeping: false,
-                isEmailVerified: false,
-                isStudent: false,
-                last: "Johnson",
-                masksRequired: false,
-                phone: "7047518820",
-                photoUrl: "https://ridebeepapp.s3.amazonaws.com/images/084b0675-16d3-44cb-ba45-37bfb1af629f-1607225573321.jpg",
-                pushToken: "ExponentPushToken[W7I1iPJejTZzuCbW07g7ZL]",
-                queueSize: 0,
-                singlesRate: 3,
-                userLevel: 0,
-                username: "Naj251",
-                venmo: "Noah-Johnson-234"
-            }
-        ]
-    })
-    */
-    @Response<APIResponse>(500, "Server Error", {
-        status: APIStatus.Error,
-        message: "Unable to get users"
-    })
     @Security("token", ["admin"])
     @Get()
     public async getUsers(@Query() offset?: number, @Query() show?: number): Promise<UsersResult | APIResponse> {
@@ -170,38 +107,6 @@ export class UsersController extends Controller {
      * Get all of the rides of this user in the history table
      * @returns {RiderHistoryResult | APIResponse}
      */
-    /*
-    @Example<RiderHistoryResult>({
-        status: APIStatus.Success,
-        data: [
-            {
-                beep: {
-                    beepersid: "ca34cc7b-de97-40b7-a1ab-148f6c43d073",
-                    destination: "Hoey Hall",
-                    doneTime: 1608484088896,
-                    groupSize: 1,
-                    id: "58be9754-d973-42a7-ab6c-682ff41d7da9",
-                    isAccepted: true,
-                    origin: "5617 Camelot Dr Camelot Dr Charlotte, NC 28270",
-                    riderid: "22192b90-54f8-49b5-9dcf-26049454716b",
-                    state: 3,
-                    timeEnteredQueue: 1608484062417
-                },
-                beeper: {
-                    first: "Test",
-                    id: "ca34cc7b-de97-40b7-a1ab-148f6c43d073",
-                    last: "User",
-                    photoUrl: "https://ridebeepapp.s3.amazonaws.com/images/ca34cc7b-de97-40b7-a1ab-148f6c43d073-1607039319321.jpg",
-                    username: "test"
-                }
-            }
-        ]
-    })
-    */
-    @Response<APIResponse>(500, "Server Error", {
-        status: APIStatus.Error,
-        message: "Unable to get rider history"
-    })
     @Security("token")
     @Get("{id}/history/rider")
     public async getRideHistory(@Request() request: express.Request, @Path() id: string): Promise<APIResponse | RiderHistoryResult> {
@@ -226,38 +131,6 @@ export class UsersController extends Controller {
      * Get all of the beeps of this user in the history table
      * @returns {BeeperHistoryResult | APIResponse}
      */
-    /*
-    @Example<BeeperHistoryResult>({
-        status: APIStatus.Success,
-        data: [
-            {
-                beep: {
-                    beepersid: "22192b90-54f8-49b5-9dcf-26049454716b",
-                    destination: "5617 Camelot Dr. Chatlotte, NC",
-                    doneTime: 1608504258230,
-                    groupSize: 3,
-                    id: "9f109d79-d494-4e81-91c8-20cc95edc6f8",
-                    isAccepted: true,
-                    origin: "1586-B U.S. Hwy 421 S U.S. Highway 421 South Boone, North Carolina 28607",
-                    riderid: "ca34cc7b-de97-40b7-a1ab-148f6c43d073",
-                    state: 3,
-                    timeEnteredQueue: 1608504246661
-                },
-                rider: {
-                    first: "Test",
-                    id: "ca34cc7b-de97-40b7-a1ab-148f6c43d073",
-                    last: "User",
-                    photoUrl: "https://ridebeepapp.s3.amazonaws.com/images/ca34cc7b-de97-40b7-a1ab-148f6c43d073-1607039319321.jpg",
-                    username: "test"
-                }
-            }
-        ]
-    })
-    */
-    @Response<APIResponse>(500, "Server Error", {
-        status: APIStatus.Error,
-        message: "Unable to get beeper history"
-    })
     @Security("token")
     @Get("{id}/history/beeper")
     public async getBeepHistory(@Request() request: express.Request, @Path() id: string): Promise<APIResponse | BeeperHistoryResult> {
@@ -300,11 +173,10 @@ export class UsersController extends Controller {
         
         for (let i = 0; i < r.length; i++) {
            if (r[i].state == -1) {
-               await BeepORM.queueEntryRepository.nativeDelete(r[i]);
+               //await BeepORM.queueEntryRepository.nativeDelete(r[i]);
+               BeepORM.queueEntryRepository.nativeDelete(r[i]);
            }
         }
-
-        //await BeepORM.em.flush();
 
         return {
             status: APIStatus.Success,

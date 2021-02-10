@@ -5,7 +5,7 @@ import { isEduEmail, deleteUser } from './helpers';
 import { Validator } from "node-input-validator";
 import * as Sentry from "@sentry/node";
 import { APIStatus, APIResponse } from "../utils/Error";
-import { Response, Body, Controller, Post, Route, Security, Tags, Request, Delete, Example, Put, Patch } from 'tsoa';
+import { Body, Controller, Post, Route, Security, Tags, Request, Delete, Put, Patch } from 'tsoa';
 import { BeepORM } from '../app';
 import { wrap } from '@mikro-orm/core';
 import { ChangePasswordParams, EditAccountParams, UpdatePushTokenParams, VerifyAccountParams, VerifyAccountResult } from './account';
@@ -19,23 +19,6 @@ export class AccountController extends Controller {
      * @param {EditAccountParams} requestBody - user should send full account data
      * @returns {APIResponse}
      */
-    @Example<APIResponse>({
-        status: APIStatus.Success,
-        message: "Successfully edited profile."
-    })
-    @Response<APIResponse>(422, "Validation Error", {
-        status: APIStatus.Error,
-        message: {
-            first: {
-                message: "The first field is mandatory.",
-                rule: "numeric"
-            }
-        }
-    })
-    @Response<APIResponse>(500, "Server Error", {
-        status: APIStatus.Error,
-        message: "Unable to edit account"
-    })
     @Security("token")
     @Patch()
     public async editAccount(@Request() request: express.Request, @Body() requestBody: EditAccountParams): Promise<APIResponse> {
@@ -54,7 +37,6 @@ export class AccountController extends Controller {
             return new APIResponse(APIStatus.Error, v.errors);
         }
 
-        //if user puts an @ at the beginning of their venmo username, rewrite it without the @ symbol
         if (requestBody.venmo.charAt(0) == '@') {
             requestBody.venmo = requestBody.venmo.substr(1, requestBody.venmo.length);
         }
@@ -64,16 +46,14 @@ export class AccountController extends Controller {
         wrap(request.user.user).assign(requestBody);
 
         await BeepORM.userRepository.persistAndFlush(request.user.user); 
-        console.log(oldEmail);
+
         if (oldEmail !== requestBody.email) {
             await BeepORM.verifyEmailRepository.nativeDelete({ user: request.user.user });
 
-            //if user made a change to their email, we need set their status to not verified and make them re-verify
-            console.log("User's email was changed, setting isEmailVerified to false");
             wrap(request.user.user).assign({ isEmailVerified: false, isStudent: false });
 
             await BeepORM.userRepository.persistAndFlush(request.user.user); 
-            //calles helper function that will create a db entry for email varification and also send the email
+
             createVerifyEmailEntryAndSendEmail(request.user.user, requestBody.email, requestBody.first);
         }
 
@@ -85,27 +65,9 @@ export class AccountController extends Controller {
      * @param {ChangePasswordParams} requestBody - user should send a new password
      * @returns {APIResponse}
      */
-    @Example<APIResponse>({
-        status: APIStatus.Success,
-        message: "Successfully changed password."
-    })
-    @Response<APIResponse>(422, "Validation Error", {
-        status: APIStatus.Error,
-        message: {
-            password: {
-                message: "The password field is mandatory.",
-                rule: "numeric"
-            }
-        }
-    })
-    @Response<APIResponse>(500, "Server Error", {
-        status: APIStatus.Error,
-        message: "Unable to change password"
-    })
     @Security("token")
     @Post("password")
     public async changePassword (@Request() request: express.Request, @Body() requestBody: ChangePasswordParams): Promise<APIResponse> {
-        //vaidator that will ensure a new password was entered
         const v = new Validator(requestBody, {
             password: "required",
         });
@@ -121,9 +83,8 @@ export class AccountController extends Controller {
         
         wrap(request.user.user).assign({password: encryptedPassword});
 
-        BeepORM.userRepository.persistAndFlush(request.user.user);
+        await BeepORM.userRepository.persistAndFlush(request.user.user);
 
-        this.setStatus(200);
         return new APIResponse(APIStatus.Success, "Successfully changed password.");
     }
 
@@ -132,22 +93,12 @@ export class AccountController extends Controller {
      * @param {UpdatePushTokenParams} requestBody - user should send an Expo Push Token
      * @returns {APIResponse}
      */
-    @Example<APIResponse>({
-        status: APIStatus.Success,
-        message: "Successfully updated push token."
-    })
-    @Response<APIResponse>(500, "Server Error", {
-        status: APIStatus.Error,
-        message: "Unable to update push token"
-    })
     @Security("token")
     @Put("pushtoken")
     public async updatePushToken (@Request() request: express.Request, @Body() requestBody: UpdatePushTokenParams): Promise<APIResponse> {
         wrap(request.user.user).assign({ pushToken: requestBody.expoPushToken });
 
-        BeepORM.userRepository.persistAndFlush(request.user.user);
-
-        this.setStatus(200);
+        await BeepORM.userRepository.persistAndFlush(request.user.user);
 
         return new APIResponse(APIStatus.Success, "Successfully updated push token.");
     }
@@ -157,32 +108,8 @@ export class AccountController extends Controller {
      * @param {VerifyAccountParams} requestBody - user should send the token of the verify account entry
      * @returns {VerifyAccountResult | APIResponse}
      */
-    @Example<VerifyAccountResult>({
-        status: APIStatus.Success,
-        message: "Successfully verified email",
-        data: {
-            email: "bnussman@gmail.com",
-            isEmailVerified: true
-        }
-    })
-    @Response<APIResponse>(400, "Bad Request", {
-        status: APIStatus.Error,
-        message: "You tried to verify an email address that is not the same as your current email."
-    })
-    @Response<APIResponse>(404, "Verify account request not found", {
-        status: APIStatus.Error,
-        message: "Invalid verify email token"
-    })
-    @Response<APIResponse>(410, "Token expired", {
-        status: APIStatus.Error,
-        message: "Your verification token has expired"
-    })
-    @Response<APIResponse>(500, "Server Error", {
-        status: APIStatus.Error,
-        message: "Unable to verify account"
-    })
     @Post("verify")
-    public async verifyAccount (@Body() requestBody: VerifyAccountParams): Promise<VerifyAccountResult | APIResponse> {
+    public async verifyAccount(@Body() requestBody: VerifyAccountParams): Promise<VerifyAccountResult | APIResponse> {
         const entry = await BeepORM.verifyEmailRepository.findOne(requestBody.id, { populate: true });
 
         if (!entry) {
@@ -190,8 +117,6 @@ export class AccountController extends Controller {
             return new APIResponse(APIStatus.Error, "Invalid verify email token");
         }
 
-        //check to see if 1 hour has passed since the initial request, if so, report an error.
-        //3600 seconds in an hour, multiplied by 1000 because javascripts handles Unix time in ms
         if ((entry.time + (3600 * 1000)) < Date.now()) {
             this.setStatus(410);
             await BeepORM.verifyEmailRepository.removeAndFlush(entry);
@@ -200,8 +125,7 @@ export class AccountController extends Controller {
 
         const usersEmail: string | undefined = entry.user.email;
 
-        //this case should not happen because of validation, but just in case
-        if(!usersEmail) {
+        if (!usersEmail) {
             this.setStatus(400);
             await BeepORM.verifyEmailRepository.removeAndFlush(entry);
             return new APIResponse(APIStatus.Error, "Please ensure you have a valid email set in your profile. Visit your app or our website to re-send a varification email.");
@@ -216,9 +140,7 @@ export class AccountController extends Controller {
 
         let update;
 
-        //use the helper function isEduEmail to check if user is a student
         if (isEduEmail(entry.email)) {
-            //if user is a student ensure we update isStudent
             update = { isEmailVerified: true, isStudent: true };
         }
         else {
@@ -227,7 +149,7 @@ export class AccountController extends Controller {
 
         const user = await BeepORM.userRepository.findOne(entry.user);
 
-        if (!user) return new APIResponse(APIStatus.Error, "error");
+        if (!user) return new APIResponse(APIStatus.Error, "You tried to verify an account that does not exist");
 
         wrap(user).assign(update);
 
@@ -235,34 +157,23 @@ export class AccountController extends Controller {
 
         await BeepORM.verifyEmailRepository.removeAndFlush(entry);
 
-        return ({
+        return {
             status: APIStatus.Success,
             message: "Successfully verified email",
             data: {...update, email: entry.email}
-        });
+        };
     }
 
     /**
      * Resend a verification email to a user
      * @returns {APIResponse}
      */
-    @Example<APIResponse>({
-        status: APIStatus.Success,
-        message: "Successfully re-sent varification email to banks@nussman.us"
-    })
-    @Response<APIResponse>(500, "Server Error", {
-        status: APIStatus.Error,
-        message: "Unable to resend varification email"
-    })
     @Security("token")
     @Post("verify/resend")
     public async resendEmailVarification(@Request() request: express.Request): Promise<APIResponse> {
         await BeepORM.verifyEmailRepository.nativeDelete({ user: request.user.user });
 
-        //create a new entry with their current email address and send in email
-        await createVerifyEmailEntryAndSendEmail(request.user.user, request.user.user.email, request.user.user.first);
-
-        console.log(request.user);
+        createVerifyEmailEntryAndSendEmail(request.user.user, request.user.user.email, request.user.user.first);
 
         return new APIResponse(APIStatus.Success, "Successfully re-sent varification email to " + request.user.user.email);
     }
@@ -271,21 +182,13 @@ export class AccountController extends Controller {
      * Delete your own user account
      * @returns {APIResponse}
      */
-    @Example<APIResponse>({
-        status: APIStatus.Success,
-        message: "Successfully deleted user"
-    })
-    @Response<APIResponse>(500, "Server Error", {
-        status: APIStatus.Error,
-        message: "Unable to delete user"
-    })
     @Security("token")
     @Delete()
     public async deleteAccount(@Request() request: express.Request): Promise<APIResponse> {
         if (await deleteUser(request.user.user)) {
-            this.setStatus(200);
             return new APIResponse(APIStatus.Success, "Successfully deleted user");
         }
+
         this.setStatus(500);
         return new APIResponse(APIStatus.Error, "Unable to delete user");
     }
