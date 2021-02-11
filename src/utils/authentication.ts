@@ -2,10 +2,11 @@ import * as express from "express";
 import * as Sentry from "@sentry/node";
 import { APIStatus, APIAuthResponse } from "./Error";
 import { BeepORM } from "../app";
-import { ObjectId } from "@mikro-orm/mongodb";
 import { UserRole } from "../entities/User";
+import { AuthChecker } from "type-graphql";
+import { Context } from "../utils/context";
 
-export async function expressAuthentication(request: express.Request, securityName: string, scopes?: string[]): Promise<any> {
+export async function oldAuthChecker(request: express.Request, securityName: string, scopes?: string[]): Promise<any> {
     if (securityName === "token") {
         const token: string | undefined = request.get("Authorization")?.split(" ")[1];
 
@@ -47,3 +48,26 @@ export async function expressAuthentication(request: express.Request, securityNa
         }
     }
 }
+
+// create auth checker function
+export const authChecker: AuthChecker<Context> = ({ context: { user } }, roles) => {
+    console.log("Context", user);
+    console.log("Roles", roles);
+    if (roles.length === 0) {
+      // if `@Authorized()`, check only if user exists
+      return user != null;
+    }
+    // there are some roles defined now
+  
+    if (!user) {
+      // and if no user, restrict access
+      return false;
+    }
+
+    if (roles[0] == user.role) {
+      // grant access if the role matches specified
+      return true;
+    }
+
+    return false;
+  };
