@@ -1,4 +1,5 @@
 import { ObjectId } from '@mikro-orm/mongodb';
+import { TokenEntry } from '../entities/TokenEntry';
 import { User } from '../entities/User';
 
 export interface TokenData {
@@ -56,21 +57,10 @@ export interface UserPluckResult {
     isStudent?: boolean;
 }
 
-export interface TokenEntry {
-    id: string,
-    tokenid: string,
-    userid: string
-}
-
 export interface TokenPluckResult {
     id?: string,
     tokenid?: string,
     userid?: string
-}
-
-export interface AuthUser {
-    user: User,
-    token: TokenEntry
 }
 
 export interface BeepTableResult {
@@ -90,7 +80,7 @@ export interface BeepTableResult {
 declare global {
     namespace Express {
         export interface Request {
-            user: AuthUser;
+            user: { user: User, token: TokenEntry };
         }
     }
 }

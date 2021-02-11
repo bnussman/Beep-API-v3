@@ -41,7 +41,7 @@ export class UserResolver {
         return false;
     }
 
-    @Query(returns => User)
+    @Mutation(returns => User)
     @Authorized(UserRole.ADMIN)
     public async editUser(@Arg('data') data: EditUserValidator, @Arg("id") id: string) {
         const user = await BeepORM.userRepository.findOne(id);

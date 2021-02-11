@@ -6,53 +6,28 @@ import { UserRole } from "../entities/User";
 import { AuthChecker } from "type-graphql";
 import { Context } from "../utils/context";
 
-export async function oldAuthChecker(request: express.Request, securityName: string, scopes?: string[]): Promise<any> {
-    if (securityName === "token") {
-        const token: string | undefined = request.get("Authorization")?.split(" ")[1];
+export async function oldAuthChecker(req: express.Request, res: express.Response, next: express.NextFunction): Promise<any> {
+        const token: string | undefined = req.get("Authorization")?.split(" ")[1];
 
         if (!token) {
-            return Promise.reject(new APIAuthResponse(APIStatus.Error, "You must provide an authentication token"));
-        }
-
-        const tokenEntryResult = await BeepORM.tokenRepository.findOne(token, { populate: true });
-
-        if (!tokenEntryResult) {
-            return Promise.reject(new APIAuthResponse(APIStatus.Error, "Your token is not valid"));
-        }
-
-        if (scopes && (scopes[0] == "admin")) {
-            if (tokenEntryResult.user.role != UserRole.ADMIN) {
-                return Promise.reject(new APIAuthResponse(APIStatus.Error, "You must be an admin to use this endpoint"));
-            }
-        }
-
-        return Promise.resolve({ token: tokenEntryResult, user: tokenEntryResult.user });
-    }
-    else if (securityName == "optionalAdmin") {
-        const token: string | undefined = request.get("Authorization")?.split(" ")[1];
-
-        if (!token) {
-            return Promise.resolve();
-        }
+            next();
+            return;
+        };
 
         const tokenEntryResult = await BeepORM.tokenRepository.findOne(token, { populate: true });
 
         if (tokenEntryResult) {
-            if (tokenEntryResult.user.role == UserRole.ADMIN) {
-                return Promise.resolve({ token: token, user: tokenEntryResult.user });
-            }
-            return Promise.resolve();
+            req.user = { user: tokenEntryResult.user, token: tokenEntryResult };
         }
-        else {
-            return Promise.resolve();
-        }
-    }
+
+        next();
 }
 
 // create auth checker function
-export const authChecker: AuthChecker<Context> = ({ context: { user } }, roles) => {
-    console.log("Context", user);
-    console.log("Roles", roles);
+export const authChecker: AuthChecker<Context> = ({ context }, roles) => {
+    //@ts-ignore
+    const user = context.req.user.user;
+    console.log("Checking auth");
     if (roles.length === 0) {
       // if `@Authorized()`, check only if user exists
       return user != null;

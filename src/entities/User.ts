@@ -40,7 +40,6 @@ export class User {
     @Property()
     venmo!: string;
 
-    @Field()
     @Property({ lazy: true })
     password?: string;
 

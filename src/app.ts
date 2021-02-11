@@ -21,7 +21,7 @@ import { GraphQLSchema } from "graphql";
 import { buildSchema } from 'type-graphql';
 import { graphqlHTTP } from 'express-graphql';
 import { UserResolver } from './users/resolver';
-import {authChecker} from "./utils/authentication";
+import {authChecker, oldAuthChecker} from "./utils/authentication";
 
 const url = `mongodb+srv://banks:${process.env.MONGODB_PASSWORD}@beep.5zzlx.mongodb.net/test?retryWrites=true&w=majority`;
 
@@ -92,6 +92,8 @@ export default class BeepAPIServer {
         this.app.use("/healthcheck", healthcheck);
         this.app.use("/.well-known/acme-challenge/:id", healthcheck);
         this.app.get('/graphql', expressPlayground({ endpoint: '/graphql' }));
+
+        this.app.use(oldAuthChecker);
 
         initializeSentry(this.app);
 
