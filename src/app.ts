@@ -61,7 +61,7 @@ export default class BeepAPIServer {
     private async setup(): Promise<void> {
 
         BeepORM.orm = await MikroORM.init({
-            entities: ['./build/src/entities/*.js'],
+            entities: ['./build/entities/*.js'],
             entitiesTs: ['./src/entities/*.ts'],
             dbName: 'beep',
             type: 'mongo',
