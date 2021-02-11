@@ -1,88 +1,88 @@
 import express from 'express';
-import * as Sentry from "@sentry/node";
-import { APIStatus, APIResponse } from "../utils/Error";
-import { EditUserParams, UserResult, UsersResult } from "../users/users";
+import { EditUserParams, UserResult } from "../users/users";
 import { deleteUser } from '../account/helpers';
-import { BeeperHistoryResult, RiderHistoryResult } from '../account/account';
 import { BeepORM } from '../app';
 import { ObjectId } from '@mikro-orm/mongodb';
 import { wrap } from '@mikro-orm/core';
 import { User, UserRole } from '../entities/User';
+import { Arg, Args, Authorized, Mutation, Query, Resolver } from 'type-graphql';
+import PaginationArgs from '../args/Pagination';
+import { Beep } from '../entities/Beep';
+import { QueueEntry } from '../entities/QueueEntry';
+import EditUserValidator from '../validators/user/EditUser';
 
-export class UsersController {
+@Resolver(User)
+export class UserResolver {
 
-    public async getUser(request: express.Request, id: string): Promise<UserResult | APIResponse> {
+    @Query(returns => User)
+    public async getUser(@Arg("id") id: string) {
         const user = await BeepORM.userRepository.findOne(id);
 
         if (!user) {
-            return new APIResponse(APIStatus.Error, "User not found");
+            throw new Error("User not found");
         }
 
-        return {
-            status: APIStatus.Success,
-            user: user
-        };
+        return user;
     }
 
-    public async removeUser(id: string): Promise<APIResponse> {
+    @Mutation(returns => Boolean)
+    @Authorized(UserRole.ADMIN)
+    public async removeUser(@Arg("id") id: string) {
         const user = BeepORM.em.getReference(User, new ObjectId(id));
 
         if (!user) {
-            return new APIResponse(APIStatus.Error, "User not found");
+            throw new Error("User not found");
         }
 
         if (await deleteUser(user)) {
-            return new APIResponse(APIStatus.Success, "Successfully deleted user");
+            return true;
         }
 
-        return new APIResponse(APIStatus.Error, "Unable to delete user");
+        return false;
     }
 
-    public async editUser(id: string, requestBody: EditUserParams): Promise<APIResponse> {
-
+    @Query(returns => User)
+    @Authorized(UserRole.ADMIN)
+    public async editUser(@Arg('data') data: EditUserValidator, @Arg("id") id: string) {
         const user = await BeepORM.userRepository.findOne(id);
 
         if (!user) {
-            return new APIResponse(APIStatus.Error, "User not found");
+            throw new Error("User not found");
         }
 
-        wrap(user).assign(requestBody);
+        wrap(user).assign(data);
 
         await BeepORM.userRepository.persistAndFlush(user);
 
-        return new APIResponse(APIStatus.Success, "Successfully edited user");
+        return user;
     }
 
-    public async getUsers(offset?: number, show?: number): Promise<UsersResult | APIResponse> {
+    @Query(returns => [User])
+    @Authorized(UserRole.ADMIN)
+    public async getUsers(@Args() { offset, show }: PaginationArgs) {
         const [users, count] = await BeepORM.em.findAndCount(User, {}, { limit: show, offset: offset });
 
         return {
-            status: APIStatus.Success,
             total: count,
             users: users
         };
     }
 
-
-    public async getRideHistory(request: express.Request, id: string): Promise<APIResponse | RiderHistoryResult> {
-        const r = await BeepORM.beepRepository.find({ rider: new ObjectId(id) }, { populate: true });
-
-        return {
-            status: APIStatus.Success,
-            data: r
-        };
+    @Query(returns => [Beep])
+    @Authorized()
+    public async getRideHistory(@Arg("id") id: string) {
+        return await BeepORM.beepRepository.find({ rider: id }, { populate: true });
     }
 
-    public async getBeepHistory(request: express.Request, id: string): Promise<APIResponse | BeeperHistoryResult> {
-        const r = await BeepORM.beepRepository.find({ beeper: new ObjectId(id) }, { populate: true });
-
-        return {
-            status: APIStatus.Success,
-            data: r
-        };
+    @Query(returns => [Beep])
+    @Authorized()
+    public async getBeepHistory(@Arg("id") id: string) {
+        return await BeepORM.beepRepository.find({ beeper: id }, { populate: true });
     }
 
-    public async getQueue(request: express.Request, id: string): Promise<APIResponse | any> {
+    @Query(returns => [QueueEntry])
+    @Authorized()
+    public async getQueue(@Arg("id") id: string) {
         const r = await BeepORM.queueEntryRepository.find({ beeper: id }, { populate: true });
         
         for (let i = 0; i < r.length; i++) {
@@ -92,9 +92,6 @@ export class UsersController {
            }
         }
 
-        return {
-            status: APIStatus.Success,
-            queue: r.filter(entry => entry.state != -1)
-        };
+        return r.filter(entry => entry.state != -1);
     }
 }

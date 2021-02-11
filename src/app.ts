@@ -1,5 +1,5 @@
 import express from "express";
-import { Express, Application } from "express";
+import { Application } from "express";
 import healthcheck from "./healthcheck/routes";
 import { errorHandler } from "./utils/Error";
 import { handleNotFound } from "./utils/404";
@@ -16,6 +16,11 @@ import { Beep } from "./entities/Beep";
 import { ForgotPassword } from "./entities/ForgotPassword";
 import { Report } from "./entities/Report";
 import { Location } from "./entities/Location";
+import expressPlayground from 'graphql-playground-middleware-express';
+import { GraphQLSchema } from "graphql";
+import { buildSchema } from 'type-graphql';
+import { graphqlHTTP } from 'express-graphql';
+import { UserResolver } from './users/resolver';
 
 const url = `mongodb+srv://banks:${process.env.MONGODB_PASSWORD}@beep.5zzlx.mongodb.net/test?retryWrites=true&w=majority`;
 
@@ -85,12 +90,36 @@ export default class BeepAPIServer {
         this.app.disable('x-powered-by')
         this.app.use("/healthcheck", healthcheck);
         this.app.use("/.well-known/acme-challenge/:id", healthcheck);
+        this.app.get('/graphql', expressPlayground({ endpoint: '/graphql' }));
 
         initializeSentry(this.app);
 
         this.app.use(Sentry.Handlers.requestHandler({
             user: ["id"]
         }));
+
+        try {
+            const schema: GraphQLSchema = await buildSchema({
+                resolvers: [UserResolver],
+                dateScalarMode: 'isoDate',
+            });
+
+            this.app.post(
+                '/graphql',
+                express.json(),
+                graphqlHTTP((req, res) => ({
+                    schema,
+                    context: { req, res, em: BeepORM.em.fork() },
+                    customFormatErrorFn: (error) => {
+                        throw error;
+                    },
+                })),
+            );
+        }
+        catch(error) {
+            console.error(error);
+        }
+
 
         this.app.use(Sentry.Handlers.tracingHandler());
 
