@@ -1,8 +1,5 @@
 import * as express from "express";
-import * as Sentry from "@sentry/node";
-import { APIStatus, APIAuthResponse } from "./Error";
 import { BeepORM } from "../app";
-import { UserRole } from "../entities/User";
 import { AuthChecker } from "type-graphql";
 import { Context } from "../utils/context";
 
@@ -26,7 +23,9 @@ export async function oldAuthChecker(req: express.Request, res: express.Response
 // create auth checker function
 export const authChecker: AuthChecker<Context> = ({ context }, roles) => {
     //@ts-ignore
-    const user = context.req.user.user;
+    const user = context.req.user?.user;
+    //@ts-ignore
+    if (!user) return false;
     console.log("Checking auth");
     if (roles.length === 0) {
       // if `@Authorized()`, check only if user exists

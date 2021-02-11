@@ -62,10 +62,9 @@ export class UserResolver {
     public async getUsers(@Args() { offset, show }: PaginationArgs) {
         const [users, count] = await BeepORM.em.findAndCount(User, {}, { limit: show, offset: offset });
 
-        return {
-            total: count,
-            users: users
-        };
+        //TODO: we need to return count along with result for pagination
+
+        return users;
     }
 
     @Query(returns => [Beep])

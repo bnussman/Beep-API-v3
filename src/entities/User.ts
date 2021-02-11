@@ -79,7 +79,7 @@ export class User {
     @Enum()
     role: UserRole = UserRole.USER;
 
-    @Field()
+    @Field({ nullable: true })
     @Property({ nullable: true, lazy: true })
     pushToken?: string;
 
