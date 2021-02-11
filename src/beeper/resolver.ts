@@ -2,26 +2,15 @@ import * as express from 'express';
 import { sendNotification } from '../utils/notifications';
 import { Validator } from 'node-input-validator';
 import * as Sentry from "@sentry/node";
-import { Controller, Request, Body, Tags, Security, Route, Get, Patch } from 'tsoa';
 import { APIResponse, APIStatus } from '../utils/Error';
 import { GetBeeperQueueResult, SetBeeperQueueParams, SetBeeperStatusParams } from './beeper';
 import { wrap } from '@mikro-orm/core';
 import { BeepORM } from '../app';
 import { Beep } from '../entities/Beep';
 
-@Tags("Beeper")
-@Route("beeper")
-export class BeeperController extends Controller {
+export class BeeperController {
 
-    /**
-     * Users use this to set if they are beeping or not
-     * It also allows them to update their rates and mask settings
-     * @param {SetBeeperStatusParams} requestBody - client sends rates, isBeeping status, mask setting, and capacity
-     * @returns {APIResponse} 
-     */
-    @Security("token")
-    @Patch("status")
-    public async setBeeperStatus(@Request() request: express.Request, @Body() requestBody: SetBeeperStatusParams): Promise<APIResponse> {
+    public async setBeeperStatus(request: express.Request, requestBody: SetBeeperStatusParams): Promise<APIResponse> {
         const v = new Validator(requestBody, {
             singlesRate: "required|numeric",
             groupRate: "required|numeric",
@@ -33,12 +22,10 @@ export class BeeperController extends Controller {
         const matched = await v.check();
 
         if (!matched) {
-            this.setStatus(422);
             return new APIResponse(APIStatus.Error, v.errors);
         }
 
         if ((requestBody.isBeeping == false) && (request.user.user.queueSize > 0)) {
-            this.setStatus(400);
             return new APIResponse(APIStatus.Error, "You can't stop beeping when you still have beeps to complete or riders in your queue");
         }
 
@@ -49,37 +36,20 @@ export class BeeperController extends Controller {
         return new APIResponse(APIStatus.Success, "Successfully updated beeping status");
     }
 
-
-    /**
-     * User calls this to get there queue when beeping.
-     * Our Socket server is responcible for telling a client a change occoured, it will prompt
-     * a call to this endpoint to get the queue and data
-     * @returns {GetBeeperQueueResult | APIResponse} 
-     */
-    @Security("token")
-    @Get("queue")
-    public async getBeeperQueue(@Request() request: express.Request): Promise<APIResponse | GetBeeperQueueResult> {
+    public async getBeeperQueue(request: express.Request): Promise<APIResponse | GetBeeperQueueResult> {
         return {
             status: APIStatus.Success,
             queue: await BeepORM.queueEntryRepository.find({ beeper: request.user.user })
         };
     }
     
-    /**
-     * A beeper calls this to set the status of one entry in their queue
-     * @param {SetBeeperQueueParams} requestBody - beeper sends the status they want to set, the rider's id, and the queue entry id
-     * @returns {APIResponse}
-     */
-    @Security("token")
-    @Patch("queue/status")
-    public async setBeeperQueue(@Request() request: express.Request, @Body() requestBody: SetBeeperQueueParams): Promise<APIResponse> {
+    public async setBeeperQueue(request: express.Request, requestBody: SetBeeperQueueParams): Promise<APIResponse> {
         const queueEntry = await BeepORM.queueEntryRepository.findOneOrFail(requestBody.queueID, { populate: true });
 
         if (requestBody.value == 'accept' || requestBody.value == 'deny') {
             const numRidersBefore = await BeepORM.queueEntryRepository.count({ timeEnteredQueue: { $lt: queueEntry.timeEnteredQueue }, isAccepted: false });
 
             if (numRidersBefore != 0) {
-                this.setStatus(400);
                 return new APIResponse(APIStatus.Error, "You must respond to the rider who first joined your queue.");
             }
         }
@@ -87,7 +57,6 @@ export class BeeperController extends Controller {
             const numRidersBefore = await BeepORM.queueEntryRepository.count({ timeEnteredQueue: { $lt: queueEntry.timeEnteredQueue }, isAccepted: true });
 
             if (numRidersBefore != 0) {
-                this.setStatus(400);
                 return new APIResponse(APIStatus.Error, "You must respond to the rider who first joined your queue.");
             }
         }

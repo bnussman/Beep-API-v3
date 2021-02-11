@@ -1,4 +1,3 @@
-import { Route, Security, Post, Request, Tags } from "tsoa";
 import * as Sentry from "@sentry/node";
 import AWS from 'aws-sdk';
 import express from "express";
@@ -7,13 +6,9 @@ import { APIResponse, APIStatus } from "../utils/Error";
 import { ProfilePhotoResponse } from "./files";
 import { BeepORM } from "../app";
 
-@Tags("Files")
-@Route("files")
 export class FilesController {
 
-    @Security("token")
-    @Post("upload")
-    public async uploadFile(@Request() request: express.Request): Promise<ProfilePhotoResponse | APIResponse> {
+    public async uploadFile(request: express.Request): Promise<ProfilePhotoResponse | APIResponse> {
         const s3 = new AWS.S3({
             accessKeyId: process.env.AWS_ACCESS_KEY_ID,
             secretAccessKey: process.env.AWS_ACCESS_KEY_SECRET

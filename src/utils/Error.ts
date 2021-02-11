@@ -1,5 +1,4 @@
 import { Response, Request, NextFunction} from "express";
-import { ValidateError } from "tsoa";
 import * as Sentry from "@sentry/node";
 
 export enum APIStatus {
@@ -25,19 +24,6 @@ export class APIAuthResponse extends APIResponse {
 } 
 
 export function errorHandler(error: unknown, request: Request, response: Response, next: NextFunction): Response | void {
-    if (error instanceof ValidateError) {
-        /*
-        return response.status(422).json({
-            status: "error",
-            message: "You did not provide the correct paramaters to use this api endpoint",
-        });
-        */
-        return response.status(422).json({
-            status: "error",
-            message: "You did not provide the correct paramaters to use this api endpoint",
-            details: error?.fields,
-        });
-    }
     if (error instanceof APIAuthResponse) {
         return response.status(401).json(error);
     }

@@ -1,7 +1,6 @@
 import express from "express";
 import { Express, Application } from "express";
 import healthcheck from "./healthcheck/routes";
-import { RegisterRoutes } from "../build/routes";
 import { errorHandler } from "./utils/Error";
 import { handleNotFound } from "./utils/404";
 import * as Sentry from "@sentry/node";
@@ -94,8 +93,6 @@ export default class BeepAPIServer {
         }));
 
         this.app.use(Sentry.Handlers.tracingHandler());
-
-        RegisterRoutes(this.app as Express);
 
         this.app.use(Sentry.Handlers.errorHandler());
 

@@ -5,23 +5,13 @@ import { isEduEmail, deleteUser } from './helpers';
 import { Validator } from "node-input-validator";
 import * as Sentry from "@sentry/node";
 import { APIStatus, APIResponse } from "../utils/Error";
-import { Body, Controller, Post, Route, Security, Tags, Request, Delete, Put, Patch } from 'tsoa';
 import { BeepORM } from '../app';
 import { wrap } from '@mikro-orm/core';
 import { ChangePasswordParams, EditAccountParams, UpdatePushTokenParams, VerifyAccountParams, VerifyAccountResult } from './account';
 
-@Tags("Account")
-@Route("account")
-export class AccountController extends Controller {
+export class AccountController {
 
-    /**
-     * Edit your user account
-     * @param {EditAccountParams} requestBody - user should send full account data
-     * @returns {APIResponse}
-     */
-    @Security("token")
-    @Patch()
-    public async editAccount(@Request() request: express.Request, @Body() requestBody: EditAccountParams): Promise<APIResponse> {
+    public async editAccount(request: express.Request, requestBody: EditAccountParams): Promise<APIResponse> {
         const v = new Validator(requestBody, {
             first: "required|alpha",
             last: "required|alpha",
@@ -33,7 +23,6 @@ export class AccountController extends Controller {
         const matched = await v.check();
 
         if (!matched) {
-            this.setStatus(422);
             return new APIResponse(APIStatus.Error, v.errors);
         }
 
@@ -60,14 +49,7 @@ export class AccountController extends Controller {
         return new APIResponse(APIStatus.Success, "Successfully edited profile.");
     }
 
-    /**
-     * Change your password when authenticated with this endpoint
-     * @param {ChangePasswordParams} requestBody - user should send a new password
-     * @returns {APIResponse}
-     */
-    @Security("token")
-    @Post("password")
-    public async changePassword (@Request() request: express.Request, @Body() requestBody: ChangePasswordParams): Promise<APIResponse> {
+    public async changePassword(request: express.Request, requestBody: ChangePasswordParams): Promise<APIResponse> {
         const v = new Validator(requestBody, {
             password: "required",
         });
@@ -75,7 +57,6 @@ export class AccountController extends Controller {
         const matched = await v.check();
 
         if (!matched) {
-            this.setStatus(422);
             return new APIResponse(APIStatus.Error, v.errors);
         }
 
@@ -88,14 +69,8 @@ export class AccountController extends Controller {
         return new APIResponse(APIStatus.Success, "Successfully changed password.");
     }
 
-    /**
-     * Update your Push Token to a new push token to ensure mobile device gets notified by Expo
-     * @param {UpdatePushTokenParams} requestBody - user should send an Expo Push Token
-     * @returns {APIResponse}
-     */
-    @Security("token")
-    @Put("pushtoken")
-    public async updatePushToken (@Request() request: express.Request, @Body() requestBody: UpdatePushTokenParams): Promise<APIResponse> {
+
+    public async updatePushToken (request: express.Request, requestBody: UpdatePushTokenParams): Promise<APIResponse> {
         wrap(request.user.user).assign({ pushToken: requestBody.expoPushToken });
 
         await BeepORM.userRepository.persistAndFlush(request.user.user);
@@ -103,22 +78,14 @@ export class AccountController extends Controller {
         return new APIResponse(APIStatus.Success, "Successfully updated push token.");
     }
 
-    /**
-     * Verify your account by using the token sent to your email.
-     * @param {VerifyAccountParams} requestBody - user should send the token of the verify account entry
-     * @returns {VerifyAccountResult | APIResponse}
-     */
-    @Post("verify")
-    public async verifyAccount(@Body() requestBody: VerifyAccountParams): Promise<VerifyAccountResult | APIResponse> {
+    public async verifyAccount(requestBody: VerifyAccountParams): Promise<VerifyAccountResult | APIResponse> {
         const entry = await BeepORM.verifyEmailRepository.findOne(requestBody.id, { populate: true });
 
         if (!entry) {
-            this.setStatus(404);
             return new APIResponse(APIStatus.Error, "Invalid verify email token");
         }
 
         if ((entry.time + (3600 * 1000)) < Date.now()) {
-            this.setStatus(410);
             await BeepORM.verifyEmailRepository.removeAndFlush(entry);
             return new APIResponse(APIStatus.Error, "Your verification token has expired");
         }
@@ -126,14 +93,12 @@ export class AccountController extends Controller {
         const usersEmail: string | undefined = entry.user.email;
 
         if (!usersEmail) {
-            this.setStatus(400);
             await BeepORM.verifyEmailRepository.removeAndFlush(entry);
             return new APIResponse(APIStatus.Error, "Please ensure you have a valid email set in your profile. Visit your app or our website to re-send a varification email.");
         }
 
         //if the user's current email is not the same as the email they are trying to verify dont prcede with the request
         if (entry.email !== usersEmail) {
-            this.setStatus(400);
             await BeepORM.verifyEmailRepository.removeAndFlush(entry);
             return new APIResponse(APIStatus.Error, "You tried to verify an email address that is not the same as your current email.");
         }
@@ -164,13 +129,7 @@ export class AccountController extends Controller {
         };
     }
 
-    /**
-     * Resend a verification email to a user
-     * @returns {APIResponse}
-     */
-    @Security("token")
-    @Post("verify/resend")
-    public async resendEmailVarification(@Request() request: express.Request): Promise<APIResponse> {
+    public async resendEmailVarification(request: express.Request): Promise<APIResponse> {
         await BeepORM.verifyEmailRepository.nativeDelete({ user: request.user.user });
 
         createVerifyEmailEntryAndSendEmail(request.user.user, request.user.user.email, request.user.user.first);
@@ -178,18 +137,11 @@ export class AccountController extends Controller {
         return new APIResponse(APIStatus.Success, "Successfully re-sent varification email to " + request.user.user.email);
     }
     
-    /**
-     * Delete your own user account
-     * @returns {APIResponse}
-     */
-    @Security("token")
-    @Delete()
-    public async deleteAccount(@Request() request: express.Request): Promise<APIResponse> {
+    public async deleteAccount(request: express.Request): Promise<APIResponse> {
         if (await deleteUser(request.user.user)) {
             return new APIResponse(APIStatus.Success, "Successfully deleted user");
         }
 
-        this.setStatus(500);
         return new APIResponse(APIStatus.Error, "Unable to delete user");
     }
 }
