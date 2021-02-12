@@ -1,23 +1,6 @@
 import { APIStatus } from "../utils/Error";
 import { User } from "../entities/User";
 
-/**
- * Choose Beep Params
- * 
- * @example {
- *   "origin": "397 Perkinsville Dr Perkinsville Drive Boone, North Carolina 28607",
- *   "destination": "Test",
- *   "groupSize": "1",
- *   "beepersID": "22192b90-54f8-49b5-9dcf-26049454716b"
- * }
- */
-export interface ChooseBeepParams {
-    groupSize: number;
-    origin: string;
-    destination: string;
-    beepersID: string;
-}
-
 export interface ChooseBeepResponse {
     status: APIStatus,
     beeper: User

@@ -2,6 +2,7 @@ import { Entity, ManyToOne, PrimaryKey, Property, SerializedPrimaryKey } from "@
 import { ObjectId } from "@mikro-orm/mongodb";
 import { Field, ObjectType } from "type-graphql";
 import { User } from "./User";
+import { Location } from "./Location";
 
 @ObjectType()
 @Entity()
@@ -45,4 +46,12 @@ export class QueueEntry {
     @Field(() => User)
     @ManyToOne(() => User)
     rider!: User;
+
+    @Field()
+    @Property({ persist: false })
+    ridersQueuePosition?: number;
+
+    @Field(() => Location, { nullable: true })
+    @Property({ persist: false, nullable: true })
+    location?: Location;
 }

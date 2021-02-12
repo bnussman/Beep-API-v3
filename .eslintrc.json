@@ -15,5 +15,12 @@
         "@typescript-eslint"
     ],
     "rules": {
+        "@typescript-eslint/no-inferrable-types": [
+            2,
+            {
+                "ignoreParameters": true,
+                "ignoreProperties": true
+            }
+        ]
     }
 }

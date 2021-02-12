@@ -22,9 +22,7 @@ export async function oldAuthChecker(req: express.Request, res: express.Response
 
 // create auth checker function
 export const authChecker: AuthChecker<Context> = ({ context }, roles) => {
-    //@ts-ignore
-    const user = context.req.user?.user;
-    //@ts-ignore
+    const user = context.user;
     if (!user) return false;
     console.log("Checking auth");
     if (roles.length === 0) {

@@ -1,5 +1,3 @@
-import express from 'express';
-import { EditUserParams, UserResult } from "../users/users";
 import { deleteUser } from '../account/helpers';
 import { BeepORM } from '../app';
 import { ObjectId } from '@mikro-orm/mongodb';
@@ -14,8 +12,8 @@ import EditUserValidator from '../validators/user/EditUser';
 @Resolver(User)
 export class UserResolver {
 
-    @Query(returns => User)
-    public async getUser(@Arg("id") id: string) {
+    @Query(() => User)
+    public async getUser(@Arg("id") id: string): Promise<User> {
         const user = await BeepORM.userRepository.findOne(id);
 
         if (!user) {
@@ -25,9 +23,9 @@ export class UserResolver {
         return user;
     }
 
-    @Mutation(returns => Boolean)
+    @Mutation(() => Boolean)
     @Authorized(UserRole.ADMIN)
-    public async removeUser(@Arg("id") id: string) {
+    public async removeUser(@Arg("id") id: string): Promise<boolean> {
         const user = BeepORM.em.getReference(User, new ObjectId(id));
 
         if (!user) {
@@ -41,9 +39,9 @@ export class UserResolver {
         return false;
     }
 
-    @Mutation(returns => User)
+    @Mutation(() => User)
     @Authorized(UserRole.ADMIN)
-    public async editUser(@Arg('data') data: EditUserValidator, @Arg("id") id: string) {
+    public async editUser(@Arg("id") id: string, @Arg('data') data: EditUserValidator): Promise<User> {
         const user = await BeepORM.userRepository.findOne(id);
 
         if (!user) {
@@ -57,9 +55,9 @@ export class UserResolver {
         return user;
     }
 
-    @Query(returns => [User])
+    @Query(() => [User])
     @Authorized(UserRole.ADMIN)
-    public async getUsers(@Args() { offset, show }: PaginationArgs) {
+    public async getUsers(@Args() { offset, show }: PaginationArgs): Promise<User[]> {
         const [users, count] = await BeepORM.em.findAndCount(User, {}, { limit: show, offset: offset });
 
         //TODO: we need to return count along with result for pagination
@@ -67,26 +65,25 @@ export class UserResolver {
         return users;
     }
 
-    @Query(returns => [Beep])
+    @Query(() => [Beep])
     @Authorized()
-    public async getRideHistory(@Arg("id") id: string) {
+    public async getRideHistory(@Arg("id") id: string): Promise<Beep[]> {
         return await BeepORM.beepRepository.find({ rider: id }, { populate: true });
     }
 
-    @Query(returns => [Beep])
+    @Query(() => [Beep])
     @Authorized()
-    public async getBeepHistory(@Arg("id") id: string) {
+    public async getBeepHistory(@Arg("id") id: string): Promise<Beep[]>  {
         return await BeepORM.beepRepository.find({ beeper: id }, { populate: true });
     }
 
-    @Query(returns => [QueueEntry])
+    @Query(() => [QueueEntry])
     @Authorized()
-    public async getQueue(@Arg("id") id: string) {
+    public async getQueue(@Arg("id") id: string): Promise<QueueEntry[]> {
         const r = await BeepORM.queueEntryRepository.find({ beeper: id }, { populate: true });
         
         for (let i = 0; i < r.length; i++) {
            if (r[i].state == -1) {
-               //await BeepORM.queueEntryRepository.nativeDelete(r[i]);
                BeepORM.queueEntryRepository.nativeDelete(r[i]);
            }
         }
