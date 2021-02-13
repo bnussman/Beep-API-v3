@@ -1,12 +1,11 @@
 import { sha256 } from 'js-sha256';
 import { getToken, setPushToken, getUserFromEmail, sendResetEmail, deactivateTokens, createVerifyEmailEntryAndSendEmail, doesUserExist } from './helpers';
-import { SignUpParams } from "./auth";
 import { wrap } from '@mikro-orm/core';
 import { BeepORM } from '../app';
 import { User } from '../entities/User';
 import { ForgotPassword } from '../entities/ForgotPassword';
 import { Arg, Authorized, Ctx, Field, Mutation, ObjectType, Resolver } from 'type-graphql';
-import { LoginInput } from '../validators/auth';
+import { LoginInput, SignUpInput } from '../validators/auth';
 import { TokenEntry } from '../entities/TokenEntry';
 import { Context } from '../utils/context';
 
@@ -48,26 +47,26 @@ export class AuthResolver {
     }
 
     @Mutation(() => Auth)
-    public async signup (requestBody: SignUpParams): Promise<Auth> {
-        if (requestBody.venmo.charAt(0) == '@') {
-            requestBody.venmo = requestBody.venmo.substr(1, requestBody.venmo.length);
+    public async signup (@Arg('input') input: SignUpInput): Promise<Auth> {
+        if (input.venmo.charAt(0) == '@') {
+            input.venmo = input.venmo.substr(1, input.venmo.length);
         }
 
-        if ((await doesUserExist(requestBody.username))) {
+        if ((await doesUserExist(input.username))) {
             throw new Error("That username is already in use");
         }
 
         const user = new User();
     
-        requestBody.password = sha256(requestBody.password);
+        input.password = sha256(input.password);
 
-        wrap(user).assign(requestBody);
+        wrap(user).assign(input);
 
         await BeepORM.userRepository.persistAndFlush(user);
     
         const tokenData = await getToken(user);
 
-        createVerifyEmailEntryAndSendEmail(user, requestBody.email, requestBody.first);
+        createVerifyEmailEntryAndSendEmail(user, input.email, input.first);
 
         return {
             user: user,

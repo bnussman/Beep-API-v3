@@ -22,10 +22,13 @@ import { buildSchema } from 'type-graphql';
 import { graphqlHTTP } from 'express-graphql';
 import { UserResolver } from './users/resolver';
 import { RiderResolver } from './rider/resolver';
+import { BeeperResolver } from './beeper/resolver';
+import { BeepResolver } from './beeps/resolver';
 import { ReportsResolver } from './reports/resolver';
 import { AuthResolver } from './auth/resolver';
 import {authChecker, oldAuthChecker} from "./utils/authentication";
 import {AccountResolver} from "./account/resolver";
+import {DirectionsResolver} from "./directions/resolver";
 
 const url = `mongodb+srv://banks:${process.env.MONGODB_PASSWORD}@beep.5zzlx.mongodb.net/test?retryWrites=true&w=majority`;
 
@@ -107,7 +110,7 @@ export default class BeepAPIServer {
 
         try {
             const schema: GraphQLSchema = await buildSchema({
-                resolvers: [UserResolver, RiderResolver, ReportsResolver, AuthResolver, AccountResolver],
+                resolvers: [UserResolver, RiderResolver, ReportsResolver, AuthResolver, AccountResolver, BeeperResolver, BeepResolver, DirectionsResolver],
                 authChecker: authChecker
             });
 

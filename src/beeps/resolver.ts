@@ -1,32 +1,29 @@
-import { APIStatus, APIResponse } from '../utils/Error';
-import * as Sentry from "@sentry/node";
-import { BeepResponse, BeepsResponse } from './beeps';
-import {BeepORM} from '../app';
-import {Beep} from '../entities/Beep';
-import {QueryOrder} from '@mikro-orm/core';
+import { BeepORM } from '../app';
+import { Beep } from '../entities/Beep';
+import { QueryOrder } from '@mikro-orm/core';
+import { Args, Query, Resolver } from 'type-graphql';
+import PaginationArgs from '../args/Pagination';
 
-export class BeepsController {
-
-    public async getBeeps(offset?: number, show?: number): Promise<BeepsResponse | APIResponse> {
+@Resolver(Beep)
+export class BeepResolver {
+   
+    @Query(() => [Beep])
+    public async getBeeps(@Args() { offset, show }: PaginationArgs): Promise<Beep[]> {
         const [beeps, count] = await BeepORM.beepRepository.findAndCount({}, { orderBy: { doneTime: QueryOrder.DESC }, limit: show, offset: offset, populate: ['beeper', 'rider'] });
 
-        return {
-            status: APIStatus.Success,
-            total: count,
-            beeps: beeps
-        };
+        //TODO figure out pagination
+
+        return beeps;
     }
 
-    public async getBeep(id: string): Promise<BeepResponse | APIResponse> {
-        const result = await BeepORM.beepRepository.findOne(id);
+    @Query(() => [Beep])
+    public async getBeep(id: string): Promise<Beep> {
+        const beep = await BeepORM.beepRepository.findOne(id);
 
-        if (!result) {
-            return new APIResponse(APIStatus.Error, "This beep entry does not exist");
+        if (!beep) {
+            throw new Error("This beep entry does not exist");
         }
 
-        return {
-            status: APIStatus.Success, 
-            beep: result
-        };
+        return beep;
     }
 }

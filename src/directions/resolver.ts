@@ -1,23 +1,15 @@
-import { APIStatus, APIResponse } from "../utils/Error";
 import fetch from 'node-fetch';
+import { Arg, Query, Resolver } from "type-graphql";
 
-export class DirectionsController {
+@Resolver()
+export class DirectionsResolver {
 
-    public async getDirections(start: string, end: string): Promise<any | APIResponse> {
-        try {
-            const result = await fetch('https://maps.googleapis.com/maps/api/directions/json?origin=' + start + '&destination=' + end + '&key=AIzaSyBgabJrpu7-ELWiUIKJlpBz2mL6GYjwCVI');
-            const data = await result.json();
+    @Query(() => String)
+    public async getDirections(@Arg('start') start: string, @Arg('end') end: string): Promise<string> {
+        const result = await fetch('https://maps.googleapis.com/maps/api/directions/json?origin=' + start + '&destination=' + end + '&key=AIzaSyBgabJrpu7-ELWiUIKJlpBz2mL6GYjwCVI');
 
-            return {
-                status: APIStatus.Success,
-                eta: data.routes[0].legs[0].duration.text
-            };
-        }
-        catch (error) {
-            return {
-                status: APIStatus.Error,
-                message: error
-            }
-        }
+        const data = await result.json();
+
+        return data.routes[0].legs[0].duration.text;
     }
 }

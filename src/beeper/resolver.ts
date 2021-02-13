@@ -1,81 +1,64 @@
-import * as express from 'express';
 import { sendNotification } from '../utils/notifications';
-import { Validator } from 'node-input-validator';
-import * as Sentry from "@sentry/node";
-import { APIResponse, APIStatus } from '../utils/Error';
-import { GetBeeperQueueResult, SetBeeperQueueParams, SetBeeperStatusParams } from './beeper';
 import { wrap } from '@mikro-orm/core';
 import { BeepORM } from '../app';
 import { Beep } from '../entities/Beep';
+import { User } from '../entities/User';
+import { Arg, Authorized, Ctx, Mutation, Resolver } from 'type-graphql';
+import { Context } from '../utils/context';
+import { BeeperSettingsInput, UpdateQueueEntryInput } from '../validators/beeper';
+import * as Sentry from '@sentry/node';
 
-export class BeeperController {
+@Resolver(Beep)
+export class BeeperResolver {
 
-    public async setBeeperStatus(request: express.Request, requestBody: SetBeeperStatusParams): Promise<APIResponse> {
-        const v = new Validator(requestBody, {
-            singlesRate: "required|numeric",
-            groupRate: "required|numeric",
-            capacity: "required|numeric",
-            isBeeping: "boolean",
-            masksRequired: "boolean"
-        });
-
-        const matched = await v.check();
-
-        if (!matched) {
-            return new APIResponse(APIStatus.Error, v.errors);
+    @Mutation(() => User)
+    @Authorized()
+    public async setBeeperStatus(@Ctx() ctx: Context, @Arg('input') input: BeeperSettingsInput): Promise<User> {
+        if ((input.isBeeping == false) && (ctx.user.queueSize > 0)) {
+            throw new Error("You can't stop beeping when you still have beeps to complete or riders in your queue");
         }
 
-        if ((requestBody.isBeeping == false) && (request.user.user.queueSize > 0)) {
-            return new APIResponse(APIStatus.Error, "You can't stop beeping when you still have beeps to complete or riders in your queue");
-        }
+        wrap(ctx.user).assign(input);
 
-        wrap(request.user.user).assign(requestBody);
+        await BeepORM.userRepository.persistAndFlush(ctx.user);
 
-        await BeepORM.userRepository.persistAndFlush(request.user.user);
-
-        return new APIResponse(APIStatus.Success, "Successfully updated beeping status");
-    }
-
-    public async getBeeperQueue(request: express.Request): Promise<APIResponse | GetBeeperQueueResult> {
-        return {
-            status: APIStatus.Success,
-            queue: await BeepORM.queueEntryRepository.find({ beeper: request.user.user })
-        };
+        return ctx.user;
     }
     
-    public async setBeeperQueue(request: express.Request, requestBody: SetBeeperQueueParams): Promise<APIResponse> {
-        const queueEntry = await BeepORM.queueEntryRepository.findOneOrFail(requestBody.queueID, { populate: true });
+    @Mutation(() => Boolean)
+    public async setBeeperQueue(@Ctx() ctx: Context, @Arg('input') input: UpdateQueueEntryInput): Promise<boolean> {
+        const queueEntry = await BeepORM.queueEntryRepository.findOneOrFail(input.queueId, { populate: true });
 
-        if (requestBody.value == 'accept' || requestBody.value == 'deny') {
+        if (input.value == 'accept' || input.value == 'deny') {
             const numRidersBefore = await BeepORM.queueEntryRepository.count({ timeEnteredQueue: { $lt: queueEntry.timeEnteredQueue }, isAccepted: false });
 
             if (numRidersBefore != 0) {
-                return new APIResponse(APIStatus.Error, "You must respond to the rider who first joined your queue.");
+                throw new Error("You must respond to the rider who first joined your queue.");
             }
         }
         else {
             const numRidersBefore = await BeepORM.queueEntryRepository.count({ timeEnteredQueue: { $lt: queueEntry.timeEnteredQueue }, isAccepted: true });
 
             if (numRidersBefore != 0) {
-                return new APIResponse(APIStatus.Error, "You must respond to the rider who first joined your queue.");
+                throw new Error("You must respond to the rider who first joined your queue.");
             }
         }
 
-        if (requestBody.value == 'accept') {
+        if (input.value == 'accept') {
             queueEntry.isAccepted = true;
 
-            request.user.user.queueSize++;
+            ctx.user.queueSize++;
 
-            sendNotification(queueEntry.rider, `${request.user.user.name} has accepted your beep request`, "You will recieve another notification when they are on their way to pick you up.");
+            sendNotification(queueEntry.rider, `${ctx.user.name} has accepted your beep request`, "You will recieve another notification when they are on their way to pick you up.");
 
             BeepORM.queueEntryRepository.persist(queueEntry);
-            BeepORM.userRepository.persist(request.user.user);
+            BeepORM.userRepository.persist(ctx.user);
 
             await BeepORM.em.flush();
 
-            return new APIResponse(APIStatus.Success, "Successfully accepted rider in queue.");
+            return true;
         }
-        else if (requestBody.value == 'deny' || requestBody.value == 'complete') {
+        else if (input.value == 'deny' || input.value == 'complete') {
             const finishedBeep = new Beep();
 
             wrap(finishedBeep).assign(queueEntry, { em: BeepORM.em });
@@ -87,9 +70,9 @@ export class BeeperController {
 
             BeepORM.beepRepository.persist(finishedBeep);
 
-            if (queueEntry.isAccepted) request.user.user.queueSize--;
+            if (queueEntry.isAccepted) ctx.user.queueSize--;
 
-            BeepORM.userRepository.persist(request.user.user);
+            BeepORM.userRepository.persist(ctx.user);
 
             queueEntry.state = -1;
 
@@ -97,21 +80,21 @@ export class BeeperController {
 
             await BeepORM.em.flush();
 
-            if (requestBody.value == "deny") {
-                sendNotification(queueEntry.rider, `${request.user.user.name} has denied your beep request`, "Open your app to find a diffrent beeper.");
+            if (input.value == "deny") {
+                sendNotification(queueEntry.rider, `${ctx.user.name} has denied your beep request`, "Open your app to find a diffrent beeper.");
             }
 
-            return new APIResponse(APIStatus.Success, "Successfully removed user from queue.");
+            return true;
         }
         else {
             queueEntry.state++;
 
             switch(queueEntry.state) {
                 case 1:
-                    sendNotification(queueEntry.rider, `${request.user.user.name} is on their way!`, "Your beeper is on their way to pick you up.");
+                    sendNotification(queueEntry.rider, `${ctx.user.name} is on their way!`, "Your beeper is on their way to pick you up.");
                 break;
                 case 2:
-                    sendNotification(queueEntry.rider, `${request.user.user.name} is here!`, "Your beeper is here to pick you up.");
+                    sendNotification(queueEntry.rider, `${ctx.user.name} is here!`, "Your beeper is here to pick you up.");
                 break;
                 case 3:
                     break;
@@ -121,7 +104,7 @@ export class BeeperController {
 
             await BeepORM.queueEntryRepository.persistAndFlush(queueEntry);
 
-            return new APIResponse(APIStatus.Success, "Successfully changed ride state.");
+            return true;
         }
     }
 }
