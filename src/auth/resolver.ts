@@ -25,9 +25,7 @@ export class AuthResolver {
 
     @Mutation(() => Auth)
     public async login(@Arg('input') input: LoginInput): Promise<Auth> {
-        const user = await BeepORM.userRepository.findOne({ username: input.username }, ['password']);
-        console.log(user);
-        console.log(input);
+        const user = await BeepORM.userRepository.findOne({ username: input.username }, ['password']); console.log(user?.password);
 
         if (!user) {
             throw new Error("User not found");
@@ -37,19 +35,15 @@ export class AuthResolver {
             throw new Error("Password is incorrect");
         }
 
-        console.log(input);
-
         const tokenData = await getToken(user);
 
         if (input.pushToken) {
             setPushToken(user, input.pushToken);
         }
 
-        console.log(tokenData);
-
         return {
             user: user,
-            tokens: { ...tokenData }
+            tokens: tokenData
         };
     }
 
