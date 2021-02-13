@@ -1,92 +1,78 @@
-import * as express from 'express';
-import { Validator } from "node-input-validator";
-import * as Sentry from "@sentry/node";
-import { APIStatus, APIResponse } from "../utils/Error";
-import { ReportResponse, ReportsResponse, ReportUserParams, UpdateReportParams } from "../reports/reports";
 import { Report } from '../entities/Report';
-import { ObjectId } from '@mikro-orm/mongodb';
 import { BeepORM } from '../app';
 import { QueryOrder, wrap } from '@mikro-orm/core';
-import { User } from '../entities/User';
+import { User, UserRole } from '../entities/User';
+import { Arg, Args, Authorized, Ctx, Mutation, Query, Resolver } from 'type-graphql';
+import { Context } from '../utils/context';
+import { ReportInput, UpdateReportInput } from '../validators/report';
+import PaginationArgs from '../args/Pagination';
 
-export class ReportsController {
+@Resolver(Report)
+export class ReportsResolver {
 
-
-    public async reportUser(request: express.Request, requestBody: ReportUserParams): Promise<APIResponse> {
-        const v = new Validator(requestBody, {
-            id: "required",
-            reason: "required"
-        });
-
-        const matched = await v.check();
-
-        if (!matched) {
-            return new APIResponse(APIStatus.Error, v.errors);
-        }
-
-        const user = BeepORM.em.getReference(User, requestBody.id);
+    @Mutation(() => Boolean)
+    @Authorized()
+    public async reportUser(@Ctx() ctx: Context, @Arg('input') input: ReportInput): Promise<boolean> {
+        const user = BeepORM.em.getReference(User, input.userId);
         
-        let report;
-
-        if (requestBody.beep) {
-            report = new Report(request.user.user, user, requestBody.reason, new ObjectId(requestBody.beep));
-        }
-        else {
-            report = new Report(request.user.user, user, requestBody.reason);
-        }
+        const report = new Report(ctx.user, user, input.reason, input.beepId);
 
         await BeepORM.reportRepository.persistAndFlush(report);
 
-        return new APIResponse(APIStatus.Success, "Successfully reported user");
+        return true;
     }
 
-    public async getReports(offset?: number, show?: number): Promise<ReportsResponse | APIResponse> {
+    
+    @Query(() => [Report])
+    @Authorized(UserRole.ADMIN)
+    public async getReports(@Args() { offset, show }: PaginationArgs): Promise<Report[]> {
         const [reports, count] = await BeepORM.reportRepository.findAndCount({}, { orderBy: { timestamp: QueryOrder.DESC }, limit: show, offset: offset, populate: ['reporter', 'reported'] });
 
-        return {
-            status: APIStatus.Success,
-            total: count,
-            reports: reports
-        };
+        //TODO: figure out pagination
+
+        return reports;
     }
+    
+    @Mutation(() => Report)
+    @Authorized(UserRole.ADMIN)
+    public async updateReport(@Ctx() ctx: Context, @Arg("id") id: string, @Arg('input') input: UpdateReportInput): Promise<Report> {
+        const report = await BeepORM.reportRepository.findOne(id, { populate: true });
 
-    public async updateReport(request: express.Request, id: string, requestBody: UpdateReportParams): Promise<APIResponse> {
-        let update = requestBody as unknown;
-
-        if (requestBody.handled) {
-            update = { ...requestBody, handledBy: request.user.user };
+        if (!report) throw new Error("You are trying to update a report that does not exist");
+        
+        if (input.handled) {
+            report.handledBy = ctx.user;
         }
         else {
-            update = { ...requestBody, handledBy: null };
+            report.handledBy = null;
         }
 
-        const report = BeepORM.reportRepository.getReference(id);
-
-        wrap(report).assign(update);
+        wrap(report).assign(input);
 
         await BeepORM.reportRepository.persistAndFlush(report);
 
-        return new APIResponse(APIStatus.Success, "Successfully updated report");
+        return report;
     }
 
-    public async getReport(id: string): Promise<ReportResponse | APIResponse> {
+    @Query(() => [Report])
+    @Authorized(UserRole.ADMIN)
+    public async getReport(id: string): Promise<Report> {
         const report = await BeepORM.reportRepository.findOne(id, { populate: true, refresh: true });
 
         if (!report) {
-            return new APIResponse(APIStatus.Error, "This report entry does not exist");
+            throw new Error("This report entry does not exist");
         }
 
-        return {
-            status: APIStatus.Success, 
-            report: report
-        };
+        return report;
     }
-
-    public async deleteReport(id: string): Promise<APIResponse> {
+    
+    @Mutation(() => Boolean)
+    @Authorized(UserRole.ADMIN)
+    public async deleteReport(id: string): Promise<boolean> {
         const report = BeepORM.reportRepository.getReference(id);
 
         await BeepORM.reportRepository.removeAndFlush(report);
 
-        return new APIResponse(APIStatus.Success, "Successfully deleted report");
+        return true;
     }
 }

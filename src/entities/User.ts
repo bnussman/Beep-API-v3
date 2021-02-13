@@ -1,7 +1,12 @@
 import { Collection, Entity, Enum, OneToMany, PrimaryKey, Property, SerializedPrimaryKey, Unique } from "@mikro-orm/core";
 import { ObjectId } from "@mikro-orm/mongodb";
-import { Field, ObjectType } from "type-graphql";
+import { Authorized, Field, ObjectType } from "type-graphql";
 import { QueueEntry } from './QueueEntry';
+
+export enum UserRole {
+    ADMIN = 'admin',
+    USER = 'user'
+}
 
 @ObjectType()
 @Entity()
@@ -40,6 +45,7 @@ export class User {
     @Property()
     venmo!: string;
 
+    @Field()
     @Property({ lazy: true })
     password?: string;
 
@@ -81,6 +87,7 @@ export class User {
 
     @Field({ nullable: true })
     @Property({ nullable: true, lazy: true })
+    @Authorized(UserRole.ADMIN)
     pushToken?: string;
 
     @Field({ nullable: true })
@@ -98,7 +105,3 @@ export class User {
     queue = new Collection<QueueEntry>(this);
 }
 
-export enum UserRole {
-    ADMIN = 'admin',
-    USER = 'user'
-}

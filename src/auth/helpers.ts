@@ -1,4 +1,4 @@
-import { TokenData, UserPluckResult } from '../types/beep';
+import { UserPluckResult } from '../types/beep';
 import * as nodemailer from "nodemailer";
 import { transporter } from "../utils/mailer";
 import * as Sentry from "@sentry/node";
@@ -15,16 +15,12 @@ import { wrap } from '@mikro-orm/core';
  * @param userid a user's ID which is used to associate a token with a userid in our tokens table
  * @return user's id, auth token, and auth token's token to be used by login and sign up
  */
-export async function getToken(user: User): Promise<TokenData> {
+export async function getToken(user: User): Promise<TokenEntry> {
     const t = new TokenEntry(user);
 
     await BeepORM.tokenRepository.persistAndFlush(t);
 
-    return {
-        userid: user._id,
-        tokenid: t.tokenid,
-        token: t._id
-    };
+    return t;
 }
 
 /**

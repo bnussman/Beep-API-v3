@@ -2,75 +2,64 @@ import express from 'express';
 import { sha256 } from 'js-sha256';
 import { getToken, setPushToken, getUserFromEmail, sendResetEmail, deactivateTokens, createVerifyEmailEntryAndSendEmail, doesUserExist } from './helpers';
 import { Validator } from "node-input-validator";
-import * as Sentry from "@sentry/node";
-import { ForgotPasswordParams, LoginParams, LoginResponse, LogoutParams, RemoveTokenParams, ResetPasswordParams, SignUpParams } from "./auth";
+import { ForgotPasswordParams, LoginResponse, LogoutParams, RemoveTokenParams, ResetPasswordParams, SignUpParams } from "./auth";
 import { APIResponse, APIStatus } from '../utils/Error';
 import { wrap } from '@mikro-orm/core';
 import { BeepORM } from '../app';
 import { User } from '../entities/User';
 import { ForgotPassword } from '../entities/ForgotPassword';
+import { Arg, Field, Mutation, ObjectType, Resolver } from 'type-graphql';
+import { LoginInput } from '../validators/auth';
+import { TokenEntry } from '../entities/TokenEntry';
 
-export class AuthController {
+@ObjectType()
+class Auth {
+    @Field()
+    public user!: User;
+    @Field(() => TokenEntry)
+    public tokens!: TokenEntry;
+}
 
-    public async login (requestBody: LoginParams): Promise<LoginResponse | APIResponse> {
-        const v = new Validator(requestBody, {
-            username: "required",
-            password: "required"
-        });
+@Resolver()
+export class AuthResolver {
 
-        const matched = await v.check();
-
-        if (!matched) {
-            return new APIResponse(APIStatus.Error, v.errors);
-        }
-
-        const user = await BeepORM.userRepository.findOne({ username: requestBody.username }, ['password']);
+    @Mutation(() => Auth)
+    public async login(@Arg('input') input: LoginInput): Promise<Auth> {
+        const user = await BeepORM.userRepository.findOne({ username: input.username }, ['password']);
+        console.log(user);
+        console.log(input);
 
         if (!user) {
-            return new APIResponse(APIStatus.Error, "User not found");
+            throw new Error("User not found");
         }
 
-        if (user.password == sha256(requestBody.password)) {
-            const tokenData = await getToken(user);
-
-            if (requestBody.expoPushToken) {
-                setPushToken(user, requestBody.expoPushToken);
-            }
-
-            return {
-                status: APIStatus.Success,
-                user: user,
-                tokens: { ...tokenData }
-            };
+        if (user.password != sha256(input.password)) {
+            throw new Error("Password is incorrect");
         }
-        else {
-            return new APIResponse(APIStatus.Error, "Password is incorrect");
+
+        console.log(input);
+
+        const tokenData = await getToken(user);
+
+        if (input.pushToken) {
+            setPushToken(user, input.pushToken);
         }
+
+        console.log(tokenData);
+
+        return {
+            user: user,
+            tokens: { ...tokenData }
+        };
     }
 
-    public async signup (requestBody: SignUpParams): Promise<LoginResponse | APIResponse> {
-        const v = new Validator(requestBody, {
-            first: "required|alpha",
-            last: "required|alpha",
-            email: "required|email",
-            phone: "required|phoneNumber",
-            venmo: "required",
-            username: "required|alphaNumeric",
-            password: "required",
-        });
-
-        const matched = await v.check();
-
-        if (!matched) {
-            return new APIResponse(APIStatus.Error, v.errors);
-        }
-
+    public async signup (requestBody: SignUpParams): Promise<Auth> {
         if (requestBody.venmo.charAt(0) == '@') {
             requestBody.venmo = requestBody.venmo.substr(1, requestBody.venmo.length);
         }
 
         if ((await doesUserExist(requestBody.username))) {
-            return new APIResponse(APIStatus.Error, "That username is already in use");
+            throw new Error("That username is already in use");
         }
 
         const user = new User();
@@ -86,7 +75,6 @@ export class AuthController {
         createVerifyEmailEntryAndSendEmail(user, requestBody.email, requestBody.first);
 
         return {
-            status: APIStatus.Success,
             user: user,
             tokens: { ...tokenData }
         };
