@@ -2,15 +2,16 @@ import express from 'express';
 import { sha256 } from 'js-sha256';
 import { getToken, setPushToken, getUserFromEmail, sendResetEmail, deactivateTokens, createVerifyEmailEntryAndSendEmail, doesUserExist } from './helpers';
 import { Validator } from "node-input-validator";
-import { ForgotPasswordParams, LoginResponse, LogoutParams, RemoveTokenParams, ResetPasswordParams, SignUpParams } from "./auth";
+import { ForgotPasswordParams, LogoutParams, RemoveTokenParams, ResetPasswordParams, SignUpParams } from "./auth";
 import { APIResponse, APIStatus } from '../utils/Error';
 import { wrap } from '@mikro-orm/core';
 import { BeepORM } from '../app';
 import { User } from '../entities/User';
 import { ForgotPassword } from '../entities/ForgotPassword';
-import { Arg, Field, Mutation, ObjectType, Resolver } from 'type-graphql';
+import { Arg, Authorized, Ctx, Field, Mutation, ObjectType, Resolver } from 'type-graphql';
 import { LoginInput } from '../validators/auth';
 import { TokenEntry } from '../entities/TokenEntry';
+import {Context} from 'src/utils/context';
 
 @ObjectType()
 class Auth {
@@ -25,7 +26,7 @@ export class AuthResolver {
 
     @Mutation(() => Auth)
     public async login(@Arg('input') input: LoginInput): Promise<Auth> {
-        const user = await BeepORM.userRepository.findOne({ username: input.username }, ['password']); console.log(user?.password);
+        const user = await BeepORM.userRepository.findOne({ username: input.username }, ['password']);
 
         if (!user) {
             throw new Error("User not found");
@@ -47,6 +48,7 @@ export class AuthResolver {
         };
     }
 
+    @Mutation(() => Auth)
     public async signup (requestBody: SignUpParams): Promise<Auth> {
         if (requestBody.venmo.charAt(0) == '@') {
             requestBody.venmo = requestBody.venmo.substr(1, requestBody.venmo.length);
@@ -70,87 +72,73 @@ export class AuthResolver {
 
         return {
             user: user,
-            tokens: { ...tokenData }
+            tokens: tokenData
         };
     }
     
-    public async logout (request: express.Request, requestBody: LogoutParams): Promise<APIResponse> {
-        await BeepORM.tokenRepository.removeAndFlush(request.user.token);
+    @Mutation(() => Boolean)
+    @Authorized()
+    public async logout(@Ctx() ctx: Context, @Arg('isApp') isApp: boolean): Promise<boolean> {
+        await BeepORM.tokenRepository.removeAndFlush(ctx.token);
 
-        if (requestBody.isApp) {
-            setPushToken(request.user.user, null);
+        if (isApp) {
+            setPushToken(ctx.user, null);
         }
 
-        return new APIResponse(APIStatus.Success, "Token was revoked");
+        return true;
     }
 
-    public async removeToken (requestBody: RemoveTokenParams): Promise<APIResponse> {
-        await BeepORM.tokenRepository.removeAndFlush({ tokenid: requestBody.tokenid });
+    @Mutation(() => Boolean)
+    public async removeToken(@Arg('token') tokenid: string): Promise<boolean> {
+        await BeepORM.tokenRepository.removeAndFlush({ tokenid: tokenid });
 
-        return new APIResponse(APIStatus.Success, "Token was revoked");
+        return true;
     }
 
-    public async forgotPassword (requestBody: ForgotPasswordParams): Promise<APIResponse> {
-        const v = new Validator(requestBody, {
-            email: "required|email",
-        });
+    @Mutation(() => Boolean)
+    public async forgotPassword(@Arg('email') email: string): Promise<boolean> {
 
-        const matched = await v.check();
-
-        if (!matched) {
-            return new APIResponse(APIStatus.Error, v.errors);
-        }
-
-        const user: User | null = await getUserFromEmail(requestBody.email);
+        const user: User | null = await getUserFromEmail(email);
 
         if (!user) {
-            return new APIResponse(APIStatus.Error, "That user account does not exist");
+            throw new Error("User does not exist");
         }
 
         const existing = await BeepORM.forgotPasswordRepository.findOne({ user: user });
 
         if (existing) {
-            sendResetEmail(requestBody.email, existing.id, user.first);
+            sendResetEmail(email, existing.id, user.first);
 
-            return new APIResponse(APIStatus.Error, "You have already requested to reset your password. We have re-sent your email. Check your email and follow the instructions.");
+            throw new Error("You have already requested to reset your password. We have re-sent your email. Check your email and follow the instructions.");
         }
 
         const entry = new ForgotPassword(user);
 
         await BeepORM.forgotPasswordRepository.persistAndFlush(entry);
 
-        sendResetEmail(requestBody.email, entry.id, user.first);
+        sendResetEmail(email, entry.id, user.first);
 
-        return new APIResponse(APIStatus.Success, "Successfully sent email");
+        return true;
     }
 
-    public async resetPassword (requestBody: ResetPasswordParams): Promise<APIResponse> {
-        const v = new Validator(requestBody, {
-            password: "required",
-        });
-
-        const matched = await v.check();
-
-        if (!matched) {
-            return new APIResponse(APIStatus.Error, v.errors);
-        }
-        
-        const entry = await BeepORM.forgotPasswordRepository.findOne(requestBody.id, { populate: true });
+    @Mutation(() => Boolean)
+    public async resetPassword(@Arg('id') id: string, @Arg('password') password: string): Promise<boolean> {
+        const entry = await BeepORM.forgotPasswordRepository.findOne(id, { populate: true });
 
         if (!entry) {
-            return new APIResponse(APIStatus.Error, "This reset password request does not exist");
+            throw new Error("This reset password request does not exist");
         }
 
         if ((entry.time + (3600 * 1000)) < Date.now()) {
-            return new APIResponse(APIStatus.Error, "Your verification token has expired. You must re-request to reset your password.");
+            throw new Error("Your verification token has expired. You must re-request to reset your password.");
         }
 
-        entry.user.password = sha256(requestBody.password);
+        entry.user.password = sha256(password);
 
         deactivateTokens(entry.user);
 
         await BeepORM.userRepository.persistAndFlush(entry.user);
 
-        return new APIResponse(APIStatus.Success, "Successfully reset your password!");
+        return true;
     }
 }

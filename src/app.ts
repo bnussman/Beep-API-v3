@@ -116,7 +116,7 @@ export default class BeepAPIServer {
                 graphqlHTTP((req, res) => ({
                     schema,
                     //@ts-ignore
-                    context: { user: req.user?.user, em: BeepORM.em.fork() },
+                    context: { token: req.user?.token, user: req.user?.user, em: BeepORM.em.fork() },
                     customFormatErrorFn: (error) => {
                         return error;
                     },

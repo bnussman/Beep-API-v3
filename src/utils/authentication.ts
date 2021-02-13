@@ -9,7 +9,7 @@ export async function oldAuthChecker(req: express.Request, res: express.Response
         if (!token) {
             next();
             return;
-        };
+        }
 
         const tokenEntryResult = await BeepORM.tokenRepository.findOne(token, { populate: true });
 
