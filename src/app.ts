@@ -25,6 +25,7 @@ import { RiderResolver } from './rider/resolver';
 import { ReportsResolver } from './reports/resolver';
 import { AuthResolver } from './auth/resolver';
 import {authChecker, oldAuthChecker} from "./utils/authentication";
+import {AccountResolver} from "./account/resolver";
 
 const url = `mongodb+srv://banks:${process.env.MONGODB_PASSWORD}@beep.5zzlx.mongodb.net/test?retryWrites=true&w=majority`;
 
@@ -106,7 +107,7 @@ export default class BeepAPIServer {
 
         try {
             const schema: GraphQLSchema = await buildSchema({
-                resolvers: [UserResolver, RiderResolver, ReportsResolver, AuthResolver],
+                resolvers: [UserResolver, RiderResolver, ReportsResolver, AuthResolver, AccountResolver],
                 authChecker: authChecker
             });
 

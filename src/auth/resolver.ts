@@ -1,9 +1,6 @@
-import express from 'express';
 import { sha256 } from 'js-sha256';
 import { getToken, setPushToken, getUserFromEmail, sendResetEmail, deactivateTokens, createVerifyEmailEntryAndSendEmail, doesUserExist } from './helpers';
-import { Validator } from "node-input-validator";
-import { ForgotPasswordParams, LogoutParams, RemoveTokenParams, ResetPasswordParams, SignUpParams } from "./auth";
-import { APIResponse, APIStatus } from '../utils/Error';
+import { SignUpParams } from "./auth";
 import { wrap } from '@mikro-orm/core';
 import { BeepORM } from '../app';
 import { User } from '../entities/User';
@@ -11,12 +8,14 @@ import { ForgotPassword } from '../entities/ForgotPassword';
 import { Arg, Authorized, Ctx, Field, Mutation, ObjectType, Resolver } from 'type-graphql';
 import { LoginInput } from '../validators/auth';
 import { TokenEntry } from '../entities/TokenEntry';
-import {Context} from 'src/utils/context';
+import { Context } from '../utils/context';
 
 @ObjectType()
 class Auth {
+
     @Field()
     public user!: User;
+
     @Field(() => TokenEntry)
     public tokens!: TokenEntry;
 }

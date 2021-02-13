@@ -1,24 +1,26 @@
-import { Entity, IdentifiedReference, ManyToOne, PrimaryKey, Property, Reference, SerializedPrimaryKey } from "@mikro-orm/core";
+import { Entity, ManyToOne, PrimaryKey, Property, SerializedPrimaryKey } from "@mikro-orm/core";
 import { ObjectId } from "@mikro-orm/mongodb";
+import { Field, ObjectType } from "type-graphql";
 import { User } from "./User";
 
+@ObjectType()
 @Entity()
 export class ForgotPassword {
 
     @PrimaryKey()
     _id!: ObjectId;
 
+    @Field()
     @SerializedPrimaryKey()
     id!: string;
 
+    @Field()
     @ManyToOne()
     user!: User;
 
-    //@ManyToOne(() => User, { wrappedReference: true })
-    //user!: IdentifiedReference<User>;
-
+    @Field()
     @Property() 
-    time = Date.now();
+    time: number = Date.now();
 
     constructor(u: User) {
         this.user = u;
