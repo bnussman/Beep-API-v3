@@ -1,26 +1,6 @@
-import * as express from "express";
-import { BeepORM } from "../app";
 import { AuthChecker } from "type-graphql";
 import { Context } from "../utils/context";
 
-export async function oldAuthChecker(req: express.Request, res: express.Response, next: express.NextFunction): Promise<any> {
-        const token: string | undefined = req.get("Authorization")?.split(" ")[1];
-
-        if (!token) {
-            next();
-            return;
-        }
-
-        const tokenEntryResult = await BeepORM.tokenRepository.findOne(token, { populate: true });
-
-        if (tokenEntryResult) {
-            req.user = { user: tokenEntryResult.user, token: tokenEntryResult };
-        }
-
-        next();
-}
-
-// create auth checker function
 export const authChecker: AuthChecker<Context> = ({ context }, roles) => {
     const user = context.user;
     if (!user) return false;

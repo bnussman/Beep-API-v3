@@ -1,12 +1,4 @@
-import express from "express";
-import { Application } from "express";
-import healthcheck from "./healthcheck/routes";
-import { errorHandler } from "./utils/Error";
-import { handleNotFound } from "./utils/404";
-import * as Sentry from "@sentry/node";
 import { initializeSentry } from "./utils/sentry";
-import { Server } from "http";
-import cors from "cors";
 import { EntityManager, EntityRepository, MikroORM } from "@mikro-orm/core";
 import { TokenEntry } from "./entities/TokenEntry";
 import { User } from "./entities/User";
@@ -16,19 +8,18 @@ import { Beep } from "./entities/Beep";
 import { ForgotPassword } from "./entities/ForgotPassword";
 import { Report } from "./entities/Report";
 import { Location } from "./entities/Location";
-import expressPlayground from 'graphql-playground-middleware-express';
 import { GraphQLSchema } from "graphql";
 import { buildSchema } from 'type-graphql';
-import { graphqlHTTP } from 'express-graphql';
 import { UserResolver } from './users/resolver';
 import { RiderResolver } from './rider/resolver';
 import { BeeperResolver } from './beeper/resolver';
 import { BeepResolver } from './beeps/resolver';
 import { ReportsResolver } from './reports/resolver';
 import { AuthResolver } from './auth/resolver';
-import {authChecker, oldAuthChecker} from "./utils/authentication";
-import {AccountResolver} from "./account/resolver";
-import {DirectionsResolver} from "./directions/resolver";
+import { authChecker } from "./utils/authentication";
+import { AccountResolver } from "./account/resolver";
+import { DirectionsResolver } from "./directions/resolver";
+import { ApolloServer } from "apollo-server";
 
 const url = `mongodb+srv://banks:${process.env.MONGODB_PASSWORD}@beep.5zzlx.mongodb.net/test?retryWrites=true&w=majority`;
 
@@ -46,29 +37,9 @@ export const BeepORM = {} as {
 };
 
 export default class BeepAPIServer {
-    private app: Application;
-    private server: Server | null;
 
     constructor() {
-        this.app = express();
-        this.server = null;
         this.setup();
-    }
-
-    public getApp(): Application {
-        return this.app;
-    }
-
-    public async start(): Promise<void> {
-        const port = process.env.PORT || 3001;
-
-        this.server = this.app.listen(port, () => {
-            console.log(`Beep API listening at http://0.0.0.0:${port}`);
-        });
-    }
-
-    public async close(): Promise<void> {
-        this.server?.close();
     }
 
     private async setup(): Promise<void> {
@@ -92,51 +63,28 @@ export default class BeepAPIServer {
         BeepORM.reportRepository = BeepORM.orm.em.getRepository(Report);
         BeepORM.locationRepository = BeepORM.orm.em.getRepository(Location);
 
-        this.app.use(cors());
-        this.app.use(express.json());
-        this.app.use(express.urlencoded({ extended: true, limit: "50mb" }));
-        this.app.disable('x-powered-by')
-        this.app.use("/healthcheck", healthcheck);
-        this.app.use("/.well-known/acme-challenge/:id", healthcheck);
-        this.app.get('/graphql', expressPlayground({ endpoint: '/graphql' }));
+        initializeSentry();
 
-        this.app.use(oldAuthChecker);
+        const schema: GraphQLSchema = await buildSchema({
+            resolvers: [UserResolver, RiderResolver, ReportsResolver, AuthResolver, AccountResolver, BeeperResolver, BeepResolver, DirectionsResolver],
+            authChecker: authChecker
+        });
 
-        initializeSentry(this.app);
+        const server = new ApolloServer({
+            schema,
+            context: async ({ req }) => {
+                const token: string | undefined = req.get("Authorization")?.split(" ")[1];
 
-        this.app.use(Sentry.Handlers.requestHandler({
-            user: ["id"]
-        }));
+                if (!token) return;
 
-        try {
-            const schema: GraphQLSchema = await buildSchema({
-                resolvers: [UserResolver, RiderResolver, ReportsResolver, AuthResolver, AccountResolver, BeeperResolver, BeepResolver, DirectionsResolver],
-                authChecker: authChecker
-            });
+                const tokenEntryResult = await BeepORM.tokenRepository.findOne(token, { populate: true });
 
-            this.app.post(
-                '/graphql',
-                express.json(),
-                graphqlHTTP((req, res) => ({
-                    schema,
-                    //@ts-ignore
-                    context: { token: req.user?.token, user: req.user?.user, em: BeepORM.em.fork() },
-                    customFormatErrorFn: (error) => {
-                        return error;
-                    },
-                })),
-            );
-        }
-        catch(error) {
-            console.error(error);
-        }
+                if (tokenEntryResult) return { user: tokenEntryResult.user, token: tokenEntryResult };
+            }
+        });
 
-        this.app.use(Sentry.Handlers.tracingHandler());
+        await server.listen(3001);
 
-        this.app.use(Sentry.Handlers.errorHandler());
-
-        this.app.use(handleNotFound);
-
-        this.app.use(errorHandler);
+        console.log("🚀  Server ready and has started!");
     }
 }
