@@ -3,11 +3,12 @@ import { BeepORM } from '../app';
 import { ObjectId } from '@mikro-orm/mongodb';
 import { wrap } from '@mikro-orm/core';
 import { User, UserRole } from '../entities/User';
-import { Arg, Args, Authorized, Mutation, Query, Resolver } from 'type-graphql';
+import { Arg, Args, Authorized, Ctx, Mutation, Query, Resolver } from 'type-graphql';
 import PaginationArgs from '../args/Pagination';
 import { Beep } from '../entities/Beep';
 import { QueueEntry } from '../entities/QueueEntry';
 import EditUserValidator from '../validators/user/EditUser';
+import {Context} from 'src/utils/context';
 
 @Resolver(User)
 export class UserResolver {
@@ -79,8 +80,8 @@ export class UserResolver {
 
     @Query(() => [QueueEntry])
     @Authorized()
-    public async getQueue(@Arg("id") id: string): Promise<QueueEntry[]> {
-        const r = await BeepORM.queueEntryRepository.find({ beeper: id }, { populate: true });
+    public async getQueue(@Ctx() ctx: Context, @Arg("id", { nullable: true }) id?: string): Promise<QueueEntry[]> {
+        const r = await BeepORM.queueEntryRepository.find({ beeper: id || ctx.user.id }, { populate: true });
         
         for (let i = 0; i < r.length; i++) {
            if (r[i].state == -1) {

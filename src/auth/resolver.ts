@@ -76,7 +76,7 @@ export class AuthResolver {
     
     @Mutation(() => Boolean)
     @Authorized()
-    public async logout(@Ctx() ctx: Context, @Arg('isApp') isApp: boolean): Promise<boolean> {
+    public async logout(@Ctx() ctx: Context, @Arg('isApp', { nullable: true }) isApp?: boolean): Promise<boolean> {
         await BeepORM.tokenRepository.removeAndFlush(ctx.token);
 
         if (isApp) {
