@@ -43,6 +43,8 @@ export class RiderResolver {
 
         sendNotification(beeper, `${ctx.user.name} has entered your queue`, "Please open your app to accept or deny this rider.", "enteredBeeperQueue");
 
+        q.ridersQueuePosition = -1;
+
         return q;
     }
    
