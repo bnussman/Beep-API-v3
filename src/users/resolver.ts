@@ -68,14 +68,14 @@ export class UserResolver {
 
     @Query(() => [Beep])
     @Authorized()
-    public async getRideHistory(@Arg("id") id: string): Promise<Beep[]> {
-        return await BeepORM.beepRepository.find({ rider: id }, { populate: true });
+    public async getRideHistory(@Ctx() ctx: Context, @Arg("id", { nullable: true }) id?: string): Promise<Beep[]> {
+        return await BeepORM.beepRepository.find({ rider: id || ctx.user}, { populate: true });
     }
 
     @Query(() => [Beep])
     @Authorized()
-    public async getBeepHistory(@Arg("id") id: string): Promise<Beep[]>  {
-        return await BeepORM.beepRepository.find({ beeper: id }, { populate: true });
+    public async getBeepHistory(@Ctx() ctx: Context, @Arg("id", { nullable: true }) id?: string): Promise<Beep[]>  {
+        return await BeepORM.beepRepository.find({ beeper: id || ctx.user }, { populate: true });
     }
 
     @Query(() => [QueueEntry])

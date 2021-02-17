@@ -11,9 +11,9 @@ import * as Sentry from '@sentry/node';
 @Resolver(Beep)
 export class BeeperResolver {
 
-    @Mutation(() => User)
+    @Mutation(() => Boolean)
     @Authorized()
-    public async setBeeperStatus(@Ctx() ctx: Context, @Arg('input') input: BeeperSettingsInput): Promise<User> {
+    public async setBeeperStatus(@Ctx() ctx: Context, @Arg('input') input: BeeperSettingsInput): Promise<boolean> {
         if ((input.isBeeping == false) && (ctx.user.queueSize > 0)) {
             throw new Error("You can't stop beeping when you still have beeps to complete or riders in your queue");
         }
@@ -22,7 +22,9 @@ export class BeeperResolver {
 
         await BeepORM.userRepository.persistAndFlush(ctx.user);
 
-        return ctx.user;
+        await BeepORM.em.populate(ctx.user, ['queue']);
+
+        return true;
     }
     
     @Mutation(() => Boolean)
