@@ -19,7 +19,9 @@ import { AuthResolver } from './auth/resolver';
 import { authChecker } from "./utils/authentication";
 import { AccountResolver } from "./account/resolver";
 import { DirectionsResolver } from "./directions/resolver";
+import { RatingResolver } from "./rating/resolver";
 import { ApolloServer } from "apollo-server";
+import { Rating } from "./entities/Rating";
 
 const url = `mongodb+srv://banks:${process.env.MONGODB_PASSWORD}@beep.5zzlx.mongodb.net/test?retryWrites=true&w=majority`;
 
@@ -34,6 +36,7 @@ export const BeepORM = {} as {
     forgotPasswordRepository: EntityRepository<ForgotPassword>,
     reportRepository: EntityRepository<Report>,
     locationRepository: EntityRepository<Location>,
+    ratingRepository: EntityRepository<Rating>,
 };
 
 export default class BeepAPIServer {
@@ -62,11 +65,12 @@ export default class BeepAPIServer {
         BeepORM.forgotPasswordRepository = BeepORM.orm.em.getRepository(ForgotPassword);
         BeepORM.reportRepository = BeepORM.orm.em.getRepository(Report);
         BeepORM.locationRepository = BeepORM.orm.em.getRepository(Location);
+        BeepORM.ratingRepository = BeepORM.orm.em.getRepository(Rating);
 
         initializeSentry();
 
         const schema: GraphQLSchema = await buildSchema({
-            resolvers: [UserResolver, RiderResolver, ReportsResolver, AuthResolver, AccountResolver, BeeperResolver, BeepResolver, DirectionsResolver],
+            resolvers: [UserResolver, RiderResolver, ReportsResolver, AuthResolver, AccountResolver, BeeperResolver, BeepResolver, DirectionsResolver, RatingResolver],
             authChecker: authChecker
         });
 
