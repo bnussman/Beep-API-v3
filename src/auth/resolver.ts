@@ -11,7 +11,6 @@ import { Context } from '../utils/context';
 
 @ObjectType()
 class Auth {
-
     @Field()
     public user!: User;
 
@@ -29,6 +28,11 @@ export class AuthResolver {
         if (!user) {
             throw new Error("User not found");
         }
+
+        await BeepORM.em.populate(user, 'password');
+        
+        console.log("Server side says password is:", user.password);
+        console.log("Client's input password:", input.password);
 
         if (user.password != sha256(input.password)) {
             throw new Error("Password is incorrect");

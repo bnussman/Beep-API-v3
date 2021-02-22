@@ -65,11 +65,13 @@ export class RiderResolver {
     public async getRiderStatus(@Ctx() ctx: Context): Promise<QueueEntry> {
         const entry = await BeepORM.queueEntryRepository.findOne({ rider: ctx.user }, { populate: ['beeper'] });
 
+        if (entry?.state == -1) await BeepORM.queueEntryRepository.nativeDelete(entry);
+
         if (!entry || entry.state == -1) {
             throw new Error("Currently, user is not getting a beep.");
         }
 
-        const ridersQueuePosition = await BeepORM.queueEntryRepository.count({ beeper: entry.beeper, timeEnteredQueue: { $lt: entry.timeEnteredQueue } });
+        const ridersQueuePosition = await BeepORM.queueEntryRepository.count({ beeper: entry.beeper, timeEnteredQueue: { $lt: entry.timeEnteredQueue }, state: { $ne: -1 } });
 
         entry.ridersQueuePosition = ridersQueuePosition;
 

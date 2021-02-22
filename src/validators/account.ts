@@ -1,5 +1,5 @@
 import { User } from '../entities/User';
-import { IsEmail, IsMobilePhone, IsOptional, IsPhoneNumber, IsString } from 'class-validator';
+import { IsEmail, IsMobilePhone, IsOptional, IsString } from 'class-validator';
 import { Field, InputType } from 'type-graphql';
 
 @InputType()

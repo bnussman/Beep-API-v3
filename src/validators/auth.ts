@@ -1,4 +1,4 @@
-import { IsEmail, IsOptional, IsPhoneNumber, IsString } from 'class-validator';
+import { IsEmail, IsMobilePhone, IsOptional, IsString } from 'class-validator';
 import { Field, InputType } from 'type-graphql';
 import { User } from '../entities/User';
 
@@ -35,7 +35,7 @@ export class SignUpInput implements Partial<User> {
   public last!: string;
 
   @Field()
-  @IsPhoneNumber()
+  @IsMobilePhone("en-US")
   public phone!: string;
 
   @Field()

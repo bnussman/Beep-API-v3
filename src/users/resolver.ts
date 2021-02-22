@@ -83,11 +83,13 @@ export class UserResolver {
     public async getQueue(@Ctx() ctx: Context, @Arg("id", { nullable: true }) id?: string): Promise<QueueEntry[]> {
         const r = await BeepORM.queueEntryRepository.find({ beeper: id || ctx.user.id }, { populate: true });
         
+        /*
         for (let i = 0; i < r.length; i++) {
            if (r[i].state == -1) {
                BeepORM.queueEntryRepository.nativeDelete(r[i]);
            }
         }
+        */
 
         return r.filter(entry => entry.state != -1);
     }
