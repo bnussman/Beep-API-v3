@@ -3,19 +3,24 @@ import { BeepORM } from '../app';
 import { ObjectId } from '@mikro-orm/mongodb';
 import { wrap } from '@mikro-orm/core';
 import { User, UserRole } from '../entities/User';
-import { Arg, Args, Authorized, Ctx, Mutation, Query, Resolver } from 'type-graphql';
+import { Arg, Args, Authorized, Ctx, Info, Mutation, Query, Resolver } from 'type-graphql';
 import PaginationArgs from '../args/Pagination';
 import { Beep } from '../entities/Beep';
 import { QueueEntry } from '../entities/QueueEntry';
 import EditUserValidator from '../validators/user/EditUser';
 import {Context} from 'src/utils/context';
+import {GraphQLResolveInfo} from 'graphql';
+import fieldsToRelations from 'graphql-fields-to-relations';
 
 @Resolver(User)
 export class UserResolver {
 
     @Query(() => User)
-    public async getUser(@Arg("id") id: string): Promise<User> {
-        const user = await BeepORM.userRepository.findOne(id);
+    public async getUser(@Arg("id") id: string, @Info() info: GraphQLResolveInfo): Promise<User> {
+        const relationPaths = fieldsToRelations(info);
+        const user = await BeepORM.userRepository.findOne(id, relationPaths);
+
+        console.log(user);
 
         if (!user) {
             throw new Error("User not found");
@@ -27,7 +32,7 @@ export class UserResolver {
     @Mutation(() => Boolean)
     @Authorized(UserRole.ADMIN)
     public async removeUser(@Arg("id") id: string): Promise<boolean> {
-        const user = BeepORM.em.getReference(User, new ObjectId(id));
+        const user = BeepORM.em.getReference(User, id);
 
         if (!user) {
             throw new Error("User not found");
@@ -80,8 +85,9 @@ export class UserResolver {
 
     @Query(() => [QueueEntry])
     @Authorized()
-    public async getQueue(@Ctx() ctx: Context, @Arg("id", { nullable: true }) id?: string): Promise<QueueEntry[]> {
-        const r = await BeepORM.queueEntryRepository.find({ beeper: id || ctx.user.id }, { populate: true });
+    public async getQueue(@Ctx() ctx: Context, @Info() info: GraphQLResolveInfo, @Arg("id", { nullable: true }) id?: string): Promise<QueueEntry[]> {
+        const relationPaths = fieldsToRelations(info);
+        const r = await BeepORM.queueEntryRepository.find({ beeper: id || ctx.user.id }, relationPaths);
         
         /*
         for (let i = 0; i < r.length; i++) {

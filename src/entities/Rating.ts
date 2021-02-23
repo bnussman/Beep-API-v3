@@ -15,12 +15,12 @@ export class Rating {
     @SerializedPrimaryKey()
     id!: string;
 
-    @Field()
-    @ManyToOne()
+    @Field(() => User)
+    @ManyToOne(() => User)
     rater!: User;
 
-    @Field()
-    @ManyToOne()
+    @Field(() => User)
+    @ManyToOne(() => User)
     rated!: User;
 
     @Field()

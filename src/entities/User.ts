@@ -1,7 +1,9 @@
-import { Collection, Entity, Enum, OneToMany, PrimaryKey, Property, SerializedPrimaryKey, Unique } from "@mikro-orm/core";
+import { Cascade, Collection, Entity, Enum, OneToMany, PrimaryKey, Property, SerializedPrimaryKey, Unique } from "@mikro-orm/core";
 import { ObjectId } from "@mikro-orm/mongodb";
 import { Authorized, Field, ObjectType } from "type-graphql";
 import { QueueEntry } from './QueueEntry';
+import { Location } from './Location';
+import { Rating } from './Rating';
 
 export enum UserRole {
     ADMIN = 'admin',
@@ -103,5 +105,13 @@ export class User {
     @Field(() => [QueueEntry])
     @OneToMany(() => QueueEntry, q => q.beeper, { lazy: true, eager: false })
     queue = new Collection<QueueEntry>(this);
+
+    @Field(() => [Location])
+    @OneToMany(() => Location, l => l.user, { lazy: true, eager: false })
+    locations = new Collection<Location>(this);
+
+    @Field(() => [Rating])
+    @OneToMany(() => Rating, r => r.rated, { lazy: true, eager: false })
+    ratings = new Collection<Rating>(this);
 }
 

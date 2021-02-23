@@ -14,12 +14,12 @@ export class Beep {
     @SerializedPrimaryKey()
     id!: string;
 
-    @Field()
-    @ManyToOne()
+    @Field(() => User)
+    @ManyToOne(() => User)
     beeper!: User;
 
-    @Field()
-    @ManyToOne()
+    @Field(() => User)
+    @ManyToOne(() => User)
     rider!: User;
     
     @Field()

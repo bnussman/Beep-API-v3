@@ -20,7 +20,7 @@ import { authChecker } from "./utils/authentication";
 import { AccountResolver } from "./account/resolver";
 import { DirectionsResolver } from "./directions/resolver";
 import { RatingResolver } from "./rating/resolver";
-import { ApolloServer } from "apollo-server";
+import { ApolloServer, gql } from "apollo-server";
 import { Rating } from "./entities/Rating";
 
 const url = `mongodb+srv://banks:${process.env.MONGODB_PASSWORD}@beep.5zzlx.mongodb.net/test?retryWrites=true&w=majority`;
@@ -38,6 +38,22 @@ export const BeepORM = {} as {
     locationRepository: EntityRepository<Location>,
     ratingRepository: EntityRepository<Rating>,
 };
+
+const typeDefs = gql`
+    type File {
+        filename: String!
+        mimetype: String!
+        encoding: String!
+    }
+
+    type Query {
+        uploads: [File]
+    }
+
+    type Mutation {
+        singleUpload(file: Upload!): File!
+    }
+`;
 
 export default class BeepAPIServer {
 
@@ -75,6 +91,7 @@ export default class BeepAPIServer {
         });
 
         const server = new ApolloServer({
+            typeDefs,
             schema,
             context: async ({ req }) => {
                 const token: string | undefined = req.get("Authorization")?.split(" ")[1];

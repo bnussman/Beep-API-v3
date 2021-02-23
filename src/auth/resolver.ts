@@ -23,13 +23,13 @@ export class AuthResolver {
 
     @Mutation(() => Auth)
     public async login(@Arg('input') input: LoginInput): Promise<Auth> {
-        const user = await BeepORM.userRepository.findOne({ username: input.username }, ['password']);
+        const user = await BeepORM.em.findOne(User, { username: input.username }, { populate: ['password'] });
+
+        console.log(user);
 
         if (!user) {
             throw new Error("User not found");
         }
-
-        await BeepORM.em.populate(user, 'password');
         
         console.log("Server side says password is:", user.password);
         console.log("Client's input password:", input.password);
