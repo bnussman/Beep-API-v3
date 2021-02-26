@@ -10,17 +10,7 @@ import { Report } from "./entities/Report";
 import { Location } from "./entities/Location";
 import { GraphQLSchema } from "graphql";
 import { buildSchema } from 'type-graphql';
-import { UserResolver } from './users/resolver';
-import { RiderResolver } from './rider/resolver';
-import { BeeperResolver } from './beeper/resolver';
-import { BeepResolver } from './beeps/resolver';
-import { ReportsResolver } from './reports/resolver';
-import { AuthResolver } from './auth/resolver';
 import { authChecker } from "./utils/authentication";
-import { AccountResolver } from "./account/resolver";
-import { DirectionsResolver } from "./directions/resolver";
-import { RatingResolver } from "./rating/resolver";
-import { LocationResolver } from "./location/resolver";
 import { ApolloServer, gql } from "apollo-server";
 import { Rating } from "./entities/Rating";
 
@@ -39,22 +29,6 @@ export const BeepORM = {} as {
     locationRepository: EntityRepository<Location>,
     ratingRepository: EntityRepository<Rating>,
 };
-
-const typeDefs = gql`
-    type File {
-        filename: String!
-        mimetype: String!
-        encoding: String!
-    }
-
-    type Query {
-        uploads: [File]
-    }
-
-    type Mutation {
-        singleUpload(file: Upload!): File!
-    }
-`;
 
 export default class BeepAPIServer {
 
@@ -87,12 +61,11 @@ export default class BeepAPIServer {
         initializeSentry();
 
         const schema: GraphQLSchema = await buildSchema({
-            resolvers: [UserResolver, RiderResolver, ReportsResolver, AuthResolver, AccountResolver, BeeperResolver, BeepResolver, DirectionsResolver, RatingResolver, LocationResolver],
+            resolvers: [__dirname + '/**/resolver.{ts,js}'],
             authChecker: authChecker
         });
 
         const server = new ApolloServer({
-            typeDefs,
             schema,
             context: async ({ req }) => {
                 const token: string | undefined = req.get("Authorization")?.split(" ")[1];
@@ -107,6 +80,6 @@ export default class BeepAPIServer {
 
         await server.listen(3001);
 
-        console.log("🚀  Server ready and has started!");
+        console.log("🚕 Server ready and has started!");
     }
 }

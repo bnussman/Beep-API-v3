@@ -3,10 +3,19 @@ import { createVerifyEmailEntryAndSendEmail } from "../auth/helpers";
 import { isEduEmail, deleteUser } from './helpers';
 import { BeepORM } from '../app';
 import { wrap } from '@mikro-orm/core';
-import { Arg, Authorized, Ctx, Mutation, Resolver } from 'type-graphql';
+import { Arg, Authorized, Ctx, Field, InputType, Mutation, Resolver } from 'type-graphql';
 import { Context } from '../utils/context';
 import { EditAccountInput } from '../validators/account';
 import { User } from '../entities/User';
+import {GraphQLUpload} from 'apollo-server';
+import {Stream} from 'nodemailer/lib/xoauth2';
+
+export interface Upload {
+    filename: string;
+    mimetype: string;
+    encoding: string;
+    createReadStream: () => Stream;
+}
 
 @Resolver()
 export class AccountResolver {
@@ -121,5 +130,12 @@ export class AccountResolver {
     @Authorized()
     public async deleteAccount(@Ctx() ctx: Context): Promise<boolean> {
         return await deleteUser(ctx.user);
+    }
+
+    @Mutation(() => Boolean)
+    //@ts-ignore
+    public async uploadPhoto(@Arg('photo', () => GraphQLUpload) photo: Upload): Promise<boolean> {
+        console.log(photo);
+        return true;
     }
 }
