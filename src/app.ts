@@ -20,6 +20,7 @@ import { authChecker } from "./utils/authentication";
 import { AccountResolver } from "./account/resolver";
 import { DirectionsResolver } from "./directions/resolver";
 import { RatingResolver } from "./rating/resolver";
+import { LocationResolver } from "./location/resolver";
 import { ApolloServer, gql } from "apollo-server";
 import { Rating } from "./entities/Rating";
 
@@ -86,7 +87,7 @@ export default class BeepAPIServer {
         initializeSentry();
 
         const schema: GraphQLSchema = await buildSchema({
-            resolvers: [UserResolver, RiderResolver, ReportsResolver, AuthResolver, AccountResolver, BeeperResolver, BeepResolver, DirectionsResolver, RatingResolver],
+            resolvers: [UserResolver, RiderResolver, ReportsResolver, AuthResolver, AccountResolver, BeeperResolver, BeepResolver, DirectionsResolver, RatingResolver, LocationResolver],
             authChecker: authChecker
         });
 

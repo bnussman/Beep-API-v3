@@ -1,23 +1,34 @@
 import { BeepORM } from '../app';
 import { Beep } from '../entities/Beep';
 import { QueryOrder } from '@mikro-orm/core';
-import { Args, Query, Resolver } from 'type-graphql';
+import { Arg, Args, Authorized, Mutation, ObjectType, Query, Resolver } from 'type-graphql';
 import PaginationArgs from '../args/Pagination';
+import {Paginated} from '../users/resolver';
+import {UserRole} from '../entities/User';
+
+// we need to create a temporary class for the abstract, generic class "instance"
+@ObjectType()
+class BeepsResponse extends Paginated(Beep) {
+  // you can add more fields here if you need
+}
 
 @Resolver(Beep)
 export class BeepResolver {
    
-    @Query(() => [Beep])
-    public async getBeeps(@Args() { offset, show }: PaginationArgs): Promise<Beep[]> {
+    @Query(() => BeepsResponse)
+    @Authorized(UserRole.ADMIN)
+    public async getBeeps(@Args() { offset, show }: PaginationArgs): Promise<BeepsResponse> {
         const [beeps, count] = await BeepORM.beepRepository.findAndCount({}, { orderBy: { doneTime: QueryOrder.DESC }, limit: show, offset: offset, populate: ['beeper', 'rider'] });
 
-        //TODO figure out pagination
-
-        return beeps;
+        return {
+            items: beeps,
+            count: count
+        };
     }
 
-    @Query(() => [Beep])
-    public async getBeep(id: string): Promise<Beep> {
+    @Query(() => Beep)
+    @Authorized(UserRole.ADMIN)
+    public async getBeep(@Arg('id') id: string): Promise<Beep> {
         const beep = await BeepORM.beepRepository.findOne(id);
 
         if (!beep) {
@@ -25,5 +36,15 @@ export class BeepResolver {
         }
 
         return beep;
+    }
+
+    @Mutation(() => Boolean)
+    @Authorized(UserRole.ADMIN)
+    public async deleteBeep(@Arg('id') id: string): Promise<boolean> {
+        const beep = BeepORM.beepRepository.getReference(id);
+
+        await BeepORM.beepRepository.removeAndFlush(beep);
+
+        return true;
     }
 }

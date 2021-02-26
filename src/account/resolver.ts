@@ -59,8 +59,8 @@ export class AccountResolver {
         return true;
     }
 
-    @Mutation(() => User)
-    public async verifyAccount(@Arg('id') id: string): Promise<User> {
+    @Mutation(() => Boolean)
+    public async verifyAccount(@Arg('id') id: string): Promise<boolean> {
         const entry = await BeepORM.verifyEmailRepository.findOne(id, { populate: true });
 
         if (!entry) {
@@ -104,7 +104,7 @@ export class AccountResolver {
 
         await BeepORM.verifyEmailRepository.removeAndFlush(entry);
 
-        return user;
+        return true;
     }
 
     @Mutation(() => Boolean)

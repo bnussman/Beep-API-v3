@@ -3,7 +3,7 @@ import { BeepORM } from '../app';
 import { ObjectId } from '@mikro-orm/mongodb';
 import { wrap } from '@mikro-orm/core';
 import { User, UserRole } from '../entities/User';
-import { Arg, Args, Authorized, Ctx, Info, Mutation, Query, Resolver } from 'type-graphql';
+import { Arg, Args, Authorized, ClassType, Ctx, Field, Info, Int, Mutation, ObjectType, Query, Resolver } from 'type-graphql';
 import PaginationArgs from '../args/Pagination';
 import { Beep } from '../entities/Beep';
 import { QueueEntry } from '../entities/QueueEntry';
@@ -11,6 +11,24 @@ import EditUserValidator from '../validators/user/EditUser';
 import {Context} from 'src/utils/context';
 import {GraphQLResolveInfo} from 'graphql';
 import fieldsToRelations from 'graphql-fields-to-relations';
+
+export function Paginated<T>(TItemClass: ClassType<T>) {
+    @ObjectType({ isAbstract: true })
+    abstract class PaginatedResponseClass {
+        @Field(() => [TItemClass])
+        items!: T[];
+
+        @Field(() => Int)
+        count!: number;
+    }
+    return PaginatedResponseClass;
+}
+
+// we need to create a temporary class for the abstract, generic class "instance"
+@ObjectType()
+class UsersResponse extends Paginated(User) {
+  // you can add more fields here if you need
+}
 
 @Resolver(User)
 export class UserResolver {
@@ -61,14 +79,17 @@ export class UserResolver {
         return user;
     }
 
-    @Query(() => [User])
+
+    //@Query(() => Paginated<User>(User))
+    @Query(() => UsersResponse)
     @Authorized(UserRole.ADMIN)
-    public async getUsers(@Args() { offset, show }: PaginationArgs): Promise<User[]> {
+    public async getUsers(@Args() { offset, show }: PaginationArgs): Promise<UsersResponse> {
         const [users, count] = await BeepORM.em.findAndCount(User, {}, { limit: show, offset: offset });
 
-        //TODO: we need to return count along with result for pagination
-
-        return users;
+        return {
+            items: users,
+            count: count
+        };
     }
 
     @Query(() => [Beep])

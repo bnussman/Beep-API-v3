@@ -1,5 +1,5 @@
 import { User, UserRole } from '../../entities/User';
-import { IsBoolean, IsEmail, IsNumber, IsOptional, IsPhoneNumber, IsString, Max, Min } from 'class-validator';
+import { IsBoolean, IsEmail, IsMobilePhone, IsNumber, IsOptional, IsString, Max, Min } from 'class-validator';
 import { Field, InputType } from 'type-graphql';
 
 @InputType()
@@ -21,7 +21,7 @@ export default class EditUserValidator implements Partial<User> {
   public email?: string;
 
   @Field({ nullable: true })
-  @IsPhoneNumber()
+  @IsMobilePhone("en-US")
   @IsOptional()
   public phone?: string;
 
@@ -90,4 +90,14 @@ export default class EditUserValidator implements Partial<User> {
   @IsString()
   @IsOptional()
   public pushToken?: string;
+
+  @Field({ nullable: true })
+  @IsString()
+  @IsOptional()
+  public photoUrl?: string;
+
+  @Field({ nullable: true })
+  @IsString()
+  @IsOptional()
+  public username?: string;
 }

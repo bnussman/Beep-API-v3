@@ -131,7 +131,7 @@ export function sendResetEmail(email: string, id: string, first: string | undefi
  * @returns void
  */
 export async function deactivateTokens(user: User): Promise<void> {
-    await BeepORM.tokenRepository.removeAndFlush({ user: user });
+    await BeepORM.tokenRepository.nativeDelete({ user: user });
 }
 
 /**

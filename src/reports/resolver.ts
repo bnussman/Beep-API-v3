@@ -2,10 +2,17 @@ import { Report } from '../entities/Report';
 import { BeepORM } from '../app';
 import { QueryOrder, wrap } from '@mikro-orm/core';
 import { User, UserRole } from '../entities/User';
-import { Arg, Args, Authorized, Ctx, Mutation, Query, Resolver } from 'type-graphql';
+import { Arg, Args, Authorized, Ctx, Mutation, ObjectType, Query, Resolver } from 'type-graphql';
 import { Context } from '../utils/context';
 import { ReportInput, UpdateReportInput } from '../validators/report';
 import PaginationArgs from '../args/Pagination';
+import {Paginated} from '../users/resolver';
+
+// we need to create a temporary class for the abstract, generic class "instance"
+@ObjectType()
+class ReportsResponse extends Paginated(Report) {
+  // you can add more fields here if you need
+}
 
 @Resolver(Report)
 export class ReportsResolver {
@@ -23,14 +30,15 @@ export class ReportsResolver {
     }
 
     
-    @Query(() => [Report])
+    @Query(() => ReportsResponse)
     @Authorized(UserRole.ADMIN)
-    public async getReports(@Args() { offset, show }: PaginationArgs): Promise<Report[]> {
-        const [reports, count] = await BeepORM.reportRepository.findAndCount({}, { orderBy: { timestamp: QueryOrder.DESC }, limit: show, offset: offset, populate: ['reporter', 'reported'] });
+    public async getReports(@Args() { offset, show }: PaginationArgs): Promise<ReportsResponse> {
+        const [reports, count] = await BeepORM.reportRepository.findAndCount({}, { orderBy: { timestamp: QueryOrder.DESC }, limit: show, offset: offset, populate: true });
 
-        //TODO: figure out pagination
-
-        return reports;
+        return {
+            items: reports,
+            count: count
+        }
     }
     
     @Mutation(() => Report)
@@ -54,9 +62,9 @@ export class ReportsResolver {
         return report;
     }
 
-    @Query(() => [Report])
+    @Query(() => Report)
     @Authorized(UserRole.ADMIN)
-    public async getReport(id: string): Promise<Report> {
+    public async getReport(@Arg('id') id: string): Promise<Report> {
         const report = await BeepORM.reportRepository.findOne(id, { populate: true, refresh: true });
 
         if (!report) {
@@ -68,7 +76,7 @@ export class ReportsResolver {
     
     @Mutation(() => Boolean)
     @Authorized(UserRole.ADMIN)
-    public async deleteReport(id: string): Promise<boolean> {
+    public async deleteReport(@Arg('id') id: string): Promise<boolean> {
         const report = BeepORM.reportRepository.getReference(id);
 
         await BeepORM.reportRepository.removeAndFlush(report);

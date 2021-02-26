@@ -31,7 +31,7 @@ export class Report {
     @Property()
     reason!: string;
 
-    @Field()
+    @Field({ nullable: true })
     @Property({ nullable: true })
     notes?: string;
 
@@ -41,10 +41,10 @@ export class Report {
 
     @Field()
     @Property({ default: false })
-    handled!: boolean
+    handled: boolean = false;
 
-    @Field()
-    @ManyToOne()
+    @Field({ nullable: true })
+    @ManyToOne({ nullable: true })
     beep?: Beep;
 
     constructor(reporter: User, reported: User, reason: string, beep?: string) {

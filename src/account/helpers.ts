@@ -17,13 +17,18 @@ export function isEduEmail(email: string): boolean {
  * @returns boolean true if delete was successful
  */
 export async function deleteUser(user: User): Promise<boolean> {
-    //delete user document in user table
-    await BeepORM.userRepository.removeAndFlush(user);
 
-    //delete user's queue table from beepQueues 
-    await BeepORM.queueEntryRepository.removeAndFlush({ beeper: user });
+    await BeepORM.queueEntryRepository.nativeDelete({ beeper: user });
+    await BeepORM.queueEntryRepository.nativeDelete({ rider: user });
+    
+    await BeepORM.beepRepository.nativeDelete({ beeper: user });
+    await BeepORM.beepRepository.nativeDelete({ rider: user });
 
-    //deative all of the user's tokens
+    await BeepORM.reportRepository.nativeDelete({ reporter: user });
+    await BeepORM.reportRepository.nativeDelete({ reported: user });
+
+    await BeepORM.userRepository.nativeDelete(user);
+
     deactivateTokens(user);
 
     return true;
