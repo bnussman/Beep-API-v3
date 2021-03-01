@@ -1,6 +1,5 @@
 import { deleteUser } from '../account/helpers';
 import { BeepORM } from '../app';
-import { ObjectId } from '@mikro-orm/mongodb';
 import { wrap } from '@mikro-orm/core';
 import { User, UserRole } from '../entities/User';
 import { Arg, Args, Authorized, ClassType, Ctx, Field, Info, Int, Mutation, ObjectType, Query, Resolver } from 'type-graphql';
@@ -24,11 +23,8 @@ export function Paginated<T>(TItemClass: ClassType<T>) {
     return PaginatedResponseClass;
 }
 
-// we need to create a temporary class for the abstract, generic class "instance"
 @ObjectType()
-class UsersResponse extends Paginated(User) {
-  // you can add more fields here if you need
-}
+class UsersResponse extends Paginated(User) {}
 
 @Resolver(User)
 export class UserResolver {
@@ -37,8 +33,6 @@ export class UserResolver {
     public async getUser(@Arg("id") id: string, @Info() info: GraphQLResolveInfo): Promise<User> {
         const relationPaths = fieldsToRelations(info);
         const user = await BeepORM.userRepository.findOne(id, relationPaths);
-
-        console.log(user);
 
         if (!user) {
             throw new Error("User not found");

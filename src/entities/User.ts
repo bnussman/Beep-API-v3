@@ -48,8 +48,8 @@ export class User {
     venmo!: string;
 
     @Field()
-    @Property({ lazy: true })
-    password?: string;
+    @Property()
+    password!: string;
 
     @Field()
     @Property()
@@ -88,8 +88,7 @@ export class User {
     role: UserRole = UserRole.USER;
 
     @Field({ nullable: true })
-    @Property({ nullable: true, lazy: true })
-    @Authorized(UserRole.ADMIN)
+    @Property({ nullable: true })
     pushToken?: string;
 
     @Field({ nullable: true })

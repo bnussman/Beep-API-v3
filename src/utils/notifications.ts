@@ -11,11 +11,14 @@ import {BeepORM} from "../app";
  */
 export async function sendNotification(user: User, title: string, message: string, categoryIdentifier?: string): Promise<void> {
     
-    await BeepORM.em.populate(user, ['pushToken']); 
 
     const pushToken = user.pushToken;
 
-    if (!pushToken) return;
+    if (!pushToken) {
+        console.log("no push token :(");
+        await BeepORM.userRepository.populate(user, "pushToken"); 
+    }
+    console.log("Sending push notification to", user.name, message);
 
     const req = request({
         host: "exp.host",

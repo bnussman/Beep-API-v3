@@ -11,7 +11,7 @@ import { Location } from "./entities/Location";
 import { GraphQLSchema } from "graphql";
 import { buildSchema } from 'type-graphql';
 import { authChecker } from "./utils/authentication";
-import { ApolloServer, gql } from "apollo-server";
+import { ApolloServer } from "apollo-server";
 import { Rating } from "./entities/Rating";
 
 const url = `mongodb+srv://banks:${process.env.MONGODB_PASSWORD}@beep.5zzlx.mongodb.net/test?retryWrites=true&w=majority`;
@@ -72,8 +72,10 @@ export default class BeepAPIServer {
 
                 if (!token) return;
 
-                const tokenEntryResult = await BeepORM.tokenRepository.findOne(token, { populate: true });
+                const tokenEntryResult = await BeepORM.em.findOne(TokenEntry, token, { populate: ['user'] });
 
+
+                console.log(tokenEntryResult?.user.pushToken);
                 if (tokenEntryResult) return { user: tokenEntryResult.user, token: tokenEntryResult };
             }
         });
