@@ -2,11 +2,11 @@ import { sendNotification } from '../utils/notifications';
 import { wrap } from '@mikro-orm/core';
 import { BeepORM } from '../app';
 import { Beep } from '../entities/Beep';
-import { User } from '../entities/User';
-import { Arg, Authorized, Ctx, Mutation, Resolver } from 'type-graphql';
+import { Arg, Authorized, Ctx, Mutation, PubSub, PubSubEngine, Resolver, Root, Subscription } from 'type-graphql';
 import { Context } from '../utils/context';
 import { BeeperSettingsInput, UpdateQueueEntryInput } from '../validators/beeper';
 import * as Sentry from '@sentry/node';
+import {QueueEntry} from '../entities/QueueEntry';
 
 @Resolver(Beep)
 export class BeeperResolver {
@@ -28,7 +28,7 @@ export class BeeperResolver {
     }
     
     @Mutation(() => Boolean)
-    public async setBeeperQueue(@Ctx() ctx: Context, @Arg('input') input: UpdateQueueEntryInput): Promise<boolean> {
+    public async setBeeperQueue(@Ctx() ctx: Context, @PubSub() pubSub: PubSubEngine, @Arg('input') input: UpdateQueueEntryInput): Promise<boolean> {
         const queueEntry = await BeepORM.queueEntryRepository.findOneOrFail(input.queueId, { populate: true });
 
         if (input.value == 'accept' || input.value == 'deny') {
@@ -57,8 +57,6 @@ export class BeeperResolver {
             BeepORM.userRepository.persist(ctx.user);
 
             await BeepORM.em.flush();
-
-            return true;
         }
         else if (input.value == 'deny' || input.value == 'complete') {
             const finishedBeep = new Beep();
@@ -85,8 +83,6 @@ export class BeeperResolver {
             if (input.value == "deny") {
                 sendNotification(queueEntry.rider, `${ctx.user.name} has denied your beep request`, "Open your app to find a diffrent beeper.");
             }
-
-            return true;
         }
         else {
             queueEntry.state++;
@@ -105,8 +101,23 @@ export class BeeperResolver {
             }
 
             await BeepORM.queueEntryRepository.persistAndFlush(queueEntry);
-
-            return true;
         }
+
+        const ridersQueuePosition = await BeepORM.queueEntryRepository.count({ beeper: queueEntry.beeper, timeEnteredQueue: { $lt: queueEntry.timeEnteredQueue }, state: { $ne: -1 } });
+
+        queueEntry.ridersQueuePosition = ridersQueuePosition;
+
+        const t = input.value == 'deny' || input.value == 'complete' ? null : queueEntry;
+
+        pubSub.publish(queueEntry.rider.id, t);
+        pubSub.publish(ctx.user.id, t);
+
+        return true;
+    }
+
+    @Subscription(() => [QueueEntry], { topics: ({ args }) => args.topic })
+    public async getBeeperUpdates(@Arg("topic") topic: string, @Root() entry: QueueEntry): Promise<QueueEntry[]> {
+        const r = await BeepORM.queueEntryRepository.find({ beeper: topic }, { populate: true });
+        return r.filter(entry => entry.state != -1);
     }
 }

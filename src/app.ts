@@ -67,7 +67,11 @@ export default class BeepAPIServer {
 
         const server = new ApolloServer({
             schema,
+            subscriptions: {
+                path: "/subscriptions"
+            },
             context: async ({ req }) => {
+                if (!req) return;
                 const token: string | undefined = req.get("Authorization")?.split(" ")[1];
 
                 if (!token) return;

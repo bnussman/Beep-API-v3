@@ -16,8 +16,11 @@ export async function sendNotification(user: User, title: string, message: strin
 
     if (!pushToken) {
         console.log("no push token :(");
-        await BeepORM.userRepository.populate(user, "pushToken"); 
+        console.log("no push token :(");
+        console.log("no push token :(");
+        console.log("no push token :(");
     }
+
     console.log("Sending push notification to", user.name, message);
 
     const req = request({

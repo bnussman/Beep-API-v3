@@ -3,7 +3,7 @@ import { BeepORM } from '../app';
 import { QueryOrder, wrap } from '@mikro-orm/core';
 import { QueueEntry } from '../entities/QueueEntry';
 import { User } from '../entities/User';
-import { Arg, Authorized, Ctx, Mutation, Query, Resolver } from 'type-graphql';
+import { Arg, Authorized, Ctx, Mutation, PubSub, PubSubEngine, Query, Resolver, Root, Subscription } from 'type-graphql';
 import GetBeepInput from '../validators/rider';
 import { Context } from '../utils/context';
    
@@ -12,7 +12,7 @@ export class RiderResolver {
 
     @Mutation(() => QueueEntry)
     @Authorized()
-    public async chooseBeep(@Ctx() ctx: Context, @Arg('beeperId') beeperId: string, @Arg('input') input: GetBeepInput): Promise<QueueEntry> {
+    public async chooseBeep(@Ctx() ctx: Context, @PubSub() pubSub: PubSubEngine,  @Arg('beeperId') beeperId: string, @Arg('input') input: GetBeepInput): Promise<QueueEntry> {
         const beeper = await BeepORM.userRepository.findOne(beeperId);
 
         if (!beeper) {
@@ -44,6 +44,11 @@ export class RiderResolver {
         sendNotification(beeper, `${ctx.user.name} has entered your queue`, "Please open your app to accept or deny this rider.", "enteredBeeperQueue");
 
         q.ridersQueuePosition = -1;
+
+        const e = await BeepORM.queueEntryRepository.findOne({ rider: ctx.user.id }, true);
+
+        pubSub.publish(beeper.id, e);
+        pubSub.publish(ctx.user.id, e);
 
         return q;
     }
@@ -87,7 +92,7 @@ export class RiderResolver {
     
     @Mutation(() => Boolean)
     @Authorized()
-    public async riderLeaveQueue(@Ctx() ctx: Context): Promise<boolean> {
+    public async riderLeaveQueue(@Ctx() ctx: Context, @PubSub() pubSub: PubSubEngine): Promise<boolean> {
         const entry = await BeepORM.queueEntryRepository.findOne({ rider: ctx.user });
 
         if (!entry) {
@@ -104,6 +109,9 @@ export class RiderResolver {
 
         sendNotification(entry.beeper, `${ctx.user.name} left your queue`, "They decided they did not want a beep from you! :(");
 
+        pubSub.publish(entry.beeper.id, null);
+        pubSub.publish(ctx.user.id, null);
+
         return true;
     }
     
@@ -111,5 +119,11 @@ export class RiderResolver {
     @Authorized()
     public async getBeeperList(): Promise<User[]> {
         return await BeepORM.userRepository.find({ isBeeping: true });
+    }
+
+    @Subscription(() => QueueEntry, { nullable: true, topics: ({ args }) => args.topic })
+    public getRiderUpdates(@Arg("topic") topic: string, @Root() entry: QueueEntry): QueueEntry | null {
+        console.log("Rider Sub tiggered");
+        return entry;
     }
 }
