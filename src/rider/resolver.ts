@@ -103,14 +103,12 @@ export class RiderResolver {
 
         await BeepORM.userRepository.persistAndFlush(entry.beeper);
 
-        entry.state = -1;
-
-        await BeepORM.queueEntryRepository.persistAndFlush(entry);
-
-        sendNotification(entry.beeper, `${ctx.user.name} left your queue`, "They decided they did not want a beep from you! :(");
-
         pubSub.publish(entry.beeper.id, null);
         pubSub.publish(ctx.user.id, null);
+
+        await BeepORM.queueEntryRepository.removeAndFlush(entry);
+
+        sendNotification(entry.beeper, `${ctx.user.name} left your queue`, "They decided they did not want a beep from you! :(");
 
         return true;
     }
@@ -121,7 +119,15 @@ export class RiderResolver {
         return await BeepORM.userRepository.find({ isBeeping: true });
     }
 
-    @Subscription(() => QueueEntry, { nullable: true, topics: ({ args }) => args.topic })
+    @Subscription(() => QueueEntry, {
+        nullable: true,
+        topics: ({ args }) => args.topic,
+        filter: ({ payload, args }) => {
+            console.log(payload);
+            console.log(args);
+            return payload == null || payload?.rider._id == args.topic;
+        },
+    })
     public getRiderUpdates(@Arg("topic") topic: string, @Root() entry: QueueEntry): QueueEntry | null {
         console.log("Rider Sub tiggered");
         return entry;

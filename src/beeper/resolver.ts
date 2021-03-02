@@ -74,9 +74,7 @@ export class BeeperResolver {
 
             BeepORM.userRepository.persist(ctx.user);
 
-            queueEntry.state = -1;
-
-            BeepORM.queueEntryRepository.persist(queueEntry);
+            BeepORM.queueEntryRepository.remove(queueEntry);
 
             await BeepORM.em.flush();
 
