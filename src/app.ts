@@ -68,18 +68,26 @@ export default class BeepAPIServer {
         const server = new ApolloServer({
             schema,
             subscriptions: {
-                path: "/subscriptions"
+                path: "/subscriptions",
+                //@ts-ignore
+                onConnect: async (params: { token: string }, webSocket, context) => {
+                    if (!params.token) throw new Error("No auth token");
+
+                    const tokenEntryResult = await BeepORM.em.findOne(TokenEntry, params.token, { populate: ['user'] });
+                    if (tokenEntryResult) return { user: tokenEntryResult.user, token: tokenEntryResult };
+                }
             },
-            context: async ({ req }) => {
-                if (!req) return;
+            context: async ({ req, connection }) => {
+                if (!req) {
+                    return connection?.context;
+                }
+
                 const token: string | undefined = req.get("Authorization")?.split(" ")[1];
 
                 if (!token) return;
 
                 const tokenEntryResult = await BeepORM.em.findOne(TokenEntry, token, { populate: ['user'] });
 
-
-                console.log(tokenEntryResult?.user.pushToken);
                 if (tokenEntryResult) return { user: tokenEntryResult.user, token: tokenEntryResult };
             }
         });

@@ -113,7 +113,12 @@ export class BeeperResolver {
         return true;
     }
 
-    @Subscription(() => [QueueEntry], { topics: ({ args }) => args.topic })
+    @Subscription(() => [QueueEntry], {
+        topics: ({ args }) => args.topic,
+        filter: ({ payload, args, context }) => {
+            return context.user._id == args.topic;
+        }
+    })
     public async getBeeperUpdates(@Arg("topic") topic: string, @Root() entry: QueueEntry): Promise<QueueEntry[]> {
         const r = await BeepORM.queueEntryRepository.find({ beeper: topic }, { populate: true });
         return r.filter(entry => entry.state != -1);

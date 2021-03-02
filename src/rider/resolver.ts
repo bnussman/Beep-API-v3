@@ -122,14 +122,11 @@ export class RiderResolver {
     @Subscription(() => QueueEntry, {
         nullable: true,
         topics: ({ args }) => args.topic,
-        filter: ({ payload, args }) => {
-            console.log(payload);
-            console.log(args);
-            return payload == null || payload?.rider._id == args.topic;
+        filter: ({ payload, args, context }) => {
+            return context.user._id == args.topic;
         },
     })
     public getRiderUpdates(@Arg("topic") topic: string, @Root() entry: QueueEntry): QueueEntry | null {
-        console.log("Rider Sub tiggered");
         return entry;
     }
 }
