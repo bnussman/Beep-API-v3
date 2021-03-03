@@ -71,7 +71,7 @@ export default class BeepAPIServer {
                 path: "/subscriptions",
                 //@ts-ignore
                 onConnect: async (params: { token: string }, webSocket, context) => {
-                    if (!params.token) throw new Error("No auth token");
+                    if (!params || !params.token) throw new Error("No auth token");
 
                     const tokenEntryResult = await BeepORM.em.findOne(TokenEntry, params.token, { populate: ['user'] });
                     if (tokenEntryResult) return { user: tokenEntryResult.user, token: tokenEntryResult };
