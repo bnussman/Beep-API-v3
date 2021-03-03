@@ -47,8 +47,8 @@ export class RiderResolver {
 
         const e = await BeepORM.queueEntryRepository.findOne({ rider: ctx.user.id }, true);
 
-        pubSub.publish(beeper.id, e);
-        pubSub.publish(ctx.user.id, e);
+        pubSub.publish("BeeperUpdate", { to: beeper.id, data: e });
+        pubSub.publish("RiderUpdate", { to: ctx.user.id, data: e });
 
         return q;
     }
@@ -103,8 +103,8 @@ export class RiderResolver {
 
         await BeepORM.userRepository.persistAndFlush(entry.beeper);
 
-        pubSub.publish(entry.beeper.id, null);
-        pubSub.publish(ctx.user.id, null);
+        pubSub.publish("BeeperUpdate", { to: entry.beeper.id, data: null });
+        pubSub.publish("RiderUpdate", { to: ctx.user.id, data: null });
 
         await BeepORM.queueEntryRepository.removeAndFlush(entry);
 
@@ -121,12 +121,14 @@ export class RiderResolver {
 
     @Subscription(() => QueueEntry, {
         nullable: true,
-        topics: ({ args }) => args.topic,
+        topics: "RiderUpdate",
         filter: ({ payload, args, context }) => {
-            return context.user._id == args.topic;
+            console.log(payload.to == context.user._id);
+            return payload.to == context.user._id;
         },
     })
-    public getRiderUpdates(@Arg("topic") topic: string, @Root() entry: QueueEntry): QueueEntry | null {
-        return entry;
+    public getRiderUpdates(@Arg("topic") topic: string, @Root() entry: { to: string, data: QueueEntry }): QueueEntry | null {
+        console.log(entry);
+        return entry.data;
     }
 }

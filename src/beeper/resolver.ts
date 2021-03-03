@@ -107,16 +107,17 @@ export class BeeperResolver {
 
         const t = input.value == 'deny' || input.value == 'complete' ? null : queueEntry;
 
-        pubSub.publish(queueEntry.rider.id, t);
-        pubSub.publish(ctx.user.id, t);
+        pubSub.publish("RiderUpdate", { to: queueEntry.rider.id, data: t });
+        pubSub.publish("BeeperUpdate", { to: ctx.user.id, data: t });
 
         return true;
     }
 
     @Subscription(() => [QueueEntry], {
-        topics: ({ args }) => args.topic,
+        topics: "BeeperUpdate",
         filter: ({ payload, args, context }) => {
-            return context.user._id == args.topic;
+            console.log(payload.to == context.user._id);
+            return payload.to == context.user._id;
         }
     })
     public async getBeeperUpdates(@Arg("topic") topic: string, @Root() entry: QueueEntry): Promise<QueueEntry[]> {
