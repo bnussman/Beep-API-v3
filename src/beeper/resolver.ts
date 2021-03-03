@@ -107,20 +107,17 @@ export class BeeperResolver {
 
         const t = input.value == 'deny' || input.value == 'complete' ? null : queueEntry;
 
-        pubSub.publish("RiderUpdate", { to: queueEntry.rider.id, data: t });
-        pubSub.publish("BeeperUpdate", { to: ctx.user.id, data: t });
+        pubSub.publish("Rider" + queueEntry.rider.id, t);
+        pubSub.publish("Beeper" + ctx.user.id, t);
 
         return true;
     }
 
     @Subscription(() => [QueueEntry], {
-        topics: "BeeperUpdate",
-        filter: ({ payload, args, context }) => {
-            console.log(payload.to == context.user._id);
-            return payload.to == context.user._id;
-        }
+        topics: ({ args }) => "Beeper" + args.topic,
     })
     public async getBeeperUpdates(@Arg("topic") topic: string, @Root() entry: QueueEntry): Promise<QueueEntry[]> {
+        console.log(topic);
         const r = await BeepORM.queueEntryRepository.find({ beeper: topic }, { populate: true });
         return r.filter(entry => entry.state != -1);
     }

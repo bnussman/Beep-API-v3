@@ -47,8 +47,8 @@ export class RiderResolver {
 
         const e = await BeepORM.queueEntryRepository.findOne({ rider: ctx.user.id }, true);
 
-        pubSub.publish("BeeperUpdate", { to: beeper.id, data: e });
-        pubSub.publish("RiderUpdate", { to: ctx.user.id, data: e });
+        pubSub.publish("Beeper" + beeper.id, e);
+        pubSub.publish("Rider" + ctx.user.id, e);
 
         return q;
     }
@@ -65,15 +65,13 @@ export class RiderResolver {
         return beeper;
     }
 
-    @Query(() => QueueEntry)
+    @Query(() => QueueEntry, { nullable: true })
     @Authorized()
-    public async getRiderStatus(@Ctx() ctx: Context): Promise<QueueEntry> {
+    public async getRiderStatus(@Ctx() ctx: Context): Promise<QueueEntry | null> {
         const entry = await BeepORM.queueEntryRepository.findOne({ rider: ctx.user }, { populate: ['beeper'] });
 
-        if (entry?.state == -1) await BeepORM.queueEntryRepository.nativeDelete(entry);
-
-        if (!entry || entry.state == -1) {
-            throw new Error("Currently, user is not getting a beep.");
+        if (!entry) {
+            return null;
         }
 
         const ridersQueuePosition = await BeepORM.queueEntryRepository.count({ beeper: entry.beeper, timeEnteredQueue: { $lt: entry.timeEnteredQueue }, state: { $ne: -1 } });
@@ -100,20 +98,22 @@ export class RiderResolver {
         }
 
         if (entry.isAccepted) entry.beeper.queueSize--;
+        
+        const id = entry.beeper.id;
 
         await BeepORM.userRepository.persistAndFlush(entry.beeper);
 
-        pubSub.publish("BeeperUpdate", { to: entry.beeper.id, data: null });
-        pubSub.publish("RiderUpdate", { to: ctx.user.id, data: null });
-
         await BeepORM.queueEntryRepository.removeAndFlush(entry);
+
+        pubSub.publish("Beeper" + id, null);
+        pubSub.publish("Rider" + ctx.user.id, null);
 
         sendNotification(entry.beeper, `${ctx.user.name} left your queue`, "They decided they did not want a beep from you! :(");
 
         return true;
     }
     
-    @Query(returns => [User])
+    @Query(() => [User])
     @Authorized()
     public async getBeeperList(): Promise<User[]> {
         return await BeepORM.userRepository.find({ isBeeping: true });
@@ -121,14 +121,9 @@ export class RiderResolver {
 
     @Subscription(() => QueueEntry, {
         nullable: true,
-        topics: "RiderUpdate",
-        filter: ({ payload, args, context }) => {
-            console.log(payload.to == context.user._id);
-            return payload.to == context.user._id;
-        },
+        topics: ({ args }) => "Rider" + args.topic,
     })
-    public getRiderUpdates(@Arg("topic") topic: string, @Root() entry: { to: string, data: QueueEntry }): QueueEntry | null {
-        console.log(entry);
-        return entry.data;
+    public getRiderUpdates(@Arg("topic") topic: string, @Root() entry: QueueEntry): QueueEntry | null {
+        return entry;
     }
 }
