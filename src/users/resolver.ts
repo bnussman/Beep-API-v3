@@ -7,8 +7,8 @@ import PaginationArgs from '../args/Pagination';
 import { Beep } from '../entities/Beep';
 import { QueueEntry } from '../entities/QueueEntry';
 import EditUserValidator from '../validators/user/EditUser';
-import {Context} from 'src/utils/context';
-import {GraphQLResolveInfo} from 'graphql';
+import { Context } from '../utils/context';
+import { GraphQLResolveInfo } from 'graphql';
 import fieldsToRelations from 'graphql-fields-to-relations';
 
 export function Paginated<T>(TItemClass: ClassType<T>) {
@@ -73,8 +73,6 @@ export class UserResolver {
         return user;
     }
 
-
-    //@Query(() => Paginated<User>(User))
     @Query(() => UsersResponse)
     @Authorized(UserRole.ADMIN)
     public async getUsers(@Args() { offset, show }: PaginationArgs): Promise<UsersResponse> {
@@ -103,15 +101,7 @@ export class UserResolver {
     public async getQueue(@Ctx() ctx: Context, @Info() info: GraphQLResolveInfo, @Arg("id", { nullable: true }) id?: string): Promise<QueueEntry[]> {
         const relationPaths = fieldsToRelations(info);
         const r = await BeepORM.queueEntryRepository.find({ beeper: id || ctx.user.id }, relationPaths);
-        
-        /*
-        for (let i = 0; i < r.length; i++) {
-           if (r[i].state == -1) {
-               BeepORM.queueEntryRepository.nativeDelete(r[i]);
-           }
-        }
-        */
 
-        return r.filter(entry => entry.state != -1);
+        return r;
     }
 }
