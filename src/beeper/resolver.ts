@@ -14,7 +14,7 @@ export class BeeperResolver {
     @Mutation(() => Boolean)
     @Authorized()
     public async setBeeperStatus(@Ctx() ctx: Context, @Arg('input') input: BeeperSettingsInput): Promise<boolean> {
-        if (!ctx.user.queue.isInitialized()) await BeepORM.userRepository.populate(ctx.user, 'queue');
+        await BeepORM.userRepository.populate(ctx.user, 'queue');
 
         if (!input.isBeeping && (ctx.user.queue.length > 0)) {
             throw new Error("You can't stop beeping when you still have beeps to complete or riders in your queue");
@@ -24,7 +24,6 @@ export class BeeperResolver {
 
         await BeepORM.userRepository.persistAndFlush(ctx.user);
 
-        await BeepORM.em.populate(ctx.user, ['queue']);
 
         return true;
     }
@@ -103,14 +102,24 @@ export class BeeperResolver {
             await BeepORM.queueEntryRepository.persistAndFlush(queueEntry);
         }
 
-        const ridersQueuePosition = await BeepORM.queueEntryRepository.count({ beeper: queueEntry.beeper, timeEnteredQueue: { $lt: queueEntry.timeEnteredQueue }, state: { $ne: -1 } });
+        const queues = await BeepORM.queueEntryRepository.find({ beeper: ctx.user} , { populate: true });
 
-        queueEntry.ridersQueuePosition = ridersQueuePosition;
+        pubSub.publish("Beeper" + ctx.user.id, null);
 
-        const t = input.value == 'deny' || input.value == 'complete' ? null : queueEntry;
+        const t = (input.value == 'deny' || input.value == 'complete') ? null : queueEntry;
 
         pubSub.publish("Rider" + queueEntry.rider.id, t);
-        pubSub.publish("Beeper" + ctx.user.id, t);
+
+        for (const entry of queues) {
+
+            if (entry.id == input.queueId) continue;
+
+            const ridersQueuePosition = await BeepORM.queueEntryRepository.count({ beeper: ctx.user.id, timeEnteredQueue: { $lt: entry.timeEnteredQueue }, state: { $ne: -1 } });
+
+            entry.ridersQueuePosition = ridersQueuePosition;
+
+            pubSub.publish("Rider" + entry.rider.id, entry);
+        }
 
         return true;
     }
