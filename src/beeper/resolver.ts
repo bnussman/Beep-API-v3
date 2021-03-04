@@ -116,11 +116,9 @@ export class BeeperResolver {
     private async sendRiderUpdates(skipId: string, beeperId: string, pubSub: PubSubEngine) {
         const queues = await BeepORM.queueEntryRepository.find({ beeper: beeperId } , { populate: true });
 
-        pubSub.publish("Beeper" + beeperId, null);
-
         for (const entry of queues) {
 
-            if (entry.id == skipId) continue;
+            if (entry.rider.id == skipId) continue;
 
             const ridersQueuePosition = await BeepORM.queueEntryRepository.count({ beeper: beeperId, timeEnteredQueue: { $lt: entry.timeEnteredQueue }, state: { $ne: -1 } });
 
@@ -128,7 +126,6 @@ export class BeeperResolver {
 
             pubSub.publish("Rider" + entry.rider.id, entry);
         }
-
     }
 
     @Subscription(() => [QueueEntry], {
