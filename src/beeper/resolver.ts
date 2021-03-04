@@ -14,7 +14,9 @@ export class BeeperResolver {
     @Mutation(() => Boolean)
     @Authorized()
     public async setBeeperStatus(@Ctx() ctx: Context, @Arg('input') input: BeeperSettingsInput): Promise<boolean> {
-        if ((input.isBeeping == false) && (ctx.user.queueSize > 0)) {
+        if (!ctx.user.queue.isInitialized()) await BeepORM.userRepository.populate(ctx.user, 'queue');
+
+        if (!input.isBeeping && (ctx.user.queue.length > 0)) {
             throw new Error("You can't stop beeping when you still have beeps to complete or riders in your queue");
         }
 
