@@ -5,17 +5,17 @@ service:
   enabled: true
   name: web
   type: ClusterIP
-  url: https://ridebeep.app/api
+  url: https://ridebeep.app/
   externalPort: 3001
   internalPort: 3001
 livenessProbe:
-  path: "/healthcheck"
+  path: "/.well-known/apollo/server-health"
   initialDelaySeconds: 20
   timeoutSeconds: 5
   scheme: "HTTP"
   probeType: "httpGet"
 readinessProbe:
-  path: "/healthcheck"
+  path: "/.well-known/apollo/server-health"
   initialDelaySeconds: 20
   timeoutSeconds: 15
   scheme: "HTTP"

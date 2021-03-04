@@ -1,5 +1,5 @@
 import { initializeSentry } from "./utils/sentry";
-import { EntityManager, EntityRepository, MikroORM } from "@mikro-orm/core";
+import { MikroORM } from "@mikro-orm/core";
 import { TokenEntry } from "./entities/TokenEntry";
 import { User } from "./entities/User";
 import { VerifyEmail } from "./entities/VerifyEmail";
@@ -13,22 +13,11 @@ import { buildSchema } from 'type-graphql';
 import { authChecker } from "./utils/authentication";
 import { ApolloServer } from "apollo-server";
 import { Rating } from "./entities/Rating";
+import { ORM } from "./utils/ORM";
 
 const url = `mongodb+srv://banks:${process.env.MONGODB_PASSWORD}@beep.5zzlx.mongodb.net/test?retryWrites=true&w=majority`;
 
-export const BeepORM = {} as {
-    orm: MikroORM,
-    em: EntityManager
-    userRepository: EntityRepository<User>,
-    queueEntryRepository: EntityRepository<QueueEntry>,
-    tokenRepository: EntityRepository<TokenEntry>,
-    verifyEmailRepository: EntityRepository<VerifyEmail>,
-    beepRepository: EntityRepository<Beep>,
-    forgotPasswordRepository: EntityRepository<ForgotPassword>,
-    reportRepository: EntityRepository<Report>,
-    locationRepository: EntityRepository<Location>,
-    ratingRepository: EntityRepository<Rating>,
-};
+export const BeepORM = {} as ORM;
 
 export default class BeepAPIServer {
 
@@ -70,10 +59,11 @@ export default class BeepAPIServer {
             subscriptions: {
                 path: "/subscriptions",
                 //@ts-ignore
-                onConnect: async (params: { token: string }, webSocket, context) => {
+                onConnect: async (params: { token: string }) => {
                     if (!params || !params.token) throw new Error("No auth token");
 
                     const tokenEntryResult = await BeepORM.em.findOne(TokenEntry, params.token, { populate: ['user'] });
+                    
                     if (tokenEntryResult) return { user: tokenEntryResult.user, token: tokenEntryResult };
                 }
             },

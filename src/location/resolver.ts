@@ -1,4 +1,4 @@
-import { Paginated } from '../users/resolver';
+import { Paginated } from '../utils/paginated';
 import { Arg, Args, Authorized, ObjectType, Query, Resolver } from 'type-graphql';
 import { UserRole } from '../entities/User';
 import PaginationArgs from '../args/Pagination';

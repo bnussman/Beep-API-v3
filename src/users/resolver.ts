@@ -10,18 +10,7 @@ import EditUserValidator from '../validators/user/EditUser';
 import { Context } from '../utils/context';
 import { GraphQLResolveInfo } from 'graphql';
 import fieldsToRelations from 'graphql-fields-to-relations';
-
-export function Paginated<T>(TItemClass: ClassType<T>) {
-    @ObjectType({ isAbstract: true })
-    abstract class PaginatedResponseClass {
-        @Field(() => [TItemClass])
-        items!: T[];
-
-        @Field(() => Int)
-        count!: number;
-    }
-    return PaginatedResponseClass;
-}
+import { Paginated } from '../utils/paginated';
 
 @ObjectType()
 class UsersResponse extends Paginated(User) {}
