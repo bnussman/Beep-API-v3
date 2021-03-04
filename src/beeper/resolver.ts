@@ -102,26 +102,33 @@ export class BeeperResolver {
             await BeepORM.queueEntryRepository.persistAndFlush(queueEntry);
         }
 
-        const queues = await BeepORM.queueEntryRepository.find({ beeper: ctx.user} , { populate: true });
-
         pubSub.publish("Beeper" + ctx.user.id, null);
 
         const t = (input.value == 'deny' || input.value == 'complete') ? null : queueEntry;
 
         pubSub.publish("Rider" + queueEntry.rider.id, t);
 
+        this.sendRiderUpdates(queueEntry.rider.id, ctx.user.id, pubSub);
+
+        return true;
+    }
+
+    private async sendRiderUpdates(skipId: string, beeperId: string, pubSub: PubSubEngine) {
+        const queues = await BeepORM.queueEntryRepository.find({ beeper: beeperId } , { populate: true });
+
+        pubSub.publish("Beeper" + beeperId, null);
+
         for (const entry of queues) {
 
-            if (entry.id == input.queueId) continue;
+            if (entry.id == skipId) continue;
 
-            const ridersQueuePosition = await BeepORM.queueEntryRepository.count({ beeper: ctx.user.id, timeEnteredQueue: { $lt: entry.timeEnteredQueue }, state: { $ne: -1 } });
+            const ridersQueuePosition = await BeepORM.queueEntryRepository.count({ beeper: beeperId, timeEnteredQueue: { $lt: entry.timeEnteredQueue }, state: { $ne: -1 } });
 
             entry.ridersQueuePosition = ridersQueuePosition;
 
             pubSub.publish("Rider" + entry.rider.id, entry);
         }
 
-        return true;
     }
 
     @Subscription(() => [QueueEntry], {

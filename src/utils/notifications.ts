@@ -1,25 +1,15 @@
 import { request } from "https";
-import * as Sentry from "@sentry/node";
 import { User } from '../entities/User';
-import {BeepORM} from "../app";
 
 /**
  * Use Expo's API to send a push notification
- * @param userid the resipiant's id
+ * @param user the resipiant's id
  * @param title for the notification
  * @param message is the body of the push notification
  */
 export async function sendNotification(user: User, title: string, message: string, categoryIdentifier?: string): Promise<void> {
-    
 
-    const pushToken = user.pushToken;
-
-    if (!pushToken) {
-        console.log("no push token :(");
-        console.log("no push token :(");
-        console.log("no push token :(");
-        console.log("no push token :(");
-    }
+    if (!user.pushToken) return;
 
     console.log("Sending push notification to", user.name, message);
 
@@ -33,7 +23,7 @@ export async function sendNotification(user: User, title: string, message: strin
     });
 
     req.write(JSON.stringify({
-        "to": pushToken,
+        "to": user.pushToken,
         "title": title,
         "body": message,
         "_category": categoryIdentifier
