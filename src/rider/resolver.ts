@@ -101,9 +101,9 @@ export class RiderResolver {
         
         const id = entry.beeper.id;
 
-        await BeepORM.userRepository.persistAndFlush(entry.beeper);
+        BeepORM.userRepository.persistAndFlush(entry.beeper);
 
-        await BeepORM.queueEntryRepository.removeAndFlush(entry);
+        BeepORM.queueEntryRepository.removeAndFlush(entry);
 
         pubSub.publish("Beeper" + id, null);
         pubSub.publish("Rider" + ctx.user.id, null);
