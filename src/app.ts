@@ -14,6 +14,9 @@ import { authChecker } from "./utils/authentication";
 import { ApolloServer } from "apollo-server";
 import { Rating } from "./entities/Rating";
 import { ORM } from "./utils/ORM";
+import { RedisCacheAdapter } from 'mikro-orm-cache-adapter-redis';
+import { RedisPubSub } from 'graphql-redis-subscriptions';
+import Redis from 'ioredis';
 
 const url = `mongodb+srv://banks:${process.env.MONGODB_PASSWORD}@beep.5zzlx.mongodb.net/test?retryWrites=true&w=majority`;
 
@@ -33,7 +36,15 @@ export default class BeepAPIServer {
             dbName: 'beep',
             type: 'mongo',
             clientUrl: url,
-            debug: true
+            debug: true,
+            resultCache: {
+                adapter: RedisCacheAdapter,
+                options: {
+                    host: '192.168.1.135',
+                    port: 6379,
+                    password: 'jJHBYlvrfbcuPrJsym7ZXYKCKPpAtoiDEYduKaYlDxJFvZ+QvtHxpIQM5N/+9kPEzuDWAvHA4vgSUu0q'
+                }
+            }
         });
 
         BeepORM.em = BeepORM.orm.em;
@@ -49,9 +60,20 @@ export default class BeepAPIServer {
 
         initializeSentry();
 
+        const options = {
+            host: '192.168.1.135',
+            port: 6379,
+            password: 'jJHBYlvrfbcuPrJsym7ZXYKCKPpAtoiDEYduKaYlDxJFvZ+QvtHxpIQM5N/+9kPEzuDWAvHA4vgSUu0q',
+            db: 1
+        };
+
         const schema: GraphQLSchema = await buildSchema({
             resolvers: [__dirname + '/**/resolver.{ts,js}'],
-            authChecker: authChecker
+            authChecker: authChecker,
+            pubSub: new RedisPubSub({
+                publisher: new Redis(options),
+                subscriber: new Redis(options)
+            })
         });
 
         const server = new ApolloServer({
