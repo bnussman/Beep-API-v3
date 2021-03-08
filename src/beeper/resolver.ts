@@ -24,7 +24,6 @@ export class BeeperResolver {
 
         await BeepORM.userRepository.persistAndFlush(ctx.user);
 
-
         return true;
     }
     

@@ -114,3 +114,64 @@ export class User {
     ratings = new Collection<Rating>(this);
 }
 
+
+@ObjectType()
+export class PartialUser {
+
+    @Field({ nullable: true })
+    id?: string;
+
+    @Field({ nullable: true })
+    first?: string;
+
+    @Field({ nullable: true })
+    last?: string;
+
+    @Field({ nullable: true })
+    username?: string;
+
+    @Field({ nullable: true })
+    email?: string;
+
+    @Field({ nullable: true })
+    phone?: string;
+
+    @Field({ nullable: true })
+    venmo?: string;
+
+    @Field({ nullable: true })
+    password?: string;
+
+    @Field({ nullable: true })
+    isBeeping?: boolean;
+
+    @Field({ nullable: true })
+    isEmailVerified?: boolean;
+
+    @Field({ nullable: true })
+    isStudent?: boolean;
+
+    @Field({ nullable: true })
+    groupRate?: number;
+
+    @Field({ nullable: true })
+    singlesRate?: number;
+
+    @Field({ nullable: true })
+    capacity?: number;
+
+    @Field({ nullable: true })
+    masksRequired?: boolean;
+
+    @Field({ nullable: true })
+    queueSize?: number;
+
+    @Field({ nullable: true })
+    role?: UserRole;
+
+    @Field({ nullable: true })
+    pushToken?: string;
+
+    @Field({ nullable: true })
+    photoUrl?: string;
+}
