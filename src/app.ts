@@ -41,6 +41,7 @@ export default class BeepAPIServer {
         };
 
         if (!development) {
+            console.log("Using Redis as cache for MongoDB");
             base.resultCache = {
                 adapter: RedisCacheAdapter,
                 options: {
