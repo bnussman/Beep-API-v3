@@ -25,5 +25,7 @@
         "emitDecoratorMetadata": true,
 
         "forceConsistentCasingInFileNames": true
-    }
+
+    },
+    "compileOnSave": true
 }
