@@ -269,7 +269,7 @@ export class RiderController extends Controller {
 
                 //get rider's position in the queue by using a count query where we count entries where they entered the queue earlier
                 //(they have an earlier timestamp)
-                const ridersQueuePosition = await r.table("queues").filter(r.row('timeEnteredQueue').lt(queueEntry.timeEnteredQueue).and(r.row('beeper').eq(beepersID))).count().run((await database.getConn()));
+                const ridersQueuePosition = await r.table("queues").filter(r.row('timeEnteredQueue').lt(queueEntry.timeEnteredQueue).and(r.row('beeperid').eq(beepersID))).count().run((await database.getConn()));
 
                 let keys: string[];
 
