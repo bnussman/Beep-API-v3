@@ -231,11 +231,6 @@ export class AuthController extends Controller {
                 //user our getToken function to get an auth token on signup
                 const tokenData = await getToken(userid);
 
-                //because signup was successful we must make their queue table
-                r.db("beepQueues").tableCreate(userid).run((await database.getConnQueues()));
-                //also make them a location table
-                r.db("beepLocations").tableCreate(userid).run((await database.getConnLocations()));
-
                 //because user signed up, create a verify email entry in the db, this function will send the email
                 createVerifyEmailEntryAndSendEmail(userid, requestBody.email, requestBody.first);
 

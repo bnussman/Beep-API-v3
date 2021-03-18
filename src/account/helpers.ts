@@ -45,24 +45,6 @@ export async function deleteUser(id: string): Promise<boolean> {
         return false;
     }
 
-    //delete user's queue table from beepQueues 
-    try {
-        r.db("beepQueues").tableDrop(id).run((await database.getConnQueues()));
-    }
-    catch (error) {
-        Sentry.captureException(error);
-        return false;
-    }
-
-    //delete user's location table from beepLocations 
-    try {
-        r.db("beepLocations").tableDrop(id).run((await database.getConnLocations()));
-    }
-    catch (error) {
-        Sentry.captureException(error);
-        return false;
-    }
-
     //delete user's beep history entries 
     try {
         r.table("beeps").filter(r.row("beepersid").eq(id).or(r.row("riderid").eq(id))).delete().run((await database.getConn()));
@@ -75,6 +57,24 @@ export async function deleteUser(id: string): Promise<boolean> {
     //delete user's report entries 
     try {
         r.table("userReports").filter(r.row("reporterId").eq(id).or(r.row("reportedId").eq(id))).delete().run((await database.getConn()));
+    }
+    catch (error) {
+        Sentry.captureException(error);
+        return false;
+    }
+
+    //delete user's location entries 
+    try {
+        r.table("locations").filter({ user: id }).delete().run((await database.getConn()));
+    }
+    catch (error) {
+        Sentry.captureException(error);
+        return false;
+    }
+
+    //delete user's token entries 
+    try {
+        r.table("tokens").filter({ userid: id }).delete().run((await database.getConn()));
     }
     catch (error) {
         Sentry.captureException(error);

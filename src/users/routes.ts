@@ -421,7 +421,7 @@ export class UsersController extends Controller {
         }
 
         try {
-            const result: BeepQueueTableEntry[] = await r.table(id).orderBy('timeEnteredQueue').run((await database.getConnQueues())) as unknown as BeepQueueTableEntry[];
+            const result: BeepQueueTableEntry[] = await r.table("queues").filter({ beeperid: id }).orderBy('timeEnteredQueue').run((await database.getConn())) as unknown as BeepQueueTableEntry[];
 
             //for every entry in a beeper's queue, add personal info
             //TODO use a table join insted
@@ -481,21 +481,20 @@ export class UsersController extends Controller {
 
             if (offset) {
                 if (show) {
-                    cursor = await r.table(id).orderBy(r.desc('timestamp')).slice(offset, offset + show).run((await database.getConnLocations()));
+                    cursor = await r.table("locations").filter({ user: id }).orderBy(r.desc('timestamp')).slice(offset, offset + show).run((await database.getConn()));
                 }
                 else {
-                    cursor = await r.table(id).orderBy(r.desc('timestamp')).slice(offset).run((await database.getConnLocations()));
+                    cursor = await r.table("locations").filter({ user: id }).orderBy(r.desc('timestamp')).slice(offset).run((await database.getConn()));
                 }
             }
             else {
                 if (show) {
-                    cursor = await r.table(id).orderBy(r.desc('timestamp')).limit(show).run((await database.getConnLocations()));
+                    cursor = await r.table("locations").filter({ user: id }).orderBy(r.desc('timestamp')).limit(show).run((await database.getConn()));
                 }
                 else {
-                    cursor = await r.table(id).orderBy(r.desc('timestamp')).run((await database.getConnLocations()));
+                    cursor = await r.table("locations").filter({ user: id }).orderBy(r.desc('timestamp')).run((await database.getConn()));
                 }
             }
-
 
             const data: LocationEntry[] = await cursor.toArray();
 

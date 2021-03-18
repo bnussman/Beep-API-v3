@@ -5,7 +5,7 @@ import * as Sentry from '@sentry/node';
 
 export async function getUsersCurrentLocation(id: string): Promise<LocationData | null> {
     try {
-        const result = await r.table(id).orderBy(r.desc('timestamp')).limit(1).run((await database.getConnLocations()));
+        const result = await r.table("locations").filter({ user: id }).orderBy(r.desc('timestamp')).limit(1).run((await database.getConn()));
 
         return (await result.next());
     }

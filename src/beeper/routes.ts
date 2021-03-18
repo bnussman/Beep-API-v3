@@ -108,7 +108,7 @@ export class BeeperController extends Controller {
             try {
                 //in beeper's queue table, get the time the rider entered the queue
                 //we need this to count the number of people before this rider in the queue
-                const cursor: Cursor = await r.table(request.user.id).filter({ riderid: requestBody.riderID }).pluck('timeEnteredQueue').run((await database.getConnQueues()));
+                const cursor: Cursor = await r.table("queues").filter({ riderid: requestBody.riderID }).pluck('timeEnteredQueue').run((await database.getConn()));
 
                 //resolve the query and get the time this rider entered the queue as a const
                 const timeEnteredQueue = (await cursor.next()).timeEnteredQueue;
@@ -116,7 +116,7 @@ export class BeeperController extends Controller {
                 cursor.close();
 
                 //query to get rider's actual position in the queue
-                const ridersQueuePosition = await r.table(request.user.id).filter(r.row('timeEnteredQueue').lt(timeEnteredQueue).and(r.row('isAccepted').eq(false))).count().run((await database.getConnQueues()));
+                const ridersQueuePosition = await r.table("queues").filter(r.row('timeEnteredQueue').lt(timeEnteredQueue).and(r.row('isAccepted').eq(false)).and(r.row('beeperid').eq(request.user.id))).count().run((await database.getConn()));
 
                 //if there are riders before this rider that have not been accepted,
                 //tell the beeper they must respond to them first.
@@ -127,6 +127,7 @@ export class BeeperController extends Controller {
             }
             catch (error) {
                 Sentry.captureException(error);
+                console.log(error);
                 this.setStatus(500);
                 return new APIResponse(APIStatus.Error, "Unable set beeper queue item");
             }
@@ -135,7 +136,7 @@ export class BeeperController extends Controller {
             try {
                 //in beeper's queue table, get the time the rider entered the queue
                 //we need this to count the number of people before this rider in the queue
-                const cursor: Cursor = await r.table(request.user.id).filter({ riderid: requestBody.riderID }).pluck('timeEnteredQueue').run((await database.getConnQueues()));
+                const cursor: Cursor = await r.table("queues").filter({ riderid: requestBody.riderID }).pluck('timeEnteredQueue').run((await database.getConn()));
 
                 //resolve the query and get the time this rider entered the queue as a const
                 const timeEnteredQueue = (await cursor.next()).timeEnteredQueue;
@@ -143,7 +144,7 @@ export class BeeperController extends Controller {
                 cursor.close();
 
                 //query to get rider's actual position in the queue
-                const ridersQueuePosition = await r.table(request.user.id).filter(r.row('timeEnteredQueue').lt(timeEnteredQueue).and(r.row('isAccepted').eq(true))).count().run((await database.getConnQueues()));
+                const ridersQueuePosition = await r.table("queues").filter(r.row('timeEnteredQueue').lt(timeEnteredQueue).and(r.row('isAccepted').eq(true)).and(r.row('beeperid').eq(request.user.id))).count().run((await database.getConn()));
 
                 //if there are riders before this rider that have been accepted,
                 //tell the beeper they must respond to them first.
@@ -154,6 +155,7 @@ export class BeeperController extends Controller {
             }
             catch (error) {
                 Sentry.captureException(error);
+                console.log(error);
                 return new APIResponse(APIStatus.Error, "Unable set beeper queue item");
             }
         }
@@ -161,7 +163,7 @@ export class BeeperController extends Controller {
         if (requestBody.value == 'accept') {
             try {
                 //set queue entry's isAccepted vlaue to true
-                await r.table(request.user.id).get(requestBody.queueID).update({ isAccepted: true }).run((await database.getConnQueues()));
+                await r.table("queues").get(requestBody.queueID).update({ isAccepted: true }).run((await database.getConn()));
 
                 //increase the queueSize of the beeper
                 await r.table('users').get(request.user.id).update({ queueSize: r.row('queueSize').add(1) }).run((await database.getConn()));
@@ -179,7 +181,7 @@ export class BeeperController extends Controller {
         else if (requestBody.value == 'deny' || requestBody.value == 'complete') {
             try {
                 //delete entry in beeper's queues table
-                const result: WriteResult = await r.table(request.user.id).get(requestBody.queueID).delete({ returnChanges: true }).run((await database.getConnQueues()));
+                const result: WriteResult = await r.table("queues").get(requestBody.queueID).delete({ returnChanges: true }).run((await database.getConn()));
 
                 //ensure we actually deleted something
                 if (result.deleted != 1) {
@@ -244,7 +246,7 @@ export class BeeperController extends Controller {
         else {
             try {
                 //we can just increment the state number in the queue doccument
-                const result: WriteResult = await r.table(request.user.id).get(requestBody.queueID).update({ state: r.row('state').add(1) }, { returnChanges: true }).run((await database.getConnQueues()));
+                const result: WriteResult = await r.table("queues").get(requestBody.queueID).update({ state: r.row('state').add(1) }, { returnChanges: true }).run((await database.getConn()));
 
                 const newState = result.changes[0].new_val.state;
 
