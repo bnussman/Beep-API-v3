@@ -14,7 +14,7 @@ export async function getNumUsers(): Promise<number> {
 
 export async function getNumLocations(id: string): Promise<number> {
     try {
-        return r.table(id).count().run((await database.getConnLocations()));
+        return r.table("locations").filter({ user: id }).count().run((await database.getConn()));
     }
     catch (error) {
         Sentry.captureException(error);

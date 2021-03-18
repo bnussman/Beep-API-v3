@@ -78,6 +78,7 @@ export class RiderController extends Controller {
         //if there was no error, construct our new entry for beeper's queue table
         const newEntry = {
             riderid: request.user.id,
+            beeperid: requestBody.beepersID,
             timeEnteredQueue: Date.now(),
             isAccepted: false,
             groupSize: requestBody.groupSize,
@@ -88,7 +89,7 @@ export class RiderController extends Controller {
 
         try {
             //insert newEntry into beeper's queue table
-            const result = await r.table(requestBody.beepersID).insert(newEntry).run((await database.getConnQueues()));
+            const result = await r.table("queues").insert(newEntry).run((await database.getConn()));
             const queueId = result.generated_keys[0];
 
             //Tell Beeper someone entered their queue asyncronously
@@ -247,7 +248,7 @@ export class RiderController extends Controller {
         if (beepersID != null) {
             try {
                 //since we are in a queue, we need to find the db entry where the rider has you id
-                const cursor: Cursor = await r.table(beepersID).filter({ riderid: request.user.id }).run((await database.getConnQueues()));
+                const cursor: Cursor = await r.table("queues").filter({ riderid: request.user.id }).run((await database.getConn()));
                 
                 let queueEntry = null;
                 
@@ -268,7 +269,7 @@ export class RiderController extends Controller {
 
                 //get rider's position in the queue by using a count query where we count entries where they entered the queue earlier
                 //(they have an earlier timestamp)
-                const ridersQueuePosition = await r.table(beepersID).filter(r.row('timeEnteredQueue').lt(queueEntry.timeEnteredQueue)).count().run((await database.getConnQueues()));
+                const ridersQueuePosition = await r.table("queues").filter(r.row('timeEnteredQueue').lt(queueEntry.timeEnteredQueue).and(r.row('beeper').eq(beepersID))).count().run((await database.getConn()));
 
                 let keys: string[];
 
@@ -335,14 +336,14 @@ export class RiderController extends Controller {
         
         //in beeper's queue table, get the time the rider entered the queue
         //we need this to count the number of people before this rider in the queue
-        const cursor: Cursor = await r.table(requestBody.beepersID).filter({ riderid: request.user.id }).pluck('timeEnteredQueue', 'isAccepted').run((await database.getConnQueues()));
+        const cursor: Cursor = await r.table("queues").filter({ riderid: request.user.id }).pluck('timeEnteredQueue', 'isAccepted').run((await database.getConn()));
         
         const data = await cursor.next();
 
         cursor.close();
 
         //query to get rider's actual position in the queue
-        const ridersQueuePosition = await r.table(requestBody.beepersID).filter(r.row('timeEnteredQueue').lt(data.timeEnteredQueue)).count().run((await database.getConnQueues()));
+        const ridersQueuePosition = await r.table("queues").filter(r.row('timeEnteredQueue').lt(data.timeEnteredQueue).and(r.row('beeperid').eq(requestBody.beepersID))).count().run((await database.getConn()));
 
         //if there are riders before this rider that have not been accepted,
         //tell the beeper they must respond to them first.
@@ -353,7 +354,7 @@ export class RiderController extends Controller {
 
         try {
             //delete entry in beeper's queue table
-            const result = await r.table(requestBody.beepersID).filter({ riderid: request.user.id }).delete({ returnChanges: true }).run((await database.getConnQueues()));
+            const result = await r.table("queues").filter({ riderid: request.user.id }).delete({ returnChanges: true }).run((await database.getConn()));
 
             const entry = result.changes[0].old_val;
 
