@@ -17,8 +17,9 @@ export class FilesController {
     @Post("upload")
     public async uploadFile(@Request() request: express.Request): Promise<ProfilePhotoResponse | APIResponse> {
         const s3 = new AWS.S3({
-            accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-            secretAccessKey: process.env.AWS_ACCESS_KEY_SECRET
+            accessKeyId: process.env.S3_ACCESS_KEY_ID,
+            secretAccessKey: process.env.S3_ACCESS_KEY_SECRET,
+            endpoint: process.env.S3_ENDPOINT_URL
         });
 
         await this.handleFile(request);
@@ -32,7 +33,7 @@ export class FilesController {
         const uploadParams = {
             Body: request.file.buffer,
             Key: "images/" + fileName,
-            Bucket: "ridebeepapp",
+            Bucket: "beep",
             ACL: "public-read"
         };
 
@@ -45,7 +46,7 @@ export class FilesController {
 
                     //if user had an existing profile picture, use S3 to delete the old photo
                     if (dbResult.changes[0].old_val.photoUrl != null) {
-                        const key: string = dbResult.changes[0].old_val.photoUrl.split("https://ridebeepapp.s3.amazonaws.com/")[1];
+                        const key: string = dbResult.changes[0].old_val.photoUrl.split("https://beep.us-east-1.linodeobjects.com/")[1];
 
                         const params = {
                             Bucket: "ridebeepapp",
