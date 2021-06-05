@@ -49,7 +49,7 @@ export class FilesController {
                         const key: string = dbResult.changes[0].old_val.photoUrl.split("https://beep.us-east-1.linodeobjects.com/")[1];
 
                         const params = {
-                            Bucket: "ridebeepapp",
+                            Bucket: "beep",
                             Key: key
                         };
 
