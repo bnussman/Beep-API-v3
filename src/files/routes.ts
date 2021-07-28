@@ -24,14 +24,16 @@ export class FilesController {
 
         await this.handleFile(request);
 
-        let fileName = request.file.originalname;
+        let fileName = request.file?.originalname;
+
+        if (!fileName) throw new Error("Upload error");
 
         const extention = fileName.substr(fileName.lastIndexOf("."), fileName.length);
 
         fileName = request.user.id + "-" + Date.now() + extention;
 
         const uploadParams = {
-            Body: request.file.buffer,
+            Body: request.file?.buffer,
             Key: "images/" + fileName,
             Bucket: "beep",
             ACL: "public-read"
